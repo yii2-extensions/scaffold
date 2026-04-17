@@ -50,7 +50,7 @@ The plugin ignores all providers that are not listed here.
 Run `composer install` or `composer update` to trigger the scaffold process.
 The plugin applies all file mappings declared by the listed providers and writes `scaffold-lock.json`.
 
-## Commit the lock file
+## Commit the lockfile
 
 `scaffold-lock.json` records the hash of every file written by the scaffold process.
 Commit it to version control alongside `composer.lock` so that collaborators and CI

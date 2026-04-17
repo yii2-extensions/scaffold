@@ -26,7 +26,7 @@ recorded hash:
 
 `append` and `prepend` do not compare hashes — they always add content. On partial scaffold runs
 (`post-install-cmd`, `post-update-cmd`) these modes are skipped for files already recorded in
-the lock file, preventing duplicate content on repeated `composer install` calls.
+the lockfile, preventing duplicate content on repeated `composer install` calls.
 
 ## replace
 
