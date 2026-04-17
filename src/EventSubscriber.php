@@ -17,6 +17,7 @@ use yii\scaffold\Security\{PackageAllowlist, PathValidator};
 
 use function is_array;
 use function is_string;
+use function sprintf;
 
 /**
  * Listens to Composer script events and triggers the scaffold workflow.
@@ -138,13 +139,17 @@ final class EventSubscriber implements EventSubscriberInterface
         $io = $event->getIO();
         $vendorDirRaw = $composer->getConfig()->get('vendor-dir');
 
-        $vendorDirResolved = realpath($vendorDirRaw);
+        if ($vendorDirRaw === '') {
+            $io->writeError('[scaffold] Unable to resolve vendor-dir from Composer config; aborting scaffold.');
 
+            return;
+        }
+
+        $vendorDirResolved = realpath($vendorDirRaw);
         $vendorDir = $vendorDirResolved !== false ? $vendorDirResolved : $vendorDirRaw;
 
         $projectRootRaw = dirname($composer->getConfig()->getConfigSource()->getName());
         $projectRootResolved = realpath($projectRootRaw);
-
         $projectRoot = $projectRootResolved !== false ? $projectRootResolved : $projectRootRaw;
 
         $allowedPackages = $this->extractAllowedPackages($composer->getPackage()->getExtra(), $io);
