@@ -1,0 +1,12 @@
+{
+    "file-mapping": {
+        "resources/js/app.js": {
+            "source": "stubs/resources/js/app.js",
+            "mode": "preserve"
+        },
+        "vite.config.js": {
+            "source": "stubs/vite.config.js",
+            "mode": "replace"
+        }
+    }
+}

@@ -1,0 +1,7 @@
+{
+    "file-mapping": {
+        "../../../etc/passwd": {
+            "source": "stubs/params.php"
+        }
+    }
+}
