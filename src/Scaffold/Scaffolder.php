@@ -100,6 +100,7 @@ final class Scaffolder
         }
 
         $lockData = $this->lockFile->read();
+        $dirty = false;
 
         foreach ($merged as $destination => $mapping) {
             if (
@@ -123,6 +124,7 @@ final class Scaffolder
                         'source' => $mapping->source,
                         'mode' => $mapping->mode,
                     ];
+                    $dirty = true;
                 }
             } catch (Throwable $e) {
                 $this->io->writeError(
@@ -131,7 +133,9 @@ final class Scaffolder
             }
         }
 
-        $this->lockFile->write($lockData);
+        if ($dirty) {
+            $this->lockFile->write($lockData);
+        }
     }
 
     /**
@@ -148,8 +152,9 @@ final class Scaffolder
     private function extractHash(array $lockData, string $destination): string|null
     {
         $entry = $lockData['files'][$destination] ?? null;
+        $hash = $entry['hash'] ?? null;
 
-        return $entry !== null ? $entry['hash'] : null;
+        return is_string($hash) ? $hash : null;
     }
 
     /**

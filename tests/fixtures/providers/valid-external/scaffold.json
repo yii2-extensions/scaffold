@@ -8,8 +8,5 @@
             "source": "stubs/vite.config.js",
             "mode": "replace"
         }
-    },
-    "post-scaffold-commands": [
-        { "cmd": "yii migrate", "when": "create-project" }
-    ]
+    }
 }

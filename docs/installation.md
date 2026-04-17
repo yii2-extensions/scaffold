@@ -3,7 +3,7 @@
 ## System requirements
 
 - [PHP](https://www.php.net/downloads) `8.3` or higher.
-- [Composer](https://getcomposer.org/download/) `2.7` or higher.
+- [Composer](https://getcomposer.org/download/) `2.9` or higher.
 - [Yii2](https://github.com/yiisoft/yii2) `22.x`.
 
 ## Installation

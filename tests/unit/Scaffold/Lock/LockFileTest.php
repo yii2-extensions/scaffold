@@ -85,6 +85,7 @@ final class LockFileTest extends TestCase
                     'config/params.php' => [
                         'hash' => 'sha256:deadbeef',
                         'provider' => 'p/n',
+                        'source' => 'stubs/a.php',
                         'mode' => 'replace',
                     ],
                 ],
