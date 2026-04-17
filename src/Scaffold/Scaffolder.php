@@ -127,6 +127,14 @@ final class Scaffolder
                         'mode' => $mapping->mode,
                     ];
                     $dirty = true;
+                } elseif ($result->newHash !== '' && !isset($lockData['files'][$destination])) {
+                    $lockData['files'][$destination] = [
+                        'hash' => $result->newHash,
+                        'provider' => $mapping->providerName,
+                        'source' => $mapping->source,
+                        'mode' => $mapping->mode,
+                    ];
+                    $dirty = true;
                 }
             } catch (Throwable $e) {
                 $this->io->writeError(

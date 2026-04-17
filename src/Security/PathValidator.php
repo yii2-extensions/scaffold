@@ -47,6 +47,14 @@ final class PathValidator
                 sprintf('Destination path escapes the project root: "%s".', $destination),
             );
         }
+
+        $resolvedParent = realpath(dirname($normalized));
+
+        if ($resolvedParent !== false && !str_starts_with($resolvedParent . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException(
+                sprintf('Destination path escapes the project root via symlink: "%s".', $destination),
+            );
+        }
     }
 
     /**
@@ -75,6 +83,14 @@ final class PathValidator
         if (!str_starts_with($normalized . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
             throw new RuntimeException(
                 sprintf('Source path escapes the provider root: "%s".', $source),
+            );
+        }
+
+        $resolvedParent = realpath(dirname($normalized));
+
+        if ($resolvedParent !== false && !str_starts_with($resolvedParent . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
+            throw new RuntimeException(
+                sprintf('Source path escapes the provider root via symlink: "%s".', $source),
             );
         }
     }
