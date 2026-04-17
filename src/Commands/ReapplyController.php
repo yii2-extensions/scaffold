@@ -23,7 +23,7 @@ use function sprintf;
  * yii scaffold/reapply
  * yii scaffold/reapply config/params.php
  * yii scaffold/reapply config/params.php --force
- * yii scaffold/reapply --provider=yii2-extensions/app-base-scaffold
+ * yii scaffold/reapply --provider=yii2-extensions/app-base
  * ```
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
@@ -37,7 +37,7 @@ final class ReapplyController extends Controller
     public bool $force = false;
 
     /**
-     * Optional provider package name filter (for example, `yii2-extensions/app-base-scaffold`). When empty, all
+     * Optional provider package name filter (for example, `yii2-extensions/app-base`). When empty, all
      * providers are processed.
      */
     public string $provider = '';

@@ -41,7 +41,7 @@ The plugin ignores all providers that are not listed here.
 {
     "extra": {
         "scaffold": {
-            "allowed-packages": ["yii2-extensions/app-base-scaffold"]
+            "allowed-packages": ["yii2-extensions/app-base"]
         }
     }
 }
