@@ -24,6 +24,7 @@ trait ConsoleApplicationTrait
     {
         $this->setUpTempDirectory();
 
+        // intentionally not assigned — Application::__construct() sets Yii::$app as a side effect.
         new Application(
             [
                 'id' => 'scaffold-test',

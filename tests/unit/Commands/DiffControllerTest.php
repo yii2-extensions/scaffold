@@ -102,6 +102,15 @@ final class DiffControllerTest extends TestCase
         );
     }
 
+    public function testBuildDiffNormalizesCrlfAndLfAsIdentical(): void
+    {
+        self::assertSame(
+            '',
+            $this->makeController()->buildDiff("line1\r\nline2", "line1\nline2"),
+            'CRLF and LF versions of the same content should be treated as identical.',
+        );
+    }
+
     protected function setUp(): void
     {
         $this->setUpConsoleApplication();

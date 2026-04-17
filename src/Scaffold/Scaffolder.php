@@ -7,6 +7,7 @@ namespace yii\scaffold\Scaffold;
 use Composer\IO\IOInterface;
 use Composer\Package\PackageInterface;
 use RuntimeException;
+use Throwable;
 use yii\scaffold\Manifest\ManifestLoader;
 use yii\scaffold\Scaffold\Lock\LockFile;
 use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome, ModeInterface, PrependMode, PreserveMode, ReplaceMode};
@@ -109,10 +110,10 @@ final class Scaffolder
                 continue;
             }
 
-            $mode = $this->resolveMode($mapping->mode);
-            $hashAtScaffold = $this->extractHash($lockData, $destination);
-
             try {
+                $mode = $this->resolveMode($mapping->mode);
+                $hashAtScaffold = $this->extractHash($lockData, $destination);
+
                 $result = $this->applier->apply($mapping, $projectRoot, $mode, $hashAtScaffold);
 
                 if ($result->outcome === ApplyOutcome::Written) {
@@ -123,7 +124,7 @@ final class Scaffolder
                         'mode' => $mapping->mode,
                     ];
                 }
-            } catch (RuntimeException $e) {
+            } catch (Throwable $e) {
                 $this->io->writeError(
                     sprintf('[scaffold] Error applying "%s": %s', $destination, $e->getMessage()),
                 );
