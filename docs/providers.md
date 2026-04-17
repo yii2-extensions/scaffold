@@ -1,8 +1,9 @@
 # Creating providers
 
-A scaffold provider is any Composer package that declares file mappings under `extra.scaffold` in its
-`composer.json`. Providers do not need a special package type — any installed package can contribute scaffold files
-once it appears in the root project's `allowed-packages` list.
+A scaffold provider is any Composer package that declares file mappings under `extra.scaffold` in its `composer.json`.
+
+Providers do not need a special package type — any installed package can contribute scaffold files once it appears in
+the root project's `allowed-packages` list.
 
 ## Inline manifest
 
@@ -10,25 +11,25 @@ Declare mappings directly in `composer.json` under `extra.scaffold.file-mapping`
 
 ```json
 {
-  "name": "yii2-extensions/app-base-scaffold",
-  "extra": {
-    "scaffold": {
-      "file-mapping": {
-        "config/params.php": {
-          "source": "stubs/config/params.php",
-          "mode": "replace"
-        },
-        "config/web.php": {
-          "source": "stubs/config/web.php",
-          "mode": "preserve"
-        },
-        ".env.example": {
-          "source": "stubs/.env.example",
-          "mode": "append"
+    "name": "yii2-extensions/app-base-scaffold",
+    "extra": {
+        "scaffold": {
+            "file-mapping": {
+                "config/params.php": {
+                    "source": "stubs/config/params.php",
+                    "mode": "replace"
+                },
+                "config/web.php": {
+                    "source": "stubs/config/web.php",
+                    "mode": "preserve"
+                },
+                ".env.example": {
+                    "source": "stubs/.env.example",
+                    "mode": "append"
+                }
+            }
         }
-      }
     }
-  }
 }
 ```
 
@@ -41,12 +42,12 @@ For larger providers, point to a `scaffold.json` file instead of embedding mappi
 
 ```json
 {
-  "name": "yii2-extensions/app-nginx-scaffold",
-  "extra": {
-    "scaffold": {
-      "manifest": "scaffold.json"
+    "name": "yii2-extensions/app-nginx-scaffold",
+    "extra": {
+        "scaffold": {
+            "manifest": "scaffold.json"
+        }
     }
-  }
 }
 ```
 
@@ -54,16 +55,16 @@ For larger providers, point to a `scaffold.json` file instead of embedding mappi
 
 ```json
 {
-  "file-mapping": {
+    "file-mapping": {
     "docker/nginx/nginx.conf": {
-      "source": "stubs/nginx/nginx.conf",
-      "mode": "replace"
+        "source": "stubs/nginx/nginx.conf",
+        "mode": "replace"
     },
     "docker/nginx/default.conf": {
-      "source": "stubs/nginx/default.conf",
-      "mode": "preserve"
+        "source": "stubs/nginx/default.conf",
+            "mode": "preserve"
+        }
     }
-  }
 }
 ```
 
