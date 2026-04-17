@@ -257,13 +257,9 @@ final class ScaffolderTest extends TestCase
 
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $root = self::createStub(PackageInterface::class);
-
-        $root->method('getExtra')->willReturn([]);
-
         $this
             ->makeScaffolder([], $builder)
-            ->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+            ->scaffold($this->makeRootPackage([]), [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
     }
 
     public function testPreserveFileIsNotOverwritten(): void

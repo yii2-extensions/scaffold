@@ -48,13 +48,7 @@ final class PathValidator
             );
         }
 
-        $resolvedParent = realpath(dirname($normalized));
-
-        if ($resolvedParent !== false && !str_starts_with($resolvedParent . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
-            throw new RuntimeException(
-                sprintf('Destination path escapes the project root via symlink: "%s".', $destination),
-            );
-        }
+        $this->assertNoSymlinkEscape($normalized, $realRoot, 'destination', $destination);
     }
 
     /**
@@ -86,12 +80,46 @@ final class PathValidator
             );
         }
 
-        $resolvedParent = realpath(dirname($normalized));
+        $this->assertNoSymlinkEscape($normalized, $realRoot, 'source', $source);
+    }
 
-        if ($resolvedParent !== false && !str_starts_with($resolvedParent . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
-            throw new RuntimeException(
-                sprintf('Source path escapes the provider root via symlink: "%s".', $source),
-            );
+    /**
+     * Walks up from the deepest existing ancestor of `$normalized` and rejects the path if that ancestor resolves
+     * outside `$realRoot` via a symlink.
+     *
+     * Checking only `realpath(dirname($normalized))` misses the case where the immediate parent does not yet exist but
+     * a higher-level ancestor is a symlink that escapes the root. This method finds the deepest path segment that
+     * already exists on disk, resolves it, and enforces containment.
+     *
+     * @param string $normalized Absolute, traversal-free path to validate.
+     * @param string $realRoot Resolved root boundary (output of `realpath()`).
+     * @param string $context Human-readable label for error messages (`'source'` or `'destination'`).
+     * @param string $originalPath Original user-supplied path, used only in the exception message.
+     *
+     * @throws RuntimeException when a symlink ancestor escapes `$realRoot`.
+     */
+    private function assertNoSymlinkEscape(
+        string $normalized,
+        string $realRoot,
+        string $context,
+        string $originalPath,
+    ): void {
+        $dir = dirname($normalized);
+
+        while ($dir !== $realRoot && $dir !== dirname($dir)) {
+            $resolved = realpath($dir);
+
+            if ($resolved !== false) {
+                if (!str_starts_with($resolved . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
+                    throw new RuntimeException(
+                        sprintf('%s path escapes the root via symlink: "%s".', ucfirst($context), $originalPath),
+                    );
+                }
+
+                return;
+            }
+
+            $dir = dirname($dir);
         }
     }
 

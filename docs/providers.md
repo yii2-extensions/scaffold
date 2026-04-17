@@ -56,12 +56,12 @@ For larger providers, point to a `scaffold.json` file instead of embedding mappi
 ```json
 {
     "file-mapping": {
-    "docker/nginx/nginx.conf": {
-        "source": "stubs/nginx/nginx.conf",
-        "mode": "replace"
-    },
-    "docker/nginx/default.conf": {
-        "source": "stubs/nginx/default.conf",
+        "docker/nginx/nginx.conf": {
+            "source": "stubs/nginx/nginx.conf",
+            "mode": "replace"
+        },
+        "docker/nginx/default.conf": {
+            "source": "stubs/nginx/default.conf",
             "mode": "preserve"
         }
     }

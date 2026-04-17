@@ -16,7 +16,7 @@ use yii\scaffold\Security\PathValidator;
  * @since 0.1
  */
 #[Group('scaffold')]
-#[Group('lock')]
+#[Group('security')]
 final class PathValidatorTest extends TestCase
 {
     public function testDestinationWithAbsoluteUnixPathThrows(): void

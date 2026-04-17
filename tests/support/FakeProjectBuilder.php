@@ -52,7 +52,9 @@ final class FakeProjectBuilder
             throw new RuntimeException(sprintf('Could not create directory "%s".', $dir));
         }
 
-        file_put_contents($full, $content);
+        if (file_put_contents($full, $content) === false) {
+            throw new RuntimeException(sprintf('Could not write file "%s".', $full));
+        }
     }
 
     /**
@@ -71,7 +73,9 @@ final class FakeProjectBuilder
             throw new RuntimeException(sprintf('Could not create directory "%s".', $dir));
         }
 
-        file_put_contents($full, $content);
+        if (file_put_contents($full, $content) === false) {
+            throw new RuntimeException(sprintf('Could not write file "%s".', $full));
+        }
     }
 
     /**

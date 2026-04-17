@@ -26,7 +26,7 @@ Or add the entry manually to your `composer.json`:
 {
     "config": {
         "allow-plugins": {
-        "yii2-extensions/scaffold": true
+            "yii2-extensions/scaffold": true
         }
     }
 }
@@ -41,7 +41,7 @@ The plugin ignores all providers that are not listed here.
 {
     "extra": {
         "scaffold": {
-        "allowed-packages": ["yii2-extensions/app-base-scaffold"]
+            "allowed-packages": ["yii2-extensions/app-base-scaffold"]
         }
     }
 }

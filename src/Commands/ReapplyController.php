@@ -32,16 +32,20 @@ final class ReapplyController extends Controller
     public bool $force = false;
 
     /**
+     * Optional provider package name filter (for example, `yii2-extensions/app-base-scaffold`). When empty, all
+     * providers are processed.
+     */
+    public string $provider = '';
+
+    /**
      * Re-applies scaffold files from vendor stubs, updating lock hashes on success.
      *
-     * @param string $file Optional destination path to reapply (for example, `config/params.php`).
-     * When empty, all tracked files are processed.
-     * @param string $provider Optional provider package name filter (for example, `yii2-extensions/app-base-scaffold`).
-     * When empty, all providers are processed.
+     * @param string $file Optional destination path to reapply (for example, `config/params.php`). When empty, all
+     * tracked files are processed.
      *
      * @return int Exit code indicating success or failure of the operation.
      */
-    public function actionIndex(string $file = '', string $provider = ''): int
+    public function actionIndex(string $file = ''): int
     {
         $projectRoot = Yii::$app->basePath;
         $vendorDir = Yii::$app->vendorPath;
@@ -62,7 +66,7 @@ final class ReapplyController extends Controller
                 continue;
             }
 
-            if ($provider !== '' && $entry['provider'] !== $provider) {
+            if ($this->provider !== '' && $entry['provider'] !== $this->provider) {
                 continue;
             }
 
@@ -137,7 +141,7 @@ final class ReapplyController extends Controller
             $this->stdout(sprintf('[scaffold] Reapplied "%s".', $destination) . PHP_EOL);
         }
 
-        if (($file !== '' || $provider !== '') && !$anyMatched) {
+        if (($file !== '' || $this->provider !== '') && !$anyMatched) {
             $this->stderr('[scaffold] No tracked files matched the given filter.' . PHP_EOL);
 
             return ExitCode::UNSPECIFIED_ERROR;
@@ -161,7 +165,7 @@ final class ReapplyController extends Controller
     public function options($actionID): array
     {
         return [
-            ...parent::options($actionID), 'force',
+            ...parent::options($actionID), 'force', 'provider',
         ];
     }
 }

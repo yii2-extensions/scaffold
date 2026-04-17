@@ -43,7 +43,8 @@ final class StatusController extends Controller
         $colFile = max(4, max(array_map('strlen', array_keys($statuses))));
         $colProvider = max(8, max(array_map('strlen', array_column($statuses, 'provider'))));
         $colMode = max(4, max(array_map('strlen', array_column($statuses, 'mode'))));
-        $separator = str_repeat('-', $colFile + $colProvider + $colMode + 8 + 6);
+        $colStatus = max(6, max(array_map('strlen', array_column($statuses, 'status'))));
+        $separator = str_repeat('-', $colFile + $colProvider + $colMode + $colStatus + 6);
 
         $this->stdout(
             sprintf("%-{$colFile}s  %-{$colProvider}s  %-{$colMode}s  %s", 'File', 'Provider', 'Mode', 'Status')
