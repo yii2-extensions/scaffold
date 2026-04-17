@@ -5,23 +5,23 @@ declare(strict_types=1);
 namespace yii\scaffold\Commands;
 
 use Yii;
-use yii\console\Controller;
-use yii\console\ExitCode;
+use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\LockFile;
+
+use function sprintf;
 
 /**
  * Removes a file entry from `scaffold-lock.json` without deleting the file from disk.
  *
- * After ejection the file is no longer managed by scaffold and will not be re-applied
- * or overwritten on future runs.
+ * After ejection the file is no longer managed by scaffold and will not be re-applied  or overwritten on future runs.
  *
  * Usage example:
  * ```bash
  * yii scaffold/eject config/params.php --yes
  * ```
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class EjectController extends Controller
 {
@@ -33,15 +33,20 @@ final class EjectController extends Controller
     /**
      * Removes `$file` from `scaffold-lock.json`.
      *
-     * Without `--yes`, only prints what would happen. Requires explicit confirmation
-     * to modify the lock file. The on-disk file is never deleted.
+     * Without `--yes`, only prints what would happen. Requires explicit confirmation to modify the lock file.
      *
-     * @param string $file Destination path as recorded in `scaffold-lock.json` (e.g. `config/params.php`).
+     * The on-disk file is never deleted.
+     *
+     * @param string $file Destination path as recorded in `scaffold-lock.json` (for example, `config/params.php`).
+     *
+     * @return int Exit code indicating the result of the operation.
      */
     public function actionIndex(string $file): int
     {
         $projectRoot = Yii::$app->basePath;
+
         $lock = new LockFile($projectRoot);
+
         $data = $lock->read();
 
         $entry = $data['files'][$file] ?? null;
@@ -65,10 +70,9 @@ final class EjectController extends Controller
             return ExitCode::OK;
         }
 
-        $updatedFiles = $data['files'];
-        unset($updatedFiles[$file]);
+        unset($data['files'][$file]);
 
-        $lock->write(['providers' => $data['providers'], 'files' => $updatedFiles]);
+        $lock->write($data);
 
         $this->stdout(
             sprintf(
@@ -81,10 +85,17 @@ final class EjectController extends Controller
     }
 
     /**
-     * @param string $actionID
+     * Returns the list of available options for the specified action.
+     *
+     * @param string $actionID ID of the action being executed.
+     *
+     * @return array<string> List of available options for the specified action. This method is used by the console
+     * application to determine which options are valid for a given action.
      */
     public function options($actionID): array
     {
-        return array_values(array_merge(parent::options($actionID), ['yes']));
+        return [
+            ...parent::options($actionID), 'yes',
+        ];
     }
 }

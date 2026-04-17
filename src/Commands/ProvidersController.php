@@ -5,8 +5,7 @@ declare(strict_types=1);
 namespace yii\scaffold\Commands;
 
 use Yii;
-use yii\console\Controller;
-use yii\console\ExitCode;
+use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\LockFile;
 
 /**
@@ -17,17 +16,20 @@ use yii\scaffold\Scaffold\Lock\LockFile;
  * yii scaffold/providers
  * ```
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class ProvidersController extends Controller
 {
     /**
      * Outputs a summary table of all providers tracked in `scaffold-lock.json`.
+     *
+     * @return int Exit code indicating the result of the command execution.
      */
     public function actionIndex(): int
     {
         $lock = new LockFile(Yii::$app->basePath);
+
         $data = $lock->read();
 
         /** @var array<string, int> $providers */
@@ -44,11 +46,11 @@ final class ProvidersController extends Controller
             return ExitCode::OK;
         }
 
-        $this->stdout(sprintf("%-44s %s\n", 'Provider', 'Files'));
+        $this->stdout(sprintf('%-44s %s', 'Provider', 'Files') . PHP_EOL);
         $this->stdout(str_repeat('-', 52) . PHP_EOL);
 
         foreach ($providers as $name => $count) {
-            $this->stdout(sprintf("%-44s %d\n", $name, $count));
+            $this->stdout(sprintf('%-44s %d', $name, $count) . PHP_EOL);
         }
 
         return ExitCode::OK;

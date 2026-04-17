@@ -4,10 +4,14 @@ declare(strict_types=1);
 
 namespace yii\scaffold\Commands;
 
+use SebastianBergmann\Diff\Differ;
+use SebastianBergmann\Diff\Output\DiffOnlyOutputBuilder;
 use Yii;
-use yii\console\Controller;
-use yii\console\ExitCode;
+use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\LockFile;
+
+use function is_string;
+use function sprintf;
 
 /**
  * Shows a line-by-line diff between the provider stub and the current on-disk file.
@@ -17,20 +21,24 @@ use yii\scaffold\Scaffold\Lock\LockFile;
  * yii scaffold/diff config/params.php
  * ```
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class DiffController extends Controller
 {
     /**
      * Outputs the diff between the provider stub and the current file for `$file`.
      *
-     * @param string $file Destination path as recorded in `scaffold-lock.json` (e.g. `config/params.php`).
+     * @param string $file Destination path as recorded in `scaffold-lock.json` (for example, `config/params.php`).
+     *
+     * @return int Exit code indicating success or failure of the operation.
      */
     public function actionIndex(string $file): int
     {
         $projectRoot = Yii::$app->basePath;
+
         $lock = new LockFile($projectRoot);
+
         $data = $lock->read();
 
         $entry = $data['files'][$file] ?? null;
@@ -43,11 +51,13 @@ final class DiffController extends Controller
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
-        $currentPath = $projectRoot . '/' . $file;
+        $currentPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($file, '/\\');
         $currentContent = is_file($currentPath) ? (string) file_get_contents($currentPath) : '';
 
-        $vendorDir = $projectRoot . '/vendor';
-        $stubPath = $vendorDir . '/' . $entry['provider'] . '/' . $entry['source'];
+        $vendorDir = Yii::$app->vendorPath;
+
+        $stubPath = "{$vendorDir}/" . $entry['provider'] . '/' . $entry['source'];
+
         $stubContent = is_file($stubPath) ? (string) file_get_contents($stubPath) : '';
 
         $diff = $this->buildDiff($stubContent, $currentContent);
@@ -62,40 +72,40 @@ final class DiffController extends Controller
     }
 
     /**
-     * Builds a simple line-by-line diff between `$stubContent` and `$currentContent`.
+     * Builds a line-by-line diff between `$stubContent` and `$currentContent` using LCS.
      *
-     * Lines present only in the stub are prefixed with `- `, lines present only in the current
-     * file are prefixed with `+ `, and shared unchanged lines are prefixed with two spaces.
-     * Returns an empty string when the two inputs are identical.
+     * Lines present only in the stub are prefixed with `- `, lines present only in the current file are prefixed with
+     * `+ `, and shared unchanged lines are prefixed with two spaces.
      *
      * @param string $stubContent Content from the provider stub file.
      * @param string $currentContent Content of the current on-disk file.
+     *
+     * @return string Formatted diff output. Empty string if the contents are identical.
      */
     public function buildDiff(string $stubContent, string $currentContent): string
     {
+        $stubContent = (string) preg_replace('/\r\n|\r/', "\n", $stubContent);
+        $currentContent = (string) preg_replace('/\r\n|\r/', "\n", $currentContent);
+
         if ($stubContent === $currentContent) {
             return '';
         }
 
-        $stubLines = explode("\n", $stubContent);
-        $currentLines = explode("\n", $currentContent);
-        $count = max(count($stubLines), count($currentLines));
+        $differ = new Differ(new DiffOnlyOutputBuilder(''));
+
+        $entries = $differ->diffToArray($stubContent, $currentContent);
+
         $output = [];
 
-        for ($i = 0; $i < $count; $i++) {
-            $stub = array_key_exists($i, $stubLines) ? $stubLines[$i] : null;
-            $current = array_key_exists($i, $currentLines) ? $currentLines[$i] : null;
+        foreach ($entries as [$line, $type]) {
+            $line = is_string($line) ? $line : '';
 
-            if ($stub === $current) {
-                $output[] = '  ' . ($stub ?? '');
+            if ($type === Differ::REMOVED) {
+                $output[] = '- ' . rtrim($line, "\n");
+            } elseif ($type === Differ::ADDED) {
+                $output[] = '+ ' . rtrim($line, "\n");
             } else {
-                if ($stub !== null) {
-                    $output[] = '- ' . $stub;
-                }
-
-                if ($current !== null) {
-                    $output[] = '+ ' . $current;
-                }
+                $output[] = '  ' . rtrim($line, "\n");
             }
         }
 

@@ -6,15 +6,16 @@ namespace yii\scaffold\Security;
 
 use RuntimeException;
 
+use function sprintf;
+
 /**
  * Validates scaffold paths against path traversal and absolute path injection.
  *
- * Both destination (project-relative) and source (provider-relative) paths are
- * validated before any filesystem operation. Rejects paths containing `..` as a
- * segment and paths that begin with a directory separator.
+ * Both destination (project-relative) and source (provider-relative) paths are validated before any filesystem
+ * operation. Rejects paths containing `..` as a segment and paths that begin with a directory separator.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class PathValidator
 {
@@ -81,6 +82,9 @@ final class PathValidator
     /**
      * Asserts that no path segment is `..`, preventing directory traversal.
      *
+     * @param string $path Path to validate.
+     * @param string $context Contextual name for error messages.
+     *
      * @throws RuntimeException when a traversal segment is detected.
      */
     private function assertNoTraversal(string $path, string $context): void
@@ -107,7 +111,11 @@ final class PathValidator
      */
     private function assertRelative(string $path, string $context): void
     {
-        if (str_starts_with($path, '/') || str_starts_with($path, '\\') || preg_match('/^[A-Za-z]:/', $path) === 1) {
+        if (
+            str_starts_with($path, '/')
+            || str_starts_with($path, '\\')
+            || preg_match('/^[A-Za-z]:/', $path) === 1
+        ) {
             throw new RuntimeException(
                 sprintf('Absolute path is not allowed in %s: "%s".', $context, $path),
             );
@@ -117,8 +125,13 @@ final class PathValidator
     /**
      * Normalizes a base + relative path without requiring the target to exist on disk.
      *
-     * The relative path must have already passed traversal validation — this method
-     * does not re-validate and assumes no `..` segments are present.
+     * The relative path must have already passed traversal validation this method does not re-validate and assumes no
+     * `..` segments are present.
+     *
+     * @param string $base Absolute base path.
+     * @param string $relative Relative path to combine with the base.
+     *
+     * @return string Normalized absolute path combining the base and relative segments.
      */
     private function normalizePath(string $base, string $relative): string
     {

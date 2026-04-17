@@ -10,25 +10,25 @@ Declare mappings directly in `composer.json` under `extra.scaffold.file-mapping`
 
 ```json
 {
-    "name": "yii2-extensions/app-base-scaffold",
-    "extra": {
-        "scaffold": {
-            "file-mapping": {
-                "config/params.php": {
-                    "source": "stubs/config/params.php",
-                    "mode": "replace"
-                },
-                "config/web.php": {
-                    "source": "stubs/config/web.php",
-                    "mode": "preserve"
-                },
-                ".env.example": {
-                    "source": "stubs/.env.example",
-                    "mode": "append"
-                }
-            }
+  "name": "yii2-extensions/app-base-scaffold",
+  "extra": {
+    "scaffold": {
+      "file-mapping": {
+        "config/params.php": {
+          "source": "stubs/config/params.php",
+          "mode": "replace"
+        },
+        "config/web.php": {
+          "source": "stubs/config/web.php",
+          "mode": "preserve"
+        },
+        ".env.example": {
+          "source": "stubs/.env.example",
+          "mode": "append"
         }
+      }
     }
+  }
 }
 ```
 
@@ -41,12 +41,12 @@ For larger providers, point to a `scaffold.json` file instead of embedding mappi
 
 ```json
 {
-    "name": "yii2-extensions/app-nginx-scaffold",
-    "extra": {
-        "scaffold": {
-            "manifest": "scaffold.json"
-        }
+  "name": "yii2-extensions/app-nginx-scaffold",
+  "extra": {
+    "scaffold": {
+      "manifest": "scaffold.json"
     }
+  }
 }
 ```
 
@@ -54,16 +54,16 @@ For larger providers, point to a `scaffold.json` file instead of embedding mappi
 
 ```json
 {
-    "file-mapping": {
-        "docker/nginx/nginx.conf": {
-            "source": "stubs/nginx/nginx.conf",
-            "mode": "replace"
-        },
-        "docker/nginx/default.conf": {
-            "source": "stubs/nginx/default.conf",
-            "mode": "preserve"
-        }
+  "file-mapping": {
+    "docker/nginx/nginx.conf": {
+      "source": "stubs/nginx/nginx.conf",
+      "mode": "replace"
+    },
+    "docker/nginx/default.conf": {
+      "source": "stubs/nginx/default.conf",
+      "mode": "preserve"
     }
+  }
 }
 ```
 
@@ -71,19 +71,19 @@ The plugin resolves `scaffold.json` relative to the provider's installation path
 
 ## File modes
 
-| Mode       | Behaviour |
-|------------|-----------|
+| Mode       | Behaviour                                                                                            |
+| ---------- | ---------------------------------------------------------------------------------------------------- |
 | `replace`  | Writes the stub. Skips if the destination has been modified by the user since the last scaffold run. |
-| `preserve` | Writes the stub only if the destination does not already exist on disk. Never overwrites. |
-| `append`   | Appends the stub content to the destination. Creates the file if absent. |
-| `prepend`  | Prepends the stub content before existing destination content. Creates the file if absent. |
+| `preserve` | Writes the stub only if the destination does not already exist on disk. Never overwrites.            |
+| `append`   | Appends the stub content to the destination. Creates the file if absent.                             |
+| `prepend`  | Prepends the stub content before existing destination content. Creates the file if absent.           |
 
 See [File Modes](modes.md) for a detailed description of each mode and the hash-tracking mechanism.
 
 ## Provider layout example
 
-```
-yii2-extensions/app-base-scaffold/
+```text
+yii2-extensions/app-base/
 ├── composer.json          # declares extra.scaffold.file-mapping or extra.scaffold.manifest
 ├── scaffold.json          # optional external manifest
 └── stubs/

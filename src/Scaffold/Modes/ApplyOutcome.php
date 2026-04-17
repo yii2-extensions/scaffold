@@ -7,16 +7,23 @@ namespace yii\scaffold\Scaffold\Modes;
 /**
  * Enumerates the possible outcomes after applying a scaffold file mapping.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 enum ApplyOutcome
 {
-    /** File was skipped — either preserved or user-modified. */
+    /**
+     * File was skipped either preserved or user-modified.
+     */
     case Skipped;
 
-    /** File was written but a warning was issued (reserved for future use). */
+    /**
+     * File was written but a warning was issued (reserved for future use).
+     */
     case Warned;
-    /** File was written or overwritten successfully. */
+
+    /**
+     * File was written or overwritten successfully.
+     */
     case Written;
 }

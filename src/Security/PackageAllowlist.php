@@ -6,23 +6,23 @@ namespace yii\scaffold\Security;
 
 use RuntimeException;
 
+use function in_array;
+
 /**
  * Enforces the `extra.scaffold.allowed-packages` allowlist declared in the root project.
  *
- * Only packages explicitly listed in `allowed-packages` may write files to the project.
- * An empty allowlist rejects every package.
+ * Only packages explicitly listed in `allowed-packages` may write files to the project. An empty allowlist rejects
+ * every package.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class PackageAllowlist
 {
     /**
      * @param list<string> $allowedPackages Package names from `extra.scaffold.allowed-packages`.
      */
-    public function __construct(
-        private readonly array $allowedPackages,
-    ) {}
+    public function __construct(private readonly array $allowedPackages) {}
 
     /**
      * Asserts that the given package is authorized to write scaffold files.
@@ -43,6 +43,10 @@ final class PackageAllowlist
 
     /**
      * Returns whether the given package name is in the allowlist.
+     *
+     * @param string $packageName Name of the package to check.
+     *
+     * @return bool `true` if the package is allowed to scaffold files, `false` otherwise.
      */
     public function isAllowed(string $packageName): bool
     {

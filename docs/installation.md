@@ -24,11 +24,11 @@ Or add the entry manually to your `composer.json`:
 
 ```json
 {
-    "config": {
-        "allow-plugins": {
-            "yii2-extensions/scaffold": true
-        }
+  "config": {
+    "allow-plugins": {
+      "yii2-extensions/scaffold": true
     }
+  }
 }
 ```
 
@@ -39,13 +39,11 @@ The plugin ignores all providers that are not listed here.
 
 ```json
 {
-    "extra": {
-        "scaffold": {
-            "allowed-packages": [
-                "yii2-extensions/app-base-scaffold"
-            ]
-        }
+  "extra": {
+    "scaffold": {
+      "allowed-packages": ["yii2-extensions/app-base-scaffold"]
     }
+  }
 }
 ```
 

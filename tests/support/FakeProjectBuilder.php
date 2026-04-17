@@ -10,7 +10,7 @@ use RuntimeException;
  * Builds a temporary fake project and vendor directory for functional scaffold tests.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
+ * @since 0.1
  */
 final class FakeProjectBuilder
 {
@@ -52,8 +52,8 @@ final class FakeProjectBuilder
     /**
      * Creates a stub file for a provider package inside the fake vendor directory.
      *
-     * @param string $providerName Composer package name (e.g. `yii2-extensions/app-base-scaffold`).
-     * @param string $relPath Path relative to the provider root (e.g. `stubs/config/params.php`).
+     * @param string $providerName Composer package name (for example, `yii2-extensions/app-base-scaffold`).
+     * @param string $relPath Path relative to the provider root (for example, `stubs/config/params.php`).
      * @param string $content File content to write.
      */
     public function createStubFile(string $providerName, string $relPath, string $content): void
@@ -70,6 +70,8 @@ final class FakeProjectBuilder
 
     /**
      * Returns the absolute path to the fake project root.
+     *
+     * @return string Absolute path to the fake project root.
      */
     public function getProjectRoot(): string
     {
@@ -78,6 +80,8 @@ final class FakeProjectBuilder
 
     /**
      * Returns the absolute path to the fake vendor directory.
+     *
+     * @return string Absolute path to the fake vendor directory.
      */
     public function getVendorDir(): string
     {

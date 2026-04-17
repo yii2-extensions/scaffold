@@ -4,20 +4,22 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\unit\Commands;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Yii;
 use yii\scaffold\Commands\StatusController;
 use yii\scaffold\Module;
-use yii\scaffold\Scaffold\Lock\Hasher;
-use yii\scaffold\Scaffold\Lock\LockFile;
+use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\tests\support\ConsoleApplicationTrait;
 
 /**
  * Unit tests for {@see StatusController} status computation via {@see StatusController::getStatuses()}.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
+ * @since 0.1
  */
+#[Group('scaffold')]
+#[Group('commands')]
 final class StatusControllerTest extends TestCase
 {
     use ConsoleApplicationTrait;
@@ -32,17 +34,20 @@ final class StatusControllerTest extends TestCase
     public function testGetStatusesReturnsMissingWhenFileAbsentFromDisk(): void
     {
         $lock = new LockFile($this->tempDir);
-        $lock->write([
-            'providers' => [],
-            'files' => [
-                'config/params.php' => [
-                    'hash' => 'sha256:abc',
-                    'provider' => 'pkg/name',
-                    'source' => 'stubs/config/params.php',
-                    'mode' => 'replace',
+
+        $lock->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'config/params.php' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/config/params.php',
+                        'mode' => 'replace',
+                    ],
                 ],
             ],
-        ]);
+        );
 
         $statuses = $this->makeController()->getStatuses($this->tempDir);
 
@@ -52,28 +57,44 @@ final class StatusControllerTest extends TestCase
             self::fail('Expected "config/params.php" key in statuses.');
         }
 
-        self::assertSame('missing', $entry['status']);
-        self::assertSame('pkg/name', $entry['provider']);
-        self::assertSame('replace', $entry['mode']);
+        self::assertSame(
+            'missing',
+            $entry['status'],
+            'Expected status to be "missing" when file is absent from disk.',
+        );
+        self::assertSame(
+            'pkg/name',
+            $entry['provider'],
+            "Expected provider to be 'pkg/name'.",
+        );
+        self::assertSame(
+            'replace',
+            $entry['mode'],
+            "Expected mode to be 'replace'.",
+        );
     }
 
     public function testGetStatusesReturnsModifiedWhenHashDiffers(): void
     {
-        $filePath = $this->tempDir . '/output.txt';
+        $filePath = "{$this->tempDir}/output.txt";
+
         file_put_contents($filePath, 'user-modified content');
 
         $lock = new LockFile($this->tempDir);
-        $lock->write([
-            'providers' => [],
-            'files' => [
-                'output.txt' => [
-                    'hash' => 'sha256:' . hash('sha256', 'original stub content'),
-                    'provider' => 'pkg/name',
-                    'source' => 'stubs/output.txt',
-                    'mode' => 'replace',
+
+        $lock->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'output.txt' => [
+                        'hash' => 'sha256:' . hash('sha256', 'original stub content'),
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/output.txt',
+                        'mode' => 'replace',
+                    ],
                 ],
             ],
-        ]);
+        );
 
         $statuses = $this->makeController()->getStatuses($this->tempDir);
 
@@ -83,29 +104,38 @@ final class StatusControllerTest extends TestCase
             self::fail('Expected "output.txt" key in statuses.');
         }
 
-        self::assertSame('MODIFIED', $entry['status']);
+        self::assertSame(
+            'MODIFIED',
+            $entry['status'],
+            "Expected status to be 'MODIFIED' when file hash differs from lock file.",
+        );
     }
 
     public function testGetStatusesReturnsSyncedWhenHashMatches(): void
     {
-        $filePath = $this->tempDir . '/output.txt';
+        $filePath = "{$this->tempDir}/output.txt";
+
         file_put_contents($filePath, 'stub content');
 
         $hasher = new Hasher();
+
         $hash = $hasher->hash($filePath);
 
         $lock = new LockFile($this->tempDir);
-        $lock->write([
-            'providers' => [],
-            'files' => [
-                'output.txt' => [
-                    'hash' => $hash,
-                    'provider' => 'pkg/name',
-                    'source' => 'stubs/output.txt',
-                    'mode' => 'preserve',
+
+        $lock->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'output.txt' => [
+                        'hash' => $hash,
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/output.txt',
+                        'mode' => 'preserve',
+                    ],
                 ],
             ],
-        ]);
+        );
 
         $statuses = $this->makeController()->getStatuses($this->tempDir);
 
@@ -115,7 +145,11 @@ final class StatusControllerTest extends TestCase
             self::fail('Expected "output.txt" key in statuses.');
         }
 
-        self::assertSame('synced', $entry['status']);
+        self::assertSame(
+            'synced',
+            $entry['status'],
+            "Expected status to be 'synced' when file hash matches lock file.",
+        );
     }
 
     protected function setUp(): void

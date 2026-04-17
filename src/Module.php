@@ -16,19 +16,20 @@ use yii\base\Module as BaseModule;
  * ],
  * ```
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class Module extends BaseModule
 {
     /**
-     * @var string
+     * @var string Default route when accessing the module without specifying a `controller/action`.
      */
     public $defaultRoute = 'status';
 
     public function init(): void
     {
         parent::init();
+
         $this->controllerNamespace = 'yii\\scaffold\\Commands';
     }
 }

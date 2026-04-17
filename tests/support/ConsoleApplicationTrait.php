@@ -10,11 +10,11 @@ use yii\scaffold\Module;
 /**
  * Provides a minimal {@see Application} for console controller tests.
  *
- * Creates a temporary project directory, boots a {@see Application} using it as `basePath`,
- * registers the `scaffold` module, and tears everything down after each test.
+ * Creates a temporary project directory, boots a {@see Application} using it as `basePath`, registers the `scaffold`
+ * module, and tears everything down after each test.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
+ * @since 0.1
  */
 trait ConsoleApplicationTrait
 {
@@ -24,13 +24,15 @@ trait ConsoleApplicationTrait
     {
         $this->setUpTempDirectory();
 
-        new Application([
-            'id' => 'scaffold-test',
-            'basePath' => $this->tempDir,
-            'modules' => [
-                'scaffold' => Module::class,
+        new Application(
+            [
+                'id' => 'scaffold-test',
+                'basePath' => $this->tempDir,
+                'modules' => [
+                    'scaffold' => Module::class,
+                ],
             ],
-        ]);
+        );
     }
 
     protected function tearDownConsoleApplication(): void

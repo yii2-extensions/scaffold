@@ -2,14 +2,17 @@
 
 declare(strict_types=1);
 
+use yii\console\Application;
+use yii\scaffold\Module;
+
 return [
     'id' => 'scaffold-test',
     'basePath' => dirname(__DIR__),
     'components' => [],
     'modules' => [
-        'scaffold' => \yii\scaffold\Module::class,
+        'scaffold' => Module::class,
     ],
     'phpstan' => [
-        'application_type' => \yii\console\Application::class,
+        'application_type' => Application::class,
     ],
 ];

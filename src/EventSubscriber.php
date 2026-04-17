@@ -6,23 +6,23 @@ namespace yii\scaffold;
 
 use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
-use Composer\Script\Event;
-use Composer\Script\ScriptEvents;
+use Composer\Script\{Event, ScriptEvents};
+use Throwable;
 use yii\scaffold\Bridge\Yii2ComposerBridge;
-use yii\scaffold\Manifest\ManifestLoader;
-use yii\scaffold\Manifest\ManifestSchema;
+use yii\scaffold\Manifest\{ManifestLoader, ManifestSchema};
 use yii\scaffold\Scaffold\Applier;
-use yii\scaffold\Scaffold\Lock\Hasher;
-use yii\scaffold\Scaffold\Lock\LockFile;
+use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\Scaffold\Scaffolder;
-use yii\scaffold\Security\PackageAllowlist;
-use yii\scaffold\Security\PathValidator;
+use yii\scaffold\Security\{PackageAllowlist, PathValidator};
+
+use function is_array;
+use function is_string;
 
 /**
  * Listens to Composer script events and triggers the scaffold workflow.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class EventSubscriber implements EventSubscriberInterface
 {
@@ -38,23 +38,45 @@ final class EventSubscriber implements EventSubscriberInterface
         ];
     }
 
+    /**
+     * Handles the post-create-project event to perform a full scaffold.
+     *
+     * @param Event $event Composer event object containing context for the operation.
+     */
     public function onPostCreateProject(Event $event): void
     {
         $this->runScaffold($event, fullScaffold: true);
     }
 
+    /**
+     * Handles the post-install event to perform a partial scaffold.
+     *
+     * @param Event $event Composer event object containing context for the operation.
+     */
     public function onPostInstall(Event $event): void
     {
         $this->runScaffold($event, fullScaffold: false);
     }
 
+    /**
+     * Handles the post-update event to perform a partial scaffold.
+     *
+     * @param Event $event Composer event object containing context for the operation.
+     */
     public function onPostUpdate(Event $event): void
     {
         $this->runScaffold($event, fullScaffold: false);
     }
 
     /**
-     * @param list<string> $allowedPackages
+     * Builds the Scaffolder instance with the necessary components.
+     *
+     * @param list<string> $allowedPackages List of package names that are allowed to be scaffolded, extracted from
+     * `composer.json`.
+     * @param string $projectRoot Absolute path to the project root.
+     * @param IOInterface $io Composer IO interface for user interaction.
+     *
+     * @return Scaffolder Configured Scaffolder instance.
      */
     private function buildScaffolder(array $allowedPackages, string $projectRoot, IOInterface $io): Scaffolder
     {
@@ -67,9 +89,14 @@ final class EventSubscriber implements EventSubscriberInterface
     }
 
     /**
-     * @param array<mixed> $extra
+     * Extracts the list of allowed packages from the `extra` section of `composer.json`.
      *
-     * @return list<string>
+     * @param array<mixed> $extra  `extra` section from the root package's `composer.json`, which may contain scaffold
+     * configuration.
+     * @param IOInterface $io Composer IO interface for logging warnings about invalid configuration entries.
+     *
+     * @return list<string> List of allowed package names that can be scaffolded. If the configuration is missing or
+     * invalid, an empty list is returned.
      */
     private function extractAllowedPackages(array $extra, IOInterface $io): array
     {
@@ -98,25 +125,43 @@ final class EventSubscriber implements EventSubscriberInterface
         return $allowed;
     }
 
+    /**
+     * Executes the scaffold process based on the given Composer event and scaffold type.
+     *
+     * @param Event $event Composer event object containing context for the operation.
+     * @param bool $fullScaffold Whether to perform a full scaffold (`true` for post-create-project) or a partial
+     * scaffold (`true` for post-install and post-update).
+     */
     private function runScaffold(Event $event, bool $fullScaffold): void
     {
         $composer = $event->getComposer();
         $io = $event->getIO();
+        $vendorDirRaw = $composer->getConfig()->get('vendor-dir');
 
-        $vendorDir = $composer->getConfig()->get('vendor-dir');
-        $projectRoot = dirname($composer->getConfig()->getConfigSource()->getName());
+        $vendorDirResolved = realpath($vendorDirRaw);
+
+        $vendorDir = $vendorDirResolved !== false ? $vendorDirResolved : $vendorDirRaw;
+
+        $projectRootRaw = dirname($composer->getConfig()->getConfigSource()->getName());
+        $projectRootResolved = realpath($projectRootRaw);
+
+        $projectRoot = $projectRootResolved !== false ? $projectRootResolved : $projectRootRaw;
+
         $allowedPackages = $this->extractAllowedPackages($composer->getPackage()->getExtra(), $io);
         $scaffolder = $this->buildScaffolder($allowedPackages, $projectRoot, $io);
-
         $localRepo = $composer->getRepositoryManager()->getLocalRepository();
 
-        $scaffolder->scaffold(
-            $composer->getPackage(),
-            $localRepo->getPackages(),
-            $projectRoot,
-            $vendorDir,
-            $fullScaffold,
-        );
+        try {
+            $scaffolder->scaffold(
+                $composer->getPackage(),
+                $localRepo->getPackages(),
+                $projectRoot,
+                $vendorDir,
+                $fullScaffold,
+            );
+        } catch (Throwable $e) {
+            $io->writeError(sprintf('[scaffold] Scaffolding aborted: %s', $e->getMessage()));
+        }
 
         Yii2ComposerBridge::logNotice($io);
     }

@@ -8,21 +8,28 @@ use RuntimeException;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 
+use function sprintf;
+
 /**
  * Applies a scaffold file by prepending its content before an existing destination, or writing it fresh.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class PrependMode implements ModeInterface
 {
+    /**
+     * @param string|null $hashAtScaffold Intentionally unused — prepend mode is content-agnostic and relies on the
+     * Scaffolder to skip already-locked entries on partial runs.
+     */
     public function apply(
         FileMapping $mapping,
         string $projectRoot,
         Hasher $hasher,
         string|null $hashAtScaffold,
     ): ApplyResult {
-        $destination = $projectRoot . '/' . $mapping->destination;
+        $destination = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($mapping->destination, '/\\');
+
         $source = $mapping->providerPath . '/' . $mapping->source;
 
         $sourceContent = file_get_contents($source);
@@ -52,6 +59,13 @@ final class PrependMode implements ModeInterface
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
     }
 
+    /**
+     * Ensures the directory for the given file path exists, creating it if necessary.
+     *
+     * @param string $absoluteFilePath Absolute path to the file whose directory should be ensured.
+     *
+     * @throws RuntimeException If the directory cannot be created.
+     */
     private function ensureDirectory(string $absoluteFilePath): void
     {
         $dir = dirname($absoluteFilePath);

@@ -6,12 +6,12 @@ when a file has been modified by the developer after scaffolding.
 
 ## Mode reference
 
-| Mode      | File absent          | File present (unmodified)    | File present (user-modified)      |
-|-----------|----------------------|------------------------------|-----------------------------------|
-| `replace` | Writes stub, records hash. | Overwrites with stub, updates hash. | **Skips** — emits warning to stderr. |
-| `preserve`| Writes stub, records hash. | **Skips** — never overwrites. | **Skips** — never overwrites. |
-| `append`  | Writes stub, records hash. | Appends stub content (`FILE_APPEND`), updates hash. | Appends stub content, updates hash. |
-| `prepend` | Writes stub, records hash. | Prepends stub content before existing content, updates hash. | Prepends stub content, updates hash. |
+| Mode       | File absent                | File present (unmodified)                                                                                                                             | File present (user-modified)                              |
+| ---------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                   | **Skips** — emits warning to stderr.                      |
+| `preserve` | Writes stub, records hash. | **Skips** — never overwrites.                                                                                                                         | **Skips** — never overwrites.                             |
+| `append`   | Writes stub, records hash. | Appends stub content (`FILE_APPEND`), updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).          | Appends stub content, updates hash (full scaffold only).  |
+| `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock). | Prepends stub content, updates hash (full scaffold only). |
 
 ## Hash tracking
 

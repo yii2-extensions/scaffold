@@ -12,11 +12,11 @@ use Composer\Plugin\PluginInterface;
 /**
  * Composer plugin entry point for yii2-extensions/scaffold.
  *
- * Registers the event subscriber that orchestrates multi-layer file scaffolding
- * during `composer install`, `composer update`, and `composer create-project`.
+ * Registers the event subscriber that orchestrates multi-layer file scaffolding during `composer install`,
+ * `composer update`, and `composer create-project`.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class Plugin implements PluginInterface, Capable
 {
@@ -28,7 +28,8 @@ final class Plugin implements PluginInterface, Capable
     public function deactivate(Composer $composer, IOInterface $io): void {}
 
     /**
-     * @return array<string, string>
+     * @return array<string, string> An associative array mapping capability class names to their implementing class
+     * names.
      */
     public function getCapabilities(): array
     {

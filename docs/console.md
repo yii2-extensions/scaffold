@@ -36,10 +36,10 @@ config/web.php                           yii2-extensions/app-base       preserve
 docker/nginx/nginx.conf                  yii2-extensions/app-nginx      replace    missing
 ```
 
-| Status     | Meaning |
-|------------|---------|
-| `synced`   | On-disk hash matches the hash recorded at scaffold time. |
-| `MODIFIED` | The file has been changed since the last scaffold run. |
+| Status     | Meaning                                                        |
+| ---------- | -------------------------------------------------------------- |
+| `synced`   | On-disk hash matches the hash recorded at scaffold time.       |
+| `MODIFIED` | The file has been changed since the last scaffold run.         |
 | `missing`  | The file was written by scaffold but no longer exists on disk. |
 
 ## yii scaffold/diff `<file>`
@@ -68,7 +68,7 @@ Re-copies stubs from `vendor/` to the project, updating `scaffold-lock.json` has
 yii scaffold/reapply config/params.php
 
 # reapply all files from one provider
-yii scaffold/reapply --provider=yii2-extensions/app-base-scaffold
+yii scaffold/reapply --provider=yii2-extensions/app-base
 
 # reapply all tracked files
 yii scaffold/reapply
@@ -108,8 +108,8 @@ Example output:
 ```
 Provider                                     Files
 ----------------------------------------------------
-yii2-extensions/app-base-scaffold            4
-yii2-extensions/app-nginx-scaffold           2
+yii2-extensions/app-base                     4
+yii2-extensions/app-nginx                    2
 ```
 
 ## Typical post-install workflow

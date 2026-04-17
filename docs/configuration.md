@@ -41,9 +41,7 @@ If the list is empty or absent the plugin writes a notice and exits without modi
     },
     "extra": {
         "scaffold": {
-            "allowed-packages": [
-                "yii2-extensions/app-base-scaffold"
-            ]
+            "allowed-packages": ["yii2-extensions/app-base-scaffold"]
         }
     }
 }
@@ -75,11 +73,11 @@ Example lock entry:
 
 ## Event differentiation
 
-| Composer event            | Behaviour |
-|---------------------------|-----------|
-| `post-create-project-cmd` | Full scaffold — all modes applied, all files written, lock created. |
+| Composer event            | Behaviour                                                                                                                           |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `post-create-project-cmd` | Full scaffold — all modes applied, all files written, lock created.                                                                 |
 | `post-install-cmd`        | Partial scaffold — `append` and `prepend` files already in the lock are skipped. `replace` files whose hashes match are re-applied. |
-| `post-update-cmd`         | Same as `post-install-cmd`. |
+| `post-update-cmd`         | Same as `post-install-cmd`.                                                                                                         |
 
 ## Next steps
 

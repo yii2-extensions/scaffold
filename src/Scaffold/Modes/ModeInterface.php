@@ -10,15 +10,15 @@ use yii\scaffold\Scaffold\Lock\Hasher;
 /**
  * Contract for all scaffold file-application strategies.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 interface ModeInterface
 {
     /**
      * Applies a file mapping to the project root and returns the result.
      *
-     * @param FileMapping $mapping The file mapping to apply.
+     * @param FileMapping $mapping File mapping to apply.
      * @param string $projectRoot Absolute path to the project root.
      * @param Hasher $hasher Hash utility for computing and comparing file hashes.
      * @param string|null $hashAtScaffold Hash recorded in the lock file at last scaffold time, or `null` if untracked.

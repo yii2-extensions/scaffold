@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace yii\scaffold\Commands;
 
 use Yii;
-use yii\console\Controller;
-use yii\console\ExitCode;
-use yii\scaffold\Scaffold\Lock\Hasher;
-use yii\scaffold\Scaffold\Lock\LockFile;
+use yii\console\{Controller, ExitCode};
+use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+
+use function sprintf;
 
 /**
  * Re-applies scaffold stubs to the project, optionally overwriting user-modified files.
@@ -21,8 +21,8 @@ use yii\scaffold\Scaffold\Lock\LockFile;
  * yii scaffold/reapply --provider=yii2-extensions/app-base-scaffold
  * ```
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class ReapplyController extends Controller
 {
@@ -34,20 +34,28 @@ final class ReapplyController extends Controller
     /**
      * Re-applies scaffold files from vendor stubs, updating lock hashes on success.
      *
-     * @param string $file Optional destination path to reapply (e.g. `config/params.php`).
-     *                     When empty, all tracked files are processed.
-     * @param string $provider Optional provider package name filter (e.g. `yii2-extensions/app-base-scaffold`).
-     *                         When empty, all providers are processed.
+     * @param string $file Optional destination path to reapply (for example, `config/params.php`).
+     * When empty, all tracked files are processed.
+     * @param string $provider Optional provider package name filter (for example, `yii2-extensions/app-base-scaffold`).
+     * When empty, all providers are processed.
+     *
+     * @return int Exit code indicating success or failure of the operation.
      */
     public function actionIndex(string $file = '', string $provider = ''): int
     {
         $projectRoot = Yii::$app->basePath;
-        $vendorDir = $projectRoot . '/vendor';
+        $vendorDir = Yii::$app->vendorPath;
+
         $lock = new LockFile($projectRoot);
+
         $data = $lock->read();
+
         $hasher = new Hasher();
+
         $updatedFiles = $data['files'];
+
         $anyUpdated = false;
+        $anyMatched = false;
 
         foreach ($data['files'] as $destination => $entry) {
             if ($file !== '' && $destination !== $file) {
@@ -58,8 +66,11 @@ final class ReapplyController extends Controller
                 continue;
             }
 
-            $destPath = $projectRoot . '/' . $destination;
-            $stubPath = $vendorDir . '/' . $entry['provider'] . '/' . $entry['source'];
+            $anyMatched = true;
+
+            $destPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($destination, '/\\');
+
+            $stubPath = "{$vendorDir}/" . $entry['provider'] . '/' . $entry['source'];
 
             if (!is_file($stubPath)) {
                 $this->stderr(
@@ -126,6 +137,12 @@ final class ReapplyController extends Controller
             $this->stdout(sprintf('[scaffold] Reapplied "%s".', $destination) . PHP_EOL);
         }
 
+        if (($file !== '' || $provider !== '') && !$anyMatched) {
+            $this->stderr('[scaffold] No tracked files matched the given filter.' . PHP_EOL);
+
+            return ExitCode::UNSPECIFIED_ERROR;
+        }
+
         if ($anyUpdated) {
             $lock->write(['providers' => $data['providers'], 'files' => $updatedFiles]);
         }
@@ -134,10 +151,17 @@ final class ReapplyController extends Controller
     }
 
     /**
-     * @param string $actionID
+     * Returns the list of available options for the specified action.
+     *
+     * @param string $actionID ID of the action being executed.
+     *
+     * @return array<string> List of available options for the specified action. This method is used by the console
+     * application to determine which options are valid for a given action.
      */
     public function options($actionID): array
     {
-        return array_values(array_merge(parent::options($actionID), ['force']));
+        return [
+            ...parent::options($actionID), 'force',
+        ];
     }
 }

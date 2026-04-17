@@ -10,7 +10,7 @@ use RuntimeException;
  * Provides a temporary directory that is created before each test and removed after.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
+ * @since 0.1
  */
 trait TempDirectoryTrait
 {
@@ -47,7 +47,7 @@ trait TempDirectoryTrait
                 continue;
             }
 
-            $full = $path . '/' . $entry;
+            $full = "{$path}/{$entry}";
 
             if (is_dir($full)) {
                 $this->removeDirectory($full);

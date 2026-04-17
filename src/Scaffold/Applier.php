@@ -5,20 +5,19 @@ declare(strict_types=1);
 namespace yii\scaffold\Scaffold;
 
 use Composer\IO\IOInterface;
+use RuntimeException;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
-use yii\scaffold\Scaffold\Modes\ApplyResult;
-use yii\scaffold\Scaffold\Modes\ModeInterface;
-use yii\scaffold\Security\PackageAllowlist;
-use yii\scaffold\Security\PathValidator;
+use yii\scaffold\Scaffold\Modes\{ApplyResult, ModeInterface};
+use yii\scaffold\Security\{PackageAllowlist, PathValidator};
 
 /**
  * Applies a single scaffold file mapping after running all security pre-checks.
  *
  * Enforces package authorization, path validation, and forwards mode warnings to the IO layer.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class Applier
 {
@@ -32,12 +31,14 @@ final class Applier
     /**
      * Validates and applies a single file mapping using the given mode strategy.
      *
-     * @param FileMapping $mapping The file mapping to apply.
+     * @param FileMapping $mapping File mapping to apply.
      * @param string $projectRoot Absolute path to the project root.
-     * @param ModeInterface $mode The strategy to use for writing the file.
+     * @param ModeInterface $mode Strategy to use for writing the file.
      * @param string|null $hashAtScaffold Hash recorded in the lock file at last scaffold time, or `null` if untracked.
      *
-     * @throws \RuntimeException when the provider is unauthorized or a path traversal is detected.
+     * @throws RuntimeException when the provider is unauthorized or a path traversal is detected.
+     *
+     * @return ApplyResult Result of the apply operation, including any warnings.
      */
     public function apply(
         FileMapping $mapping,

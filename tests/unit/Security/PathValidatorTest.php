@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\unit\Security;
 
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use yii\scaffold\Security\PathValidator;
@@ -12,8 +13,10 @@ use yii\scaffold\Security\PathValidator;
  * Unit tests for {@see PathValidator} path traversal and absolute path detection.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
+ * @since 0.1
  */
+#[Group('scaffold')]
+#[Group('lock')]
 final class PathValidatorTest extends TestCase
 {
     public function testDestinationWithAbsoluteUnixPathThrows(): void

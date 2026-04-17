@@ -7,8 +7,8 @@ namespace yii\scaffold\Scaffold\Modes;
 /**
  * Represents the outcome of applying a single scaffold file mapping.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class ApplyResult
 {

@@ -6,30 +6,36 @@ namespace yii\scaffold\Manifest;
 
 use RuntimeException;
 
+use function in_array;
+use function is_array;
+use function is_string;
+
 /**
  * Validates and normalizes the raw decoded JSON structure of a scaffold manifest.
  *
- * Returns a typed file-mapping array when validation succeeds, or throws on the first
- * structural violation found.
+ * Returns a typed file-mapping array when validation succeeds, or throws on the first structural violation found.
  *
  * @phpstan-type FileMappingEntry array{source: string, mode: string}
  * @phpstan-type ValidatedFileMapping array<string, FileMappingEntry>
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class ManifestSchema
 {
-    private const VALID_MODES = ['append', 'prepend', 'preserve', 'replace'];
+    /**
+     * @var array<string> Allowed mode values for file-mapping entries.
+     */
+    private const array VALID_MODES = ['append', 'prepend', 'preserve', 'replace'];
 
     /**
      * Validates a raw decoded manifest array and returns the typed file-mapping.
      *
      * @param array<mixed> $raw Decoded JSON content of the manifest.
      *
-     * @return array<string, array{source: string, mode: string}> Validated and typed file-mapping entries.
-     *
      * @throws RuntimeException when the manifest structure is invalid.
+     *
+     * @return array<string, array{source: string, mode: string}> Validated and typed file-mapping entries.
      */
     public function validate(array $raw): array
     {
@@ -42,6 +48,12 @@ final class ManifestSchema
         $typed = [];
 
         foreach ($raw['file-mapping'] as $destination => $entry) {
+            if (!is_string($destination) || $destination === '') {
+                throw new RuntimeException(
+                    sprintf('Manifest file-mapping key must be a non-empty string, got "%s".', $destination),
+                );
+            }
+
             if (!is_array($entry)) {
                 throw new RuntimeException(
                     sprintf('Manifest entry for "%s" must be an object.', $destination),
@@ -71,7 +83,7 @@ final class ManifestSchema
                 );
             }
 
-            $typed[(string) $destination] = ['source' => $entry['source'], 'mode' => $entry['mode']];
+            $typed[$destination] = ['source' => $entry['source'], 'mode' => $entry['mode']];
         }
 
         return $typed;

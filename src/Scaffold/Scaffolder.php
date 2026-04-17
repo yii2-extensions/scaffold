@@ -9,18 +9,16 @@ use Composer\Package\PackageInterface;
 use RuntimeException;
 use yii\scaffold\Manifest\ManifestLoader;
 use yii\scaffold\Scaffold\Lock\LockFile;
-use yii\scaffold\Scaffold\Modes\AppendMode;
-use yii\scaffold\Scaffold\Modes\ApplyOutcome;
-use yii\scaffold\Scaffold\Modes\ModeInterface;
-use yii\scaffold\Scaffold\Modes\PrependMode;
-use yii\scaffold\Scaffold\Modes\PreserveMode;
-use yii\scaffold\Scaffold\Modes\ReplaceMode;
+use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome, ModeInterface, PrependMode, PreserveMode, ReplaceMode};
+
+use function is_array;
+use function is_string;
 
 /**
  * Orchestrates the full scaffold lifecycle: provider resolution, manifest loading, mode application, and lock writing.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class Scaffolder
 {
@@ -34,12 +32,12 @@ final class Scaffolder
     /**
      * Runs the scaffold process for all authorized providers.
      *
-     * @param PackageInterface $rootPackage The root Composer package providing the configuration.
+     * @param PackageInterface $rootPackage Root Composer package providing the configuration.
      * @param PackageInterface[] $installedPackages All packages currently installed in the project.
      * @param string $projectRoot Absolute path to the project root.
      * @param string $vendorDir Absolute path to the Composer vendor directory.
-     * @param bool $fullScaffold When `true`, applies all modes including `append` and `prepend`.
-     *             When `false`, skips `append`/`prepend` for files already recorded in the lock file.
+     * @param bool $fullScaffold When `true`, applies all modes including `append` and `prepend`. When `false`, skips
+     * `append`/`prepend` for files already recorded in the lock file.
      */
     public function scaffold(
         PackageInterface $rootPackage,
@@ -49,6 +47,7 @@ final class Scaffolder
         bool $fullScaffold,
     ): void {
         $extra = $rootPackage->getExtra();
+
         $scaffoldConfig = $extra['scaffold'] ?? null;
 
         if (!is_array($scaffoldConfig)) {
@@ -59,17 +58,18 @@ final class Scaffolder
 
         if (!is_array($rawAllowed) || $rawAllowed === []) {
             $this->io->write('[scaffold] No allowed-packages configured. Skipping scaffold.');
+
             return;
         }
 
-        // Index installed packages by name for O(1) lookup.
+        // index installed packages by name for O(1) lookup.
         $byName = [];
 
         foreach ($installedPackages as $package) {
             $byName[$package->getName()] = $package;
         }
 
-        // Merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
+        // merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
         $merged = [];
 
         foreach ($rawAllowed as $allowedName) {
@@ -81,10 +81,12 @@ final class Scaffolder
 
             if ($package === null) {
                 $this->io->write(sprintf('[scaffold] Provider "%s" is not installed. Skipping.', $allowedName));
+
                 continue;
             }
 
-            $packagePath = $vendorDir . '/' . $allowedName;
+            $packagePath = "{$vendorDir}/{$allowedName}";
+
             $mappings = $this->loader->load($package, $packagePath);
 
             foreach ($mappings as $mapping) {
@@ -99,7 +101,8 @@ final class Scaffolder
         $lockData = $this->lockFile->read();
 
         foreach ($merged as $destination => $mapping) {
-            if (!$fullScaffold
+            if (
+                !$fullScaffold
                 && ($mapping->mode === 'append' || $mapping->mode === 'prepend')
                 && isset($lockData['files'][$destination])
             ) {
@@ -131,14 +134,32 @@ final class Scaffolder
     }
 
     /**
-     * @param array{providers: array<string, mixed>, files: array<string, array{hash: string, provider: string, source: string, mode: string}>} $lockData
+     * Extracts the hash for a given destination from the lock data, if it exists.
+     *
+     * @param array{
+     *   providers: array<string, mixed>,
+     *   files: array<string, array{hash: string, provider: string, source: string, mode: string}>,
+     * } $lockData Decoded lock file data.
+     * @param string $destination Destination path to look up.
+     *
+     * @return string|null Hash if found, or `null` if the destination is not in the lock data.
      */
     private function extractHash(array $lockData, string $destination): string|null
     {
         $entry = $lockData['files'][$destination] ?? null;
+
         return $entry !== null ? $entry['hash'] : null;
     }
 
+    /**
+     * Resolves a mode string to its corresponding ModeInterface implementation.
+     *
+     * @param string $mode Mode name (for example, 'replace', 'preserve', 'append', 'prepend').
+     *
+     * @throws RuntimeException if the mode name is unknown.
+     *
+     * @return ModeInterface Corresponding mode implementation.
+     */
     private function resolveMode(string $mode): ModeInterface
     {
         return match ($mode) {

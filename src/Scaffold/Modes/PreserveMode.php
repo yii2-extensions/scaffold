@@ -8,24 +8,35 @@ use RuntimeException;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 
+use function sprintf;
+
 /**
  * Applies a scaffold file only when the destination does not already exist.
  *
- * If the destination exists it is never overwritten; the existing hash is returned so the lock
- * file can record the current state.
+ * If the destination exists it is never overwritten; the existing hash is returned so the lock file can record the
+ * current state.
  *
- * @copyright Copyright (C) 2025 Terabytesoftw.
- * @license https://opensource.org/license/bsd-3-clause BSD 3-Clause License.
+ * @author Wilmer Arambula <terabytesoftw@gmail.com>
+ * @since 0.1
  */
 final class PreserveMode implements ModeInterface
 {
+    /**
+     * @param string|null $hashAtScaffold Intentionally unused — preserve mode never overwrites an existing file
+     * regardless of whether it drifted from the original stub.
+     *
+     * @throws RuntimeException if the source file cannot be read or the destination file cannot be written.
+     *
+     * @return ApplyResult Result of the apply operation, indicating whether the file was written or skipped, along with
+     * the new hash and any warning message.
+     */
     public function apply(
         FileMapping $mapping,
         string $projectRoot,
         Hasher $hasher,
         string|null $hashAtScaffold,
     ): ApplyResult {
-        $destination = $projectRoot . '/' . $mapping->destination;
+        $destination = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($mapping->destination, '/\\');
 
         if (file_exists($destination)) {
             return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);
