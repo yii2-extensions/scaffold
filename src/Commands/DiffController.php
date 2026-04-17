@@ -54,6 +54,44 @@ final class DiffController extends Controller
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
+        $vendorDir = Yii::$app->vendorPath;
+
+        $resolvedVendor = realpath($vendorDir);
+        $safeVendorDir = $resolvedVendor !== false ? $resolvedVendor : rtrim($vendorDir, '/\\');
+
+        $providerLock = $data['providers'][$entry['provider']] ?? null;
+        $providerRoot = $safeVendorDir . DIRECTORY_SEPARATOR . $entry['provider'];
+
+        if (is_array($providerLock) && is_string($providerLock['path'] ?? null)) {
+            $rawPath = rtrim($providerLock['path'], '/\\');
+            $resolved = realpath($rawPath);
+            $candidate = $resolved !== false ? $resolved : $rawPath;
+
+            if (str_starts_with($candidate . DIRECTORY_SEPARATOR, $safeVendorDir . DIRECTORY_SEPARATOR)) {
+                $providerRoot = $candidate;
+            } else {
+                $this->stderr(
+                    sprintf(
+                        '[scaffold] Provider root for "%s" resolves outside vendor dir; using default path.',
+                        $entry['provider'],
+                    ) . PHP_EOL,
+                );
+            }
+        }
+
+        $validator = new PathValidator();
+
+        try {
+            $validator->validateDestination($file, $projectRoot);
+            $validator->validateSource($entry['source'], $providerRoot);
+        } catch (RuntimeException $e) {
+            $this->stderr(
+                sprintf('[scaffold] Unsafe lock entry for "%s": %s', $file, $e->getMessage()) . PHP_EOL,
+            );
+
+            return ExitCode::UNSPECIFIED_ERROR;
+        }
+
         $currentPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($file, '/\\');
 
         if (is_file($currentPath)) {
@@ -70,33 +108,6 @@ final class DiffController extends Controller
             $currentContent = $rawCurrent;
         } else {
             $currentContent = '';
-        }
-
-        $vendorDir = Yii::$app->vendorPath;
-
-        $resolvedVendor = realpath($vendorDir);
-        $safeVendorDir = $resolvedVendor !== false ? $resolvedVendor : rtrim($vendorDir, '/\\');
-
-        $providerLock = $data['providers'][$entry['provider']] ?? null;
-        $providerRoot = $safeVendorDir . DIRECTORY_SEPARATOR . $entry['provider'];
-
-        if (is_array($providerLock) && is_string($providerLock['path'] ?? null)) {
-            $rawPath = rtrim($providerLock['path'], '/\\');
-            $resolved = realpath($rawPath);
-            $providerRoot = $resolved !== false ? $resolved : $rawPath;
-        }
-
-        $validator = new PathValidator();
-
-        try {
-            $validator->validateDestination($file, $projectRoot);
-            $validator->validateSource($entry['source'], $providerRoot);
-        } catch (RuntimeException $e) {
-            $this->stderr(
-                sprintf('[scaffold] Unsafe lock entry for "%s": %s', $file, $e->getMessage()) . PHP_EOL,
-            );
-
-            return ExitCode::UNSPECIFIED_ERROR;
         }
 
         $stubPath = $providerRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $entry['source']);
