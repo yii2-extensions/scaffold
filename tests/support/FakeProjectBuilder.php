@@ -22,11 +22,17 @@ final class FakeProjectBuilder
         $this->projectRoot = $tempBase . '/project';
         $this->vendorDir = $tempBase . '/vendor';
 
-        if (mkdir($this->projectRoot, 0777, recursive: true) === false) {
+        if (!is_dir($this->projectRoot)
+            && mkdir($this->projectRoot, 0777, recursive: true) === false
+            && !is_dir($this->projectRoot)
+        ) {
             throw new RuntimeException(sprintf('Could not create project root "%s".', $this->projectRoot));
         }
 
-        if (mkdir($this->vendorDir, 0777, recursive: true) === false) {
+        if (!is_dir($this->vendorDir)
+            && mkdir($this->vendorDir, 0777, recursive: true) === false
+            && !is_dir($this->vendorDir)
+        ) {
             throw new RuntimeException(sprintf('Could not create vendor dir "%s".', $this->vendorDir));
         }
     }

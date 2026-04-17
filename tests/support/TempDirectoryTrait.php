@@ -49,7 +49,9 @@ trait TempDirectoryTrait
 
             $full = "{$path}/{$entry}";
 
-            if (is_dir($full)) {
+            if (is_link($full)) {
+                unlink($full);
+            } elseif (is_dir($full)) {
                 $this->removeDirectory($full);
             } else {
                 unlink($full);

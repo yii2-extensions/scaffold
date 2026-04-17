@@ -10,6 +10,5 @@ define('YII_ENV', 'test');
 // root directory of the project
 $rootDir = dirname(__DIR__, 2);
 
-// require composer autoloader if available
 require "{$rootDir}/vendor/autoload.php";
 require "{$rootDir}/vendor/yiisoft/yii2/Yii.php";
