@@ -18,12 +18,12 @@ when a file has been modified by the developer after scaffolding.
 After writing a file the plugin computes `sha256:<hash_file('sha256', $path)>` and records it in `scaffold-lock.json`.
 On subsequent runs the plugin compares the current on-disk hash to the recorded hash:
 
-- **Hashes match** — the file has not been changed since the last scaffold run. The plugin re-applies the stub 
-(for `replace`) or skips (for `preserve`).
+- **Hashes match** — the file has not been changed since the last scaffold run. The plugin re-applies the stub
+  (for `replace`) or skips (for `preserve`).
 - **Hashes differ** — the developer has modified the file. For `replace`, the plugin skips the file and writes a warning
-to stderr. For `preserve`, the file is always skipped regardless of hash.
+  to stderr. For `preserve`, the file is always skipped regardless of hash.
 
-`append` and `prepend` do not compare hashes — they always add content. On partial scaffold runs (`post-install-cmd`, 
+`append` and `prepend` do not compare hashes — they always add content. On partial scaffold runs (`post-install-cmd`,
 `post-update-cmd`) these modes are skipped for files already recorded in the lockfile, preventing duplicate content on
 repeated `composer install` calls.
 
