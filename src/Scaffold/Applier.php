@@ -11,6 +11,8 @@ use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyResult, ModeInterface};
 use yii\scaffold\Security\{PackageAllowlist, PathValidator};
 
+use function realpath;
+
 /**
  * Applies a single scaffold file mapping after running all security pre-checks.
  *
@@ -50,7 +52,23 @@ final class Applier
         $this->pathValidator->validateDestination($mapping->destination, $projectRoot);
         $this->pathValidator->validateSource($mapping->source, $mapping->providerPath);
 
-        $result = $mode->apply($mapping, $projectRoot, $this->hasher, $hashAtScaffold);
+        $resolvedRoot = realpath($projectRoot);
+
+        $safeRoot = $resolvedRoot !== false ? $resolvedRoot : $projectRoot;
+
+        $resolvedProviderPath = realpath($mapping->providerPath);
+
+        $safeProviderPath = $resolvedProviderPath !== false ? $resolvedProviderPath : $mapping->providerPath;
+
+        $resolvedMapping = new FileMapping(
+            $mapping->destination,
+            $mapping->source,
+            $mapping->mode,
+            $mapping->providerName,
+            $safeProviderPath,
+        );
+
+        $result = $mode->apply($resolvedMapping, $safeRoot, $this->hasher, $hashAtScaffold);
 
         if ($result->warning !== null) {
             $this->io->writeError('[scaffold] ' . $result->warning);

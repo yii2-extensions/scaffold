@@ -45,7 +45,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/test'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
         // first run: full scaffold writes append.
@@ -83,7 +83,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/test'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
         // first run: full scaffold writes the append and records lock.
@@ -107,7 +107,7 @@ final class ScaffolderTest extends TestCase
 
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $root = $this->makeRootPackage([], $builder);
+        $root = $this->makeRootPackage([]);
 
         $this
             ->makeScaffolder([], $builder)
@@ -143,7 +143,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/base', 'yii2-extensions/override'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/base', 'yii2-extensions/override']);
 
         $this
             ->makeScaffolder(['yii2-extensions/base', 'yii2-extensions/override'], $builder)
@@ -179,7 +179,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/app-base-scaffold'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/app-base-scaffold']);
 
         $this
             ->makeScaffolder(['yii2-extensions/app-base-scaffold'], $builder)
@@ -224,7 +224,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/test'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
 
         $this
             ->makeScaffolder(['yii2-extensions/test'], $builder)
@@ -284,7 +284,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/test'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
 
         $this
             ->makeScaffolder(['yii2-extensions/test'], $builder)
@@ -314,7 +314,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $root = $this->makeRootPackage(['yii2-extensions/app-base-scaffold'], $builder);
+        $root = $this->makeRootPackage(['yii2-extensions/app-base-scaffold']);
 
         $this
             ->makeScaffolder(['yii2-extensions/app-base-scaffold'], $builder)
@@ -356,7 +356,7 @@ final class ScaffolderTest extends TestCase
     /**
      * @param list<string> $allowedPackages
      */
-    private function makeRootPackage(array $allowedPackages, FakeProjectBuilder $builder): PackageInterface
+    private function makeRootPackage(array $allowedPackages): PackageInterface
     {
         $pkg = self::createStub(PackageInterface::class);
 

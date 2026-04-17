@@ -13,6 +13,10 @@ use function sprintf;
 /**
  * Applies a scaffold file by appending its content to an existing destination, or writing it fresh.
  *
+ * **Callers are responsible for consulting `scaffold-lock.json`** before invoking this mode. Invoking it without a
+ * prior lock check will duplicate content on every call. `Scaffolder` enforces this contract by skipping already-locked
+ * append entries on partial runs (`$fullScaffold = false`).
+ *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */

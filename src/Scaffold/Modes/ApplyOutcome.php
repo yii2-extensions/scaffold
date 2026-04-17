@@ -18,11 +18,6 @@ enum ApplyOutcome
     case Skipped;
 
     /**
-     * File was written but a warning was issued (reserved for future use).
-     */
-    case Warned;
-
-    /**
      * File was written or overwritten successfully.
      */
     case Written;

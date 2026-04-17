@@ -52,6 +52,8 @@ final class Scaffolder
         $scaffoldConfig = $extra['scaffold'] ?? null;
 
         if (!is_array($scaffoldConfig)) {
+            $this->io->write('[scaffold] No extra.scaffold configuration found. Skipping scaffold.');
+
             return;
         }
 

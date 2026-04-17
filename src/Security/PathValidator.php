@@ -91,8 +91,10 @@ final class PathValidator
     {
         $segments = preg_split('#[/\\\\]#', $path);
 
-        if (!is_array($segments)) {
-            return;
+        if ($segments === false) {
+            throw new RuntimeException(
+                sprintf('Unable to validate path for traversal in %s: "%s".', $context, $path),
+            );
         }
 
         foreach ($segments as $segment) {
