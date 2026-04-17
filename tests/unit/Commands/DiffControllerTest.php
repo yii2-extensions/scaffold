@@ -23,6 +23,15 @@ final class DiffControllerTest extends TestCase
 {
     use ConsoleApplicationTrait;
 
+    public function testBuildDiffNormalizesCrlfAndLfAsIdentical(): void
+    {
+        self::assertSame(
+            '',
+            $this->makeController()->buildDiff("line1\r\nline2", "line1\nline2"),
+            'CRLF and LF versions of the same content should be treated as identical.',
+        );
+    }
+
     public function testBuildDiffPreservesUnchangedLinesWithIndent(): void
     {
         $diff = $this->makeController()->buildDiff("same\nchanged", "same\ndifferent");
@@ -99,15 +108,6 @@ final class DiffControllerTest extends TestCase
             '+ line2',
             $diff,
             'Added lines should be prefixed with a plus sign.',
-        );
-    }
-
-    public function testBuildDiffNormalizesCrlfAndLfAsIdentical(): void
-    {
-        self::assertSame(
-            '',
-            $this->makeController()->buildDiff("line1\r\nline2", "line1\nline2"),
-            'CRLF and LF versions of the same content should be treated as identical.',
         );
     }
 

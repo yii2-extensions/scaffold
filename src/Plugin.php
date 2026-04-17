@@ -20,12 +20,21 @@ use Composer\Plugin\PluginInterface;
  */
 final class Plugin implements PluginInterface, Capable
 {
+    private EventSubscriber|null $subscriber = null;
+
     public function activate(Composer $composer, IOInterface $io): void
     {
-        $composer->getEventDispatcher()->addSubscriber(new EventSubscriber());
+        $this->subscriber = new EventSubscriber();
+        $composer->getEventDispatcher()->addSubscriber($this->subscriber);
     }
 
-    public function deactivate(Composer $composer, IOInterface $io): void {}
+    public function deactivate(Composer $composer, IOInterface $io): void
+    {
+        if ($this->subscriber !== null) {
+            $composer->getEventDispatcher()->removeListener($this->subscriber);
+            $this->subscriber = null;
+        }
+    }
 
     /**
      * @return array<string, string> An associative array mapping capability class names to their implementing class

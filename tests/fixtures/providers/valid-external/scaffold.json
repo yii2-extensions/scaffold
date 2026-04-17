@@ -10,6 +10,6 @@
         }
     },
     "post-scaffold-commands": [
-        {"cmd": "yii migrate", "when": "create-project"}
+        { "cmd": "yii migrate", "when": "create-project" }
     ]
 }

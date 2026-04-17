@@ -1,7 +1,7 @@
 # Console commands
 
-The `yii scaffold/*` commands give developers visibility into and control over the scaffold state
-without running a full `composer install`.
+The `yii scaffold/*` commands give developers visibility into and control over the scaffold state without running a full
+`composer install`.
 
 ## Module registration
 
@@ -18,8 +18,8 @@ return [
 
 ## yii scaffold/status
 
-Reads `scaffold-lock.json` and compares the recorded hash of every tracked file to its current
-on-disk hash. Outputs a status table.
+Reads `scaffold-lock.json` and compares the recorded hash of every tracked file to its current on-disk hash. Outputs a
+status table.
 
 ```bash
 yii scaffold/status
@@ -27,7 +27,7 @@ yii scaffold/status
 
 Example output:
 
-```
+```text
 File                                     Provider                       Mode       Status
 --------------------------------------------------------------------------------------------
 config/params.php                        yii2-extensions/app-base       replace    synced
@@ -50,11 +50,11 @@ Shows a line-by-line diff between the provider stub and the current on-disk file
 yii scaffold/diff config/params.php
 ```
 
-Lines present only in the stub are prefixed with `- `, lines present only in the current file
-with `+ `, and unchanged lines with two spaces.
+Lines present only in the stub are prefixed with `-`, lines present only in the current file with `+`, and unchanged
+lines with two spaces.
 
-```
-  <?php
+```diff
+<?php
 - return [];
 + return ['adminEmail' => 'admin@example.com'];
 ```
@@ -105,7 +105,7 @@ yii scaffold/providers
 
 Example output:
 
-```
+```text
 Provider                                     Files
 ----------------------------------------------------
 yii2-extensions/app-base                     4
