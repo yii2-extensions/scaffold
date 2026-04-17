@@ -24,7 +24,7 @@ final class PluginTest extends TestCase
         self::assertArrayHasKey(
             ScriptEvents::POST_CREATE_PROJECT_CMD,
             EventSubscriber::getSubscribedEvents(),
-            'Event subscriber does not register for the post-create-project-cmd event.'
+            'Event subscriber does not register for the post-create-project-cmd event.',
         );
     }
 
@@ -33,7 +33,7 @@ final class PluginTest extends TestCase
         self::assertArrayHasKey(
             ScriptEvents::POST_INSTALL_CMD,
             EventSubscriber::getSubscribedEvents(),
-            'Event subscriber does not register for the post-install-cmd event.'
+            'Event subscriber does not register for the post-install-cmd event.',
         );
     }
 
@@ -42,7 +42,7 @@ final class PluginTest extends TestCase
         self::assertArrayHasKey(
             ScriptEvents::POST_UPDATE_CMD,
             EventSubscriber::getSubscribedEvents(),
-            'Event subscriber does not register for the post-update-cmd event.'
+            'Event subscriber does not register for the post-update-cmd event.',
         );
     }
 
@@ -51,7 +51,7 @@ final class PluginTest extends TestCase
         self::assertCount(
             0,
             (new Plugin())->getCapabilities(),
-            'Plugin capabilities array is not empty.'
+            'Plugin capabilities array is not empty.',
         );
     }
 

@@ -101,7 +101,7 @@ final class LockFileTest extends TestCase
     public function testGetPathReturnsExpectedPath(): void
     {
         self::assertSame(
-            $this->tempDir . '/scaffold-lock.json',
+            rtrim($this->tempDir, '/\\') . DIRECTORY_SEPARATOR . 'scaffold-lock.json',
             (new LockFile($this->tempDir))->getPath(),
             'Return the expected lock file path',
         );

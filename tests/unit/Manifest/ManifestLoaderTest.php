@@ -281,6 +281,7 @@ final class ManifestLoaderTest extends TestCase
             "Expected providerPath to be '/vendor/yii2-extensions/inertia-vue-scaffold'",
         );
     }
+
     public function testPackageWithNoScaffoldExtraReturnsEmptyArray(): void
     {
         $package = self::createStub(PackageInterface::class);

@@ -97,6 +97,7 @@ final class PackageAllowlistTest extends TestCase
             'Package not in allowlist should not be allowed.',
         );
     }
+
     public function testPackageInAllowlistIsAllowed(): void
     {
         $list = new PackageAllowlist(['yii2-extensions/app-base-scaffold', 'yii2-extensions/nginx-scaffold']);
