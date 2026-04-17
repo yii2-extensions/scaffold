@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace yii\scaffold\Commands;
 
 use RuntimeException;
+use Throwable;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
@@ -137,7 +138,16 @@ final class ReapplyController extends Controller
             }
 
             if (!$this->force && is_file($destPath)) {
-                $currentHash = $hasher->hash($destPath);
+                try {
+                    $currentHash = $hasher->hash($destPath);
+                } catch (Throwable $e) {
+                    $this->stderr(
+                        sprintf('[scaffold] Could not hash "%s": %s Skipping.', $destination, $e->getMessage())
+                        . PHP_EOL,
+                    );
+
+                    continue;
+                }
 
                 if (!$hasher->equals($currentHash, $entry['hash'])) {
                     $this->stdout(
@@ -179,7 +189,16 @@ final class ReapplyController extends Controller
                 continue;
             }
 
-            $newHash = $hasher->hash($destPath);
+            try {
+                $newHash = $hasher->hash($destPath);
+            } catch (Throwable $e) {
+                $this->stderr(
+                    sprintf('[scaffold] Could not hash written file "%s": %s Skipping lock update.', $destination, $e->getMessage())
+                    . PHP_EOL,
+                );
+
+                continue;
+            }
 
             $updatedFiles[$destination] = [
                 'hash' => $newHash,

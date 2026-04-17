@@ -55,7 +55,22 @@ final class DiffController extends Controller
         }
 
         $currentPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($file, '/\\');
-        $currentContent = is_file($currentPath) ? (string) file_get_contents($currentPath) : '';
+
+        if (is_file($currentPath)) {
+            $rawCurrent = file_get_contents($currentPath);
+
+            if ($rawCurrent === false) {
+                $this->stderr(
+                    sprintf('[scaffold] Could not read current file "%s".', $currentPath) . PHP_EOL,
+                );
+
+                return ExitCode::UNSPECIFIED_ERROR;
+            }
+
+            $currentContent = $rawCurrent;
+        } else {
+            $currentContent = '';
+        }
 
         $vendorDir = Yii::$app->vendorPath;
 
