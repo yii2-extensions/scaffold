@@ -104,6 +104,18 @@ final class PathValidator
         string $context,
         string $originalPath,
     ): void {
+        $resolved = realpath($normalized);
+
+        if ($resolved !== false) {
+            if (!str_starts_with($resolved . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
+                throw new RuntimeException(
+                    sprintf('%s path escapes the root via symlink: "%s".', ucfirst($context), $originalPath),
+                );
+            }
+
+            return;
+        }
+
         $dir = dirname($normalized);
 
         while ($dir !== $realRoot && $dir !== dirname($dir)) {

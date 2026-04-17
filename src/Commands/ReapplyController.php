@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace yii\scaffold\Commands;
 
+use RuntimeException;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+use yii\scaffold\Security\PathValidator;
 
 use function sprintf;
 
@@ -72,9 +74,45 @@ final class ReapplyController extends Controller
 
             $anyMatched = true;
 
+            $validator = new PathValidator();
+
+            try {
+                $validator->validateDestination($destination, $projectRoot);
+                $validator->validateSource($entry['source'], "{$vendorDir}/{$entry['provider']}");
+            } catch (RuntimeException $e) {
+                $this->stderr(
+                    sprintf('[scaffold] Unsafe lock entry for "%s": %s Skipping.', $destination, $e->getMessage())
+                    . PHP_EOL,
+                );
+
+                continue;
+            }
+
+            $mode = $entry['mode'];
+
+            if ($mode === 'append' || $mode === 'prepend') {
+                $this->stdout(
+                    sprintf(
+                        '[scaffold] "%s" uses mode "%s" and cannot be safely reapplied; run composer install instead.',
+                        $destination,
+                        $mode,
+                    ) . PHP_EOL,
+                );
+
+                continue;
+            }
+
             $destPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($destination, '/\\');
 
             $stubPath = "{$vendorDir}/" . $entry['provider'] . '/' . $entry['source'];
+
+            if ($mode === 'preserve' && !$this->force) {
+                $this->stdout(
+                    sprintf('[scaffold] "%s" uses mode "preserve". Use --force to overwrite.', $destination) . PHP_EOL,
+                );
+
+                continue;
+            }
 
             if (!is_file($stubPath)) {
                 $this->stderr(
