@@ -11,7 +11,7 @@ Declare mappings directly in `composer.json` under `extra.scaffold.file-mapping`
 
 ```json
 {
-    "name": "yii2-extensions/app-base-scaffold",
+    "name": "yii2-extensions/app-base",
     "extra": {
         "scaffold": {
             "file-mapping": {
@@ -42,7 +42,7 @@ For larger providers, point to a `scaffold.json` file instead of embedding mappi
 
 ```json
 {
-    "name": "yii2-extensions/app-nginx-scaffold",
+    "name": "yii2-extensions/app-nginx",
     "extra": {
         "scaffold": {
             "manifest": "scaffold.json"

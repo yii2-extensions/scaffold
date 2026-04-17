@@ -47,7 +47,7 @@ Declare the providers that are permitted to write files into your project:
     "extra": {
         "scaffold": {
             "allowed-packages": [
-                "yii2-extensions/app-base-scaffold"
+                "yii2-extensions/app-base"
             ]
         }
     }
@@ -64,7 +64,7 @@ Minimal `composer.json` for a project using one scaffold provider:
 {
     "require": {
         "yii2-extensions/scaffold": "^0.1",
-        "yii2-extensions/app-base-scaffold": "^0.1"
+        "yii2-extensions/app-base": "^0.1"
     },
     "config": {
         "allow-plugins": {
@@ -74,7 +74,7 @@ Minimal `composer.json` for a project using one scaffold provider:
     "extra": {
         "scaffold": {
             "allowed-packages": [
-                "yii2-extensions/app-base-scaffold"
+                "yii2-extensions/app-base"
             ]
         }
     }

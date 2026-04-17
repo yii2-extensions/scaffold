@@ -12,9 +12,9 @@ Provider packages are never trusted unless they appear in `allowed-packages`.
     "extra": {
         "scaffold": {
             "allowed-packages": [
-                "yii2-extensions/app-base-scaffold",
-                "yii2-extensions/app-nginx-scaffold",
-                "yii2-extensions/app-vue-scaffold"
+                "yii2-extensions/app-base",
+                "yii2-extensions/app-nginx",
+                "yii2-extensions/app-vue"
             ]
         }
     }
@@ -32,7 +32,7 @@ If the list is empty or absent the plugin writes a notice and exits without modi
 {
     "require": {
         "yii2-extensions/scaffold": "^0.1",
-        "yii2-extensions/app-base-scaffold": "^0.1"
+        "yii2-extensions/app-base": "^0.1"
     },
     "config": {
         "allow-plugins": {
@@ -41,7 +41,7 @@ If the list is empty or absent the plugin writes a notice and exits without modi
     },
     "extra": {
         "scaffold": {
-            "allowed-packages": ["yii2-extensions/app-base-scaffold"]
+            "allowed-packages": ["yii2-extensions/app-base"]
         }
     }
 }
@@ -63,7 +63,7 @@ Example lock entry:
     "files": {
         "config/params.php": {
             "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-            "provider": "yii2-extensions/app-base-scaffold",
+            "provider": "yii2-extensions/app-base",
             "source": "stubs/config/params.php",
             "mode": "replace"
         }
