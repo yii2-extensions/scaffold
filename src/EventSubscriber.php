@@ -155,6 +155,17 @@ final class EventSubscriber implements EventSubscriberInterface
         $allowedPackages = $this->extractAllowedPackages($composer->getPackage()->getExtra(), $io);
         $scaffolder = $this->buildScaffolder($allowedPackages, $projectRoot, $io);
         $localRepo = $composer->getRepositoryManager()->getLocalRepository();
+        $installationManager = $composer->getInstallationManager();
+
+        $installPaths = [];
+
+        foreach ($localRepo->getPackages() as $package) {
+            $path = $installationManager->getInstallPath($package);
+
+            if ($path !== null) {
+                $installPaths[$package->getName()] = $path;
+            }
+        }
 
         try {
             $scaffolder->scaffold(
@@ -163,6 +174,7 @@ final class EventSubscriber implements EventSubscriberInterface
                 $projectRoot,
                 $vendorDir,
                 $fullScaffold,
+                $installPaths,
             );
         } catch (Throwable $e) {
             $io->writeError(sprintf('[scaffold] Scaffolding aborted: %s', $e->getMessage()));

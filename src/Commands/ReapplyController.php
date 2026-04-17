@@ -106,7 +106,7 @@ final class ReapplyController extends Controller
 
             $stubPath = "{$vendorDir}/" . $entry['provider'] . '/' . $entry['source'];
 
-            if ($mode === 'preserve' && !$this->force) {
+            if ($mode === 'preserve' && !$this->force && is_file($destPath)) {
                 $this->stdout(
                     sprintf('[scaffold] "%s" uses mode "preserve". Use --force to overwrite.', $destination) . PHP_EOL,
                 );

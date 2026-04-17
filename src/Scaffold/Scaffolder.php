@@ -36,9 +36,12 @@ final class Scaffolder
      * @param PackageInterface $rootPackage Root Composer package providing the configuration.
      * @param PackageInterface[] $installedPackages All packages currently installed in the project.
      * @param string $projectRoot Absolute path to the project root.
-     * @param string $vendorDir Absolute path to the Composer vendor directory.
+     * @param string $vendorDir Absolute path to the Composer vendor directory (used as fallback for install paths).
      * @param bool $fullScaffold When `true`, applies all modes including `append` and `prepend`. When `false`, skips
      * `append`/`prepend` for files already recorded in the lock file.
+     * @param array<string, string> $installPaths Map of package name to absolute install path resolved by Composer's
+     * `InstallationManager`. When provided, these paths take precedence over the default vendor-dir concatenation,
+     * enabling correct path resolution for packages with custom installer strategies.
      */
     public function scaffold(
         PackageInterface $rootPackage,
@@ -46,6 +49,7 @@ final class Scaffolder
         string $projectRoot,
         string $vendorDir,
         bool $fullScaffold,
+        array $installPaths = [],
     ): void {
         $extra = $rootPackage->getExtra();
 
@@ -88,7 +92,7 @@ final class Scaffolder
                 continue;
             }
 
-            $packagePath = "{$vendorDir}/{$allowedName}";
+            $packagePath = $installPaths[$allowedName] ?? "{$vendorDir}/{$allowedName}";
 
             $mappings = $this->loader->load($package, $packagePath);
 

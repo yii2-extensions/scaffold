@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace yii\scaffold\Commands;
 
+use Throwable;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
@@ -71,7 +72,7 @@ final class StatusController extends Controller
      * Returns status data for all files tracked in `scaffold-lock.json`.
      *
      * Each entry maps the destination path to a status record containing the provider name, the scaffold mode, and one
-     * of: `synced`, `modified`, or `missing`.
+     * of: `synced`, `modified`, `missing`, or `error`.
      *
      * @param string $projectRoot Absolute path to the project root.
      *
@@ -94,8 +95,12 @@ final class StatusController extends Controller
             if (!file_exists($absolutePath)) {
                 $status = 'missing';
             } else {
-                $currentHash = $hasher->hash($absolutePath);
-                $status = $hasher->equals($currentHash, $entry['hash']) ? 'synced' : 'modified';
+                try {
+                    $currentHash = $hasher->hash($absolutePath);
+                    $status = $hasher->equals($currentHash, $entry['hash']) ? 'synced' : 'modified';
+                } catch (Throwable) {
+                    $status = 'error';
+                }
             }
 
             $result[$destination] = [
