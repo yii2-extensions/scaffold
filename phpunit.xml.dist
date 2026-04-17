@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <phpunit
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
-  bootstrap="./vendor/autoload.php"
+  xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+  bootstrap="tests/support/bootstrap.php"
   cacheDirectory="./runtime/.phpunit.cache"
   colors="true"
   executionOrder="depends,defects"
@@ -11,7 +11,7 @@
   stopOnFailure="false"
 >
   <testsuites>
-    <testsuite name="Package-Name">
+    <testsuite name="Yii2Extensions-Scaffold">
       <directory>tests</directory>
     </testsuite>
   </testsuites>

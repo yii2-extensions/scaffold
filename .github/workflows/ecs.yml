@@ -18,4 +18,6 @@ permissions:
 
 jobs:
   easy-coding-standard:
-    uses: yii2-framework/actions/.github/workflows/ecs.yml@main
+    uses: yii2-framework/actions/.github/workflows/ecs.yml@v1
+    with:
+      php-version: '["8.3"]'

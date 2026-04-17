@@ -1,0 +1,19 @@
+{
+    "name": "yii2-extensions/apache-scaffold",
+    "type": "yii2-scaffold",
+    "description": "Apache scaffold provider",
+    "extra": {
+        "scaffold": {
+            "file-mapping": {
+                "public/.htaccess": {
+                    "source": "stubs/public/.htaccess",
+                    "mode": "preserve"
+                },
+                ".htaccess": {
+                    "source": "stubs/.htaccess",
+                    "mode": "replace"
+                }
+            }
+        }
+    }
+}

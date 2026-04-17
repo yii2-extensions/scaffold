@@ -1,0 +1,10 @@
+{
+    "name": "yii2-extensions/inertia-vue-scaffold",
+    "type": "yii2-scaffold",
+    "description": "Inertia.js + Vue 3 scaffold provider",
+    "extra": {
+        "scaffold": {
+            "manifest": "scaffold.json"
+        }
+    }
+}
