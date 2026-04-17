@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace yii\scaffold\Commands;
 
+use RuntimeException;
 use Throwable;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+use yii\scaffold\Security\PathValidator;
 
 use function sprintf;
 
@@ -89,7 +91,21 @@ final class StatusController extends Controller
 
         $result = [];
 
+        $validator = new PathValidator();
+
         foreach ($data['files'] as $destination => $entry) {
+            try {
+                $validator->validateDestination($destination, $projectRoot);
+            } catch (RuntimeException) {
+                $result[$destination] = [
+                    'provider' => $entry['provider'],
+                    'mode' => $entry['mode'],
+                    'status' => 'error',
+                ];
+
+                continue;
+            }
+
             $absolutePath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($destination, '/\\');
 
             if (!file_exists($absolutePath)) {
