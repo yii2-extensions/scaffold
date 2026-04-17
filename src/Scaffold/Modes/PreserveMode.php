@@ -7,7 +7,10 @@ namespace yii\scaffold\Scaffold\Modes;
 use RuntimeException;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
+use yii\scaffold\Scaffold\PathResolver;
 
+use function copy;
+use function file_exists;
 use function sprintf;
 
 /**
@@ -36,15 +39,15 @@ final class PreserveMode implements ModeInterface
         Hasher $hasher,
         string|null $hashAtScaffold,
     ): ApplyResult {
-        $destination = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($mapping->destination, '/\\');
+        $destination = PathResolver::destination($projectRoot, $mapping->destination);
 
         if (file_exists($destination)) {
             return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);
         }
 
-        $source = $mapping->providerPath . '/' . $mapping->source;
+        $source = PathResolver::source($mapping->providerPath, $mapping->source);
 
-        $this->ensureDirectory($destination);
+        PathResolver::ensureDirectory($destination);
 
         if (copy($source, $destination) === false) {
             throw new RuntimeException(
@@ -53,14 +56,5 @@ final class PreserveMode implements ModeInterface
         }
 
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
-    }
-
-    private function ensureDirectory(string $absoluteFilePath): void
-    {
-        $dir = dirname($absoluteFilePath);
-
-        if (!is_dir($dir) && mkdir($dir, 0777, recursive: true) === false && !is_dir($dir)) {
-            throw new RuntimeException(sprintf('Could not create directory "%s".', $dir));
-        }
     }
 }

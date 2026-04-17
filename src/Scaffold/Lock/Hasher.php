@@ -40,13 +40,7 @@ final class Hasher
      */
     public function hash(string $absolutePath): string
     {
-        if (!is_file($absolutePath) || !is_readable($absolutePath)) {
-            throw new RuntimeException(
-                sprintf('Could not hash file "%s": file is unreadable or does not exist.', $absolutePath),
-            );
-        }
-
-        $result = hash_file('sha256', $absolutePath);
+        $result = @hash_file('sha256', $absolutePath);
 
         if ($result === false) {
             throw new RuntimeException(
