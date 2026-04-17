@@ -9,6 +9,7 @@ use Throwable;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\Security\PathValidator;
 
 use function sprintf;
@@ -106,7 +107,7 @@ final class StatusController extends Controller
                 continue;
             }
 
-            $absolutePath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($destination, '/\\');
+            $absolutePath = PathResolver::destination($projectRoot, $destination);
 
             if (!file_exists($absolutePath)) {
                 $status = 'missing';

@@ -7,7 +7,10 @@ namespace yii\scaffold\Scaffold\Modes;
 use RuntimeException;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
+use yii\scaffold\Scaffold\PathResolver;
 
+use function copy;
+use function file_exists;
 use function sprintf;
 
 /**
@@ -31,6 +34,7 @@ final class ReplaceMode implements ModeInterface
      * untracked.
      *
      * @throws RuntimeException if the source file cannot be read or the destination file cannot be written.
+     *
      * @return ApplyResult Result of the apply operation, indicating whether the file was written or skipped, along with
      * the new hash and any warning message.
      */
@@ -40,9 +44,8 @@ final class ReplaceMode implements ModeInterface
         Hasher $hasher,
         string|null $hashAtScaffold,
     ): ApplyResult {
-        $destination = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($mapping->destination, '/\\');
-
-        $source = $mapping->providerPath . '/' . $mapping->source;
+        $destination = PathResolver::destination($projectRoot, $mapping->destination);
+        $source = PathResolver::source($mapping->providerPath, $mapping->source);
 
         if (file_exists($destination) && $hashAtScaffold !== null) {
             $currentHash = $hasher->hash($destination);
@@ -56,7 +59,7 @@ final class ReplaceMode implements ModeInterface
             }
         }
 
-        $this->ensureDirectory($destination);
+        PathResolver::ensureDirectory($destination);
 
         if (copy($source, $destination) === false) {
             throw new RuntimeException(
@@ -65,21 +68,5 @@ final class ReplaceMode implements ModeInterface
         }
 
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
-    }
-
-    /**
-     * Ensures that the directory for the given absolute file path exists, creating it if necessary.
-     *
-     * @param string $absoluteFilePath Absolute path to the file for which to ensure the directory exists.
-     *
-     * @throws RuntimeException if the directory cannot be created.
-     */
-    private function ensureDirectory(string $absoluteFilePath): void
-    {
-        $dir = dirname($absoluteFilePath);
-
-        if (!is_dir($dir) && mkdir($dir, 0777, recursive: true) === false && !is_dir($dir)) {
-            throw new RuntimeException(sprintf('Could not create directory "%s".', $dir));
-        }
     }
 }

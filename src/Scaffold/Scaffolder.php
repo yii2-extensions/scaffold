@@ -14,6 +14,7 @@ use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome, ModeInterface, Prepen
 
 use function is_array;
 use function is_string;
+use function sprintf;
 
 /**
  * Orchestrates the full scaffold lifecycle: provider resolution, manifest loading, mode application, and lock writing.
@@ -23,12 +24,25 @@ use function is_string;
  */
 final class Scaffolder
 {
+    /**
+     * @var array<string, ModeInterface> Pre-instantiated mode implementations keyed by mode name for efficient
+     * resolution during scaffolding.
+     */
+    private readonly array $modes;
+
     public function __construct(
         private readonly ManifestLoader $loader,
         private readonly Applier $applier,
         private readonly LockFile $lockFile,
         private readonly IOInterface $io,
-    ) {}
+    ) {
+        $this->modes = [
+            'replace' => new ReplaceMode(),
+            'preserve' => new PreserveMode(),
+            'append' => new AppendMode(),
+            'prepend' => new PrependMode(),
+        ];
+    }
 
     /**
      * Runs the scaffold process for all authorized providers.
@@ -202,12 +216,6 @@ final class Scaffolder
      */
     private function resolveMode(string $mode): ModeInterface
     {
-        return match ($mode) {
-            'replace' => new ReplaceMode(),
-            'preserve' => new PreserveMode(),
-            'append' => new AppendMode(),
-            'prepend' => new PrependMode(),
-            default => throw new RuntimeException(sprintf('Unknown scaffold mode "%s".', $mode)),
-        };
+        return $this->modes[$mode] ?? throw new RuntimeException(sprintf('Unknown scaffold mode "%s".', $mode));
     }
 }

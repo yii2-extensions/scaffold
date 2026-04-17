@@ -10,9 +10,9 @@ use SebastianBergmann\Diff\Output\DiffOnlyOutputBuilder;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\LockFile;
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\Security\PathValidator;
 
-use function is_array;
 use function is_string;
 use function sprintf;
 
@@ -54,29 +54,16 @@ final class DiffController extends Controller
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
-        $vendorDir = Yii::$app->vendorPath;
+        $resolved = PathResolver::resolveProviderRoot(
+            Yii::$app->vendorPath,
+            $entry['provider'],
+            $data['providers'][$entry['provider']] ?? null,
+        );
 
-        $resolvedVendor = realpath($vendorDir);
-        $safeVendorDir = $resolvedVendor !== false ? $resolvedVendor : rtrim($vendorDir, '/\\');
+        $providerRoot = $resolved['root'];
 
-        $providerLock = $data['providers'][$entry['provider']] ?? null;
-        $providerRoot = $safeVendorDir . DIRECTORY_SEPARATOR . $entry['provider'];
-
-        if (is_array($providerLock) && is_string($providerLock['path'] ?? null)) {
-            $rawPath = rtrim($providerLock['path'], '/\\');
-            $resolved = realpath($rawPath);
-            $candidate = $resolved !== false ? $resolved : $rawPath;
-
-            if (str_starts_with($candidate . DIRECTORY_SEPARATOR, $safeVendorDir . DIRECTORY_SEPARATOR)) {
-                $providerRoot = $candidate;
-            } else {
-                $this->stderr(
-                    sprintf(
-                        '[scaffold] Provider root for "%s" resolves outside vendor dir; using default path.',
-                        $entry['provider'],
-                    ) . PHP_EOL,
-                );
-            }
+        if ($resolved['warning'] !== null) {
+            $this->stderr($resolved['warning'] . PHP_EOL);
         }
 
         $validator = new PathValidator();
@@ -92,7 +79,7 @@ final class DiffController extends Controller
             return ExitCode::UNSPECIFIED_ERROR;
         }
 
-        $currentPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($file, '/\\');
+        $currentPath = PathResolver::destination($projectRoot, $file);
 
         if (is_file($currentPath)) {
             $rawCurrent = file_get_contents($currentPath);
@@ -110,7 +97,7 @@ final class DiffController extends Controller
             $currentContent = '';
         }
 
-        $stubPath = $providerRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $entry['source']);
+        $stubPath = PathResolver::source($providerRoot, $entry['source']);
 
         if (!is_file($stubPath)) {
             $this->stderr(

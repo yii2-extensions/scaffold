@@ -7,7 +7,11 @@ namespace yii\scaffold\Scaffold\Modes;
 use RuntimeException;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
+use yii\scaffold\Scaffold\PathResolver;
 
+use function file_exists;
+use function file_get_contents;
+use function file_put_contents;
 use function sprintf;
 
 /**
@@ -32,9 +36,8 @@ final class AppendMode implements ModeInterface
         Hasher $hasher,
         string|null $hashAtScaffold,
     ): ApplyResult {
-        $destination = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($mapping->destination, '/\\');
-
-        $source = "{$mapping->providerPath}/{$mapping->source}";
+        $destination = PathResolver::destination($projectRoot, $mapping->destination);
+        $source = PathResolver::source($mapping->providerPath, $mapping->source);
 
         $content = file_get_contents($source);
 
@@ -42,7 +45,7 @@ final class AppendMode implements ModeInterface
             throw new RuntimeException(sprintf('Could not read source file "%s".', $source));
         }
 
-        $this->ensureDirectory($destination);
+        PathResolver::ensureDirectory($destination);
 
         $flags = file_exists($destination) ? FILE_APPEND : 0;
 
@@ -51,21 +54,5 @@ final class AppendMode implements ModeInterface
         }
 
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
-    }
-
-    /**
-     * Ensures that the directory for the given file path exists, creating it if necessary.
-     *
-     * @param string $absoluteFilePath Absolute path to the file for which to ensure the directory exists.
-     *
-     * @throws RuntimeException if the directory cannot be created and does not already exist.
-     */
-    private function ensureDirectory(string $absoluteFilePath): void
-    {
-        $dir = dirname($absoluteFilePath);
-
-        if (!is_dir($dir) && mkdir($dir, 0777, recursive: true) === false && !is_dir($dir)) {
-            throw new RuntimeException(sprintf('Could not create directory "%s".', $dir));
-        }
     }
 }

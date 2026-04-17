@@ -9,10 +9,9 @@ use Throwable;
 use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\Security\PathValidator;
 
-use function is_array;
-use function is_string;
 use function sprintf;
 
 /**
@@ -60,6 +59,7 @@ final class ReapplyController extends Controller
         $data = $lock->read();
 
         $hasher = new Hasher();
+        $validator = new PathValidator();
 
         $updatedFiles = $data['files'];
 
@@ -77,31 +77,17 @@ final class ReapplyController extends Controller
 
             $anyMatched = true;
 
-            $resolvedVendor = realpath($vendorDir);
-            $safeVendorDir = $resolvedVendor !== false ? $resolvedVendor : rtrim($vendorDir, '/\\');
+            $resolved = PathResolver::resolveProviderRoot(
+                $vendorDir,
+                $entry['provider'],
+                $data['providers'][$entry['provider']] ?? null,
+            );
 
-            $providerLock = $data['providers'][$entry['provider']] ?? null;
-            $providerRoot = $safeVendorDir . DIRECTORY_SEPARATOR . $entry['provider'];
+            $providerRoot = $resolved['root'];
 
-            if (is_array($providerLock) && is_string($providerLock['path'] ?? null)) {
-                $rawPath = rtrim($providerLock['path'], '/\\');
-                $resolved = realpath($rawPath);
-
-                $candidate = $resolved !== false ? $resolved : $rawPath;
-
-                if (str_starts_with($candidate . DIRECTORY_SEPARATOR, $safeVendorDir . DIRECTORY_SEPARATOR)) {
-                    $providerRoot = $candidate;
-                } else {
-                    $this->stderr(
-                        sprintf(
-                            '[scaffold] Provider root for "%s" resolves outside vendor dir; using default path.',
-                            $entry['provider'],
-                        ) . PHP_EOL,
-                    );
-                }
+            if ($resolved['warning'] !== null) {
+                $this->stderr($resolved['warning'] . PHP_EOL);
             }
-
-            $validator = new PathValidator();
 
             try {
                 $validator->validateDestination($destination, $projectRoot);
@@ -129,9 +115,8 @@ final class ReapplyController extends Controller
                 continue;
             }
 
-            $destPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($destination, '/\\');
-
-            $stubPath = $providerRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $entry['source']);
+            $destPath = PathResolver::destination($projectRoot, $destination);
+            $stubPath = PathResolver::source($providerRoot, $entry['source']);
 
             if ($mode === 'preserve' && !$this->force && is_file($destPath)) {
                 $this->stdout(
@@ -183,11 +168,11 @@ final class ReapplyController extends Controller
                 continue;
             }
 
-            $destDir = dirname($destPath);
-
-            if (!is_dir($destDir) && mkdir($destDir, 0777, true) === false && !is_dir($destDir)) {
+            try {
+                PathResolver::ensureDirectory($destPath);
+            } catch (RuntimeException $e) {
                 $this->stderr(
-                    sprintf('[scaffold] Could not create directory "%s". Skipping.', $destDir) . PHP_EOL,
+                    sprintf('[scaffold] %s Skipping.', $e->getMessage()) . PHP_EOL,
                 );
 
                 continue;
