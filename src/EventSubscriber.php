@@ -28,6 +28,16 @@ use function sprintf;
 final class EventSubscriber implements EventSubscriberInterface
 {
     /**
+     * Set to `true` after `onPostInstall` executes in the current process.
+     *
+     * During `composer create-project`, Composer fires `post-install-cmd` before `post-create-project-cmd` within the
+     * same process. The install run applies all scaffold entries (including `append`/`prepend`) because the lock is
+     * empty. If the create-project handler were also to run a full scaffold, those entries would be re-applied and
+     * duplicated. This flag prevents that second run.
+     */
+    private static bool $installScaffoldRan = false;
+
+    /**
      * @return array<string, string>
      */
     public static function getSubscribedEvents(): array
@@ -42,10 +52,17 @@ final class EventSubscriber implements EventSubscriberInterface
     /**
      * Handles the post-create-project event to perform a full scaffold.
      *
+     * Skipped when `post-install-cmd` already ran in this process (i.e., during `composer create-project`), since the
+     * partial install scaffold with an empty lock is equivalent to a full scaffold.
+     *
      * @param Event $event Composer event object containing context for the operation.
      */
     public function onPostCreateProject(Event $event): void
     {
+        if (self::$installScaffoldRan) {
+            return;
+        }
+
         $this->runScaffold($event, fullScaffold: true);
     }
 
@@ -56,6 +73,8 @@ final class EventSubscriber implements EventSubscriberInterface
      */
     public function onPostInstall(Event $event): void
     {
+        self::$installScaffoldRan = true;
+
         $this->runScaffold($event, fullScaffold: false);
     }
 
