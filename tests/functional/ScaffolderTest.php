@@ -160,6 +160,25 @@ final class ScaffolderTest extends TestCase
             file_get_contents($builder->getProjectRoot() . '/app.php'),
             'When multiple providers write to the same destination, the last provider in the list should win.',
         );
+
+        $lockData = (new LockFile($builder->getProjectRoot()))->read();
+
+        $appEntry = $lockData['files']['app.php'] ?? null;
+
+        self::assertNotNull(
+            $appEntry,
+            "Lock must contain exactly one entry for 'app.php'.",
+        );
+        self::assertCount(
+            1,
+            array_filter(array_keys($lockData['files']), static fn(string $k) => $k === 'app.php'),
+            "Lock must contain exactly one entry for 'app.php'.",
+        );
+        self::assertSame(
+            'yii2-extensions/override',
+            $appEntry['provider'],
+            "Lock entry for 'app.php' must be attributed to the last (winning) provider.",
+        );
     }
 
     public function testLockFileRecordsCorrectHash(): void
@@ -291,6 +310,20 @@ final class ScaffolderTest extends TestCase
             file_get_contents($builder->getProjectRoot() . '/config/params.php'),
             'Preserve mode file should not be overwritten if it already exists.',
         );
+
+        $lockData = (new LockFile($builder->getProjectRoot()))->read();
+
+        $lockEntry = $lockData['files']['config/params.php'] ?? null;
+
+        $userContentHash = (new Hasher())->hash($builder->getProjectRoot() . '/config/params.php');
+
+        if ($lockEntry !== null) {
+            self::assertSame(
+                $userContentHash,
+                $lockEntry['hash'],
+                'If a lock entry exists for a preserved file, its hash must match the untouched user content.',
+            );
+        }
     }
 
     public function testReplaceFileIsWrittenAndLockCreated(): void

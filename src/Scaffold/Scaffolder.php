@@ -78,6 +78,7 @@ final class Scaffolder
 
         // merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
         $merged = [];
+        $resolvedProviderPaths = [];
 
         foreach ($rawAllowed as $allowedName) {
             if (!is_string($allowedName)) {
@@ -93,8 +94,17 @@ final class Scaffolder
             }
 
             $packagePath = $installPaths[$allowedName] ?? "{$vendorDir}/{$allowedName}";
+            $resolvedProviderPaths[$allowedName] = $packagePath;
 
-            $mappings = $this->loader->load($package, $packagePath);
+            try {
+                $mappings = $this->loader->load($package, $packagePath);
+            } catch (Throwable $e) {
+                $this->io->writeError(
+                    sprintf('[scaffold] Failed to load manifest for "%s": %s', $allowedName, $e->getMessage()),
+                );
+
+                continue;
+            }
 
             foreach ($mappings as $mapping) {
                 $merged[$mapping->destination] = $mapping;
@@ -107,6 +117,16 @@ final class Scaffolder
 
         $lockData = $this->lockFile->read();
         $dirty = false;
+
+        foreach ($resolvedProviderPaths as $providerName => $providerPath) {
+            $existing = $lockData['providers'][$providerName] ?? null;
+            $storedPath = is_array($existing) && is_string($existing['path'] ?? null) ? $existing['path'] : null;
+
+            if ($storedPath !== $providerPath) {
+                $lockData['providers'][$providerName] = ['path' => $providerPath];
+                $dirty = true;
+            }
+        }
 
         foreach ($merged as $destination => $mapping) {
             if (

@@ -10,6 +10,7 @@ use Yii;
 use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\LockFile;
 
+use function is_array;
 use function is_string;
 use function sprintf;
 
@@ -56,9 +57,23 @@ final class DiffController extends Controller
 
         $vendorDir = Yii::$app->vendorPath;
 
-        $stubPath = "{$vendorDir}/" . $entry['provider'] . '/' . $entry['source'];
+        $providerLock = $data['providers'][$entry['provider']] ?? null;
 
-        $stubContent = is_file($stubPath) ? (string) file_get_contents($stubPath) : '';
+        $providerRoot = is_array($providerLock) && is_string($providerLock['path'] ?? null)
+            ? rtrim($providerLock['path'], '/\\')
+            : rtrim($vendorDir, '/\\') . DIRECTORY_SEPARATOR . $entry['provider'];
+
+        $stubPath = $providerRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $entry['source']);
+
+        if (!is_file($stubPath)) {
+            $this->stderr(
+                sprintf('[scaffold] Stub not found: "%s".', $stubPath) . PHP_EOL,
+            );
+
+            return ExitCode::UNSPECIFIED_ERROR;
+        }
+
+        $stubContent = (string) file_get_contents($stubPath);
 
         $diff = $this->buildDiff($stubContent, $currentContent);
 

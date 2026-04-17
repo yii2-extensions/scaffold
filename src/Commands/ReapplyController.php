@@ -10,6 +10,8 @@ use yii\console\{Controller, ExitCode};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\Security\PathValidator;
 
+use function is_array;
+use function is_string;
 use function sprintf;
 
 /**
@@ -74,11 +76,17 @@ final class ReapplyController extends Controller
 
             $anyMatched = true;
 
+            $providerLock = $data['providers'][$entry['provider']] ?? null;
+
+            $providerRoot = is_array($providerLock) && is_string($providerLock['path'] ?? null)
+                ? rtrim($providerLock['path'], '/\\')
+                : rtrim($vendorDir, '/\\') . DIRECTORY_SEPARATOR . $entry['provider'];
+
             $validator = new PathValidator();
 
             try {
                 $validator->validateDestination($destination, $projectRoot);
-                $validator->validateSource($entry['source'], "{$vendorDir}/{$entry['provider']}");
+                $validator->validateSource($entry['source'], $providerRoot);
             } catch (RuntimeException $e) {
                 $this->stderr(
                     sprintf('[scaffold] Unsafe lock entry for "%s": %s Skipping.', $destination, $e->getMessage())
@@ -104,7 +112,7 @@ final class ReapplyController extends Controller
 
             $destPath = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . ltrim($destination, '/\\');
 
-            $stubPath = "{$vendorDir}/" . $entry['provider'] . '/' . $entry['source'];
+            $stubPath = $providerRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $entry['source']);
 
             if ($mode === 'preserve' && !$this->force && is_file($destPath)) {
                 $this->stdout(
