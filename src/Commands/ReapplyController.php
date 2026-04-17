@@ -76,11 +76,29 @@ final class ReapplyController extends Controller
 
             $anyMatched = true;
 
-            $providerLock = $data['providers'][$entry['provider']] ?? null;
+            $resolvedVendor = realpath($vendorDir);
+            $safeVendorDir = $resolvedVendor !== false ? $resolvedVendor : rtrim($vendorDir, '/\\');
 
-            $providerRoot = is_array($providerLock) && is_string($providerLock['path'] ?? null)
-                ? rtrim($providerLock['path'], '/\\')
-                : rtrim($vendorDir, '/\\') . DIRECTORY_SEPARATOR . $entry['provider'];
+            $providerLock = $data['providers'][$entry['provider']] ?? null;
+            $providerRoot = $safeVendorDir . DIRECTORY_SEPARATOR . $entry['provider'];
+
+            if (is_array($providerLock) && is_string($providerLock['path'] ?? null)) {
+                $rawPath = rtrim($providerLock['path'], '/\\');
+                $resolved = realpath($rawPath);
+
+                $candidate = $resolved !== false ? $resolved : $rawPath;
+
+                if (str_starts_with($candidate . DIRECTORY_SEPARATOR, $safeVendorDir . DIRECTORY_SEPARATOR)) {
+                    $providerRoot = $candidate;
+                } else {
+                    $this->stderr(
+                        sprintf(
+                            '[scaffold] Provider root for "%s" resolves outside vendor dir; using default path.',
+                            $entry['provider'],
+                        ) . PHP_EOL,
+                    );
+                }
+            }
 
             $validator = new PathValidator();
 
