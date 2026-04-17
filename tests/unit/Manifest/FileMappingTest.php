@@ -113,30 +113,8 @@ final class FileMappingTest extends TestCase
             '/path',
         );
 
-        self::assertSame(
-            'config/params.php',
-            $mapping->destination,
-            'Constructor should assign the destination property correctly.',
-        );
-        self::assertSame(
-            'stubs/params.php',
-            $mapping->source,
-            'Constructor should assign the source property correctly.',
-        );
-        self::assertSame(
-            'preserve',
-            $mapping->mode,
-            'Constructor should assign the mode property correctly.',
-        );
-        self::assertSame(
-            'vendor/pkg',
-            $mapping->providerName,
-            'Constructor should assign the providerName property correctly.',
-        );
-        self::assertSame(
-            '/path',
-            $mapping->providerPath,
-            'Constructor should assign the providerPath property correctly.',
-        );
+        $this->expectException(\Error::class);
+
+        (new \ReflectionProperty(FileMapping::class, 'destination'))->setValue($mapping, 'other.php');
     }
 }

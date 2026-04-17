@@ -105,9 +105,9 @@ final class StatusControllerTest extends TestCase
         }
 
         self::assertSame(
-            'MODIFIED',
+            'modified',
             $entry['status'],
-            "Expected status to be 'MODIFIED' when file hash differs from lock file.",
+            "Expected status to be 'modified' when file hash differs from lock file.",
         );
     }
 

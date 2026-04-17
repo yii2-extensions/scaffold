@@ -118,7 +118,6 @@ final class PathValidatorTest extends TestCase
 
         (new PathValidator())->validateDestination('resources/js/Pages/Home.vue', sys_get_temp_dir());
     }
-    // --- validateDestination ---
 
     public function testValidRelativeDestinationPasses(): void
     {
@@ -126,8 +125,6 @@ final class PathValidatorTest extends TestCase
 
         (new PathValidator())->validateDestination('config/params.php', sys_get_temp_dir());
     }
-
-    // --- validateSource ---
 
     public function testValidRelativeSourcePasses(): void
     {

@@ -32,14 +32,14 @@ File                                     Provider                       Mode    
 --------------------------------------------------------------------------------------------
 config/params.php                        yii2-extensions/app-base       replace    synced
 config/web.php                           yii2-extensions/app-base       preserve   synced
-.env.example                             yii2-extensions/app-base       append     MODIFIED
+.env.example                             yii2-extensions/app-base       append     modified
 docker/nginx/nginx.conf                  yii2-extensions/app-nginx      replace    missing
 ```
 
 | Status     | Meaning                                                        |
 | ---------- | -------------------------------------------------------------- |
 | `synced`   | On-disk hash matches the hash recorded at scaffold time.       |
-| `MODIFIED` | The file has been changed since the last scaffold run.         |
+| `modified` | The file has been changed since the last scaffold run.         |
 | `missing`  | The file was written by scaffold but no longer exists on disk. |
 
 ## yii scaffold/diff `<file>`

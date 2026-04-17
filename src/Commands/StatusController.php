@@ -70,7 +70,7 @@ final class StatusController extends Controller
      * Returns status data for all files tracked in `scaffold-lock.json`.
      *
      * Each entry maps the destination path to a status record containing the provider name, the scaffold mode, and one
-     * of: `synced`, `MODIFIED`, or `missing`.
+     * of: `synced`, `modified`, or `missing`.
      *
      * @param string $projectRoot Absolute path to the project root.
      *
@@ -94,7 +94,7 @@ final class StatusController extends Controller
                 $status = 'missing';
             } else {
                 $currentHash = $hasher->hash($absolutePath);
-                $status = $hasher->equals($currentHash, $entry['hash']) ? 'synced' : 'MODIFIED';
+                $status = $hasher->equals($currentHash, $entry['hash']) ? 'synced' : 'modified';
             }
 
             $result[$destination] = [
