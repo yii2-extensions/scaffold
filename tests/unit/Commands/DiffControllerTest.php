@@ -23,6 +23,18 @@ final class DiffControllerTest extends TestCase
 {
     use ConsoleApplicationTrait;
 
+    public function testBuildDiffExactOutputFormat(): void
+    {
+        // Trailing newlines on every line force Differ to emit lines ending with `\n`, so rtrim is observable.
+        $diff = $this->makeController()->buildDiff("a\nb\n", "a\nc\n");
+
+        self::assertSame(
+            '  a' . PHP_EOL . '- b' . PHP_EOL . '+ c' . PHP_EOL,
+            $diff,
+            "Diff output must strip per-line newlines via 'rtrim', join with PHP_EOL, and end with a single PHP_EOL.",
+        );
+    }
+
     public function testBuildDiffNormalizesCrlfAndLfAsIdentical(): void
     {
         self::assertSame(

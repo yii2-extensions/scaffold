@@ -25,13 +25,7 @@ use function sprintf;
 final class PreserveMode implements ModeInterface
 {
     /**
-     * @param string|null $hashAtScaffold Intentionally unused — preserve mode never overwrites an existing file
-     * regardless of whether it drifted from the original stub.
-     *
-     * @throws RuntimeException if the source file cannot be read or the destination file cannot be written.
-     *
-     * @return ApplyResult Result of the apply operation, indicating whether the file was written or skipped, along with
-     * the new hash and any warning message.
+     * @throws RuntimeException when the source file cannot be read or the destination cannot be written.
      */
     public function apply(
         FileMapping $mapping,

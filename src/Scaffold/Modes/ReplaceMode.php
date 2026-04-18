@@ -25,18 +25,7 @@ use function sprintf;
 final class ReplaceMode implements ModeInterface
 {
     /**
-     * Applies the replace mode to a file mapping.
-     *
-     * @param FileMapping $mapping File mapping to apply.
-     * @param string $projectRoot Absolute path to the project root.
-     * @param Hasher $hasher Hash utility for computing and comparing file hashes.
-     * @param string|null $hashAtScaffold Hash recorded in the lock file at the last scaffold time, or `null` if
-     * untracked.
-     *
-     * @throws RuntimeException if the source file cannot be read or the destination file cannot be written.
-     *
-     * @return ApplyResult Result of the apply operation, indicating whether the file was written or skipped, along with
-     * the new hash and any warning message.
+     * @throws RuntimeException when the source file cannot be read or the destination cannot be written.
      */
     public function apply(
         FileMapping $mapping,

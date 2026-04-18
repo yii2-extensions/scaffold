@@ -26,6 +26,7 @@
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^11.5",
+        "xepozz/internal-mocker": "^1.4",
         "yii2-extensions/phpstan": "^0.5@dev"
     },
     "autoload": {

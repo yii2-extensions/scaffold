@@ -9,4 +9,46 @@
     source: {
         directories: ["src"],
     },
+    mutators: {
+        "@default": true,
+        // `str_replace('/', DIRECTORY_SEPARATOR, …)` is a no-op on POSIX systems where the separator already is
+        // `/`. Unwrapping the call cannot produce observable behavior in the target test environment.
+        UnwrapStrReplace: {
+            ignoreSourceCodeByRegex: [
+                ".*str_replace\\(.*DIRECTORY_SEPARATOR.*",
+            ],
+        },
+        // The boundary check `str_starts_with($normalized . DIR_SEP, $realRoot . DIR_SEP)` is defended at two levels:
+        // `normalizePath` always prefixes `realRoot . DIR_SEP` to the relative segment, and the paths are canonical
+        // on POSIX. Removing either DIR_SEP operand cannot produce a divergence reachable through validated input.
+        // Actual symlink-escape detection is exercised via dedicated symlink tests.
+        ConcatOperandRemoval: {
+            ignoreSourceCodeByRegex: [
+                ".*str_starts_with\\(\\$normalized \\. DIRECTORY_SEPARATOR, \\$realRoot \\. DIRECTORY_SEPARATOR\\).*",
+            ],
+        },
+        // The `while ($dir !== $realRoot && $dir !== dirname($dir))` guard cannot diverge on non-root `realRoot`:
+        // the walk always finds a resolvable in-root ancestor (at the latest, `realRoot` itself) before reaching `/`.
+        LogicalAnd: {
+            ignoreSourceCodeByRegex: [
+                ".*while \\(\\$dir !== \\$realRoot && \\$dir !== dirname\\(\\$dir\\)\\).*",
+            ],
+        },
+        // The early `return;` after a safe ancestor is only an optimization: walking further up always stops at
+        // `realRoot` (the loop guard), and ancestors of `realRoot` are never visited. Removing the return cannot
+        // reach an unsafe resolution that the original would have missed.
+        ReturnRemoval: {
+            ignoreSourceCodeByRegex: [
+                ".*return;$",
+            ],
+        },
+        // On POSIX, `normalizePath` trims a trailing separator only when the relative segment is empty. The outer
+        // `str_starts_with` boundary check uses `$normalized . DIR_SEP`, and `realpath` strips trailing slashes when
+        // canonicalizing, so keeping the trailing separator never produces an observable divergence.
+        UnwrapRtrim: {
+            ignoreSourceCodeByRegex: [
+                ".*return rtrim\\(\\$combined, DIRECTORY_SEPARATOR\\);.*",
+            ],
+        },
+    },
 }

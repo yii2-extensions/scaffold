@@ -108,6 +108,72 @@ final class LockFileTest extends TestCase
         );
     }
 
+    public function testGetPathStripsTrailingSlashFromProjectRoot(): void
+    {
+        self::assertSame(
+            '/tmp/project' . DIRECTORY_SEPARATOR . 'scaffold-lock.json',
+            (new LockFile('/tmp/project/'))->getPath(),
+            'Trailing separator on the project root must not produce a double separator in the lock file path.',
+        );
+    }
+
+    public function testReadCachesResultAfterFirstCall(): void
+    {
+        $lock = new LockFile($this->tempDir);
+
+        $lock->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'a.txt' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'pkg/a',
+                        'source' => 'stubs/a.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $first = $lock->read();
+
+        // remove the file from disk — subsequent reads must still hit the in-memory cache.
+        unlink($this->tempDir . '/scaffold-lock.json');
+
+        self::assertSame(
+            $first,
+            $lock->read(),
+            'Must return the cached data without touching the filesystem again.',
+        );
+    }
+
+    public function testReadPreservesProvidersEntries(): void
+    {
+        $lock = new LockFile($this->tempDir);
+
+        $lock->write(
+            [
+                'providers' => [
+                    'pkg/name' => ['path' => '/vendor/pkg/name'],
+                ],
+                'files' => [],
+            ],
+        );
+
+        $data = $lock->read();
+
+        self::assertArrayHasKey(
+            'providers',
+            $data,
+            "Must include the 'providers' key in the returned structure.",
+        );
+        self::assertSame(
+            ['path' => '/vendor/pkg/name'],
+            $data['providers']['pkg/name'] ?? null,
+            'Provider entries persisted on disk must be preserved by read.',
+        );
+    }
+
     public function testReadReturnsDefaultStructureWhenMissing(): void
     {
         $data = (new LockFile($this->tempDir))->read();
@@ -155,7 +221,7 @@ final class LockFileTest extends TestCase
         $entry = $data['files']['config/params.php'] ?? null;
 
         if ($entry === null) {
-            self::fail('Expected "config/params.php" entry in lock file.');
+            self::fail("Expected 'config/params.php' entry in lock file.");
         }
 
         self::assertSame(

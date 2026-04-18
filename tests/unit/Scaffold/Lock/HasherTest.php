@@ -7,6 +7,7 @@ namespace yii\scaffold\tests\unit\Scaffold\Lock;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
@@ -100,13 +101,34 @@ final class HasherTest extends TestCase
         self::assertStringStartsWith(
             'sha256:',
             $hash,
-            'Hash should start with "sha256:" prefix',
+            "Hash should start with 'sha256:' prefix",
         );
+        // 'sha256:' (7) + 64 hex chars
         self::assertSame(
             7 + 64,
             strlen($hash),
-            'Hash length should be 71 characters',
-        ); // "sha256:" (7) + 64 hex chars
+            "Hash length should be '71' characters",
+        );
+    }
+
+    public function testHashThrowsWhenFileExistsButIsUnreadable(): void
+    {
+        $file = "{$this->tempDir}/unreadable.txt";
+
+        file_put_contents($file, 'content');
+
+        // force `is_readable()` inside the Lock namespace to report false while the file still exists.
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'is_readable',
+            [$file],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('file is unreadable or does not exist');
+
+        (new Hasher())->hash($file);
     }
 
     protected function setUp(): void

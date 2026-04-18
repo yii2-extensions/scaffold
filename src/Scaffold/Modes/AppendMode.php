@@ -9,9 +9,6 @@ use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\PathResolver;
 
-use function file_exists;
-use function file_get_contents;
-use function file_put_contents;
 use function sprintf;
 
 /**
@@ -27,8 +24,7 @@ use function sprintf;
 final class AppendMode implements ModeInterface
 {
     /**
-     * @param string|null $hashAtScaffold Intentionally unused — append mode is content-agnostic and relies on the
-     * Scaffolder to skip already-locked entries on partial runs.
+     * @throws RuntimeException when the source file cannot be read or the destination cannot be written.
      */
     public function apply(
         FileMapping $mapping,
