@@ -11,6 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\{FileMapping, ManifestLoader, ManifestSchema};
+use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
  * Unit tests for {@see ManifestLoader} inline and external manifest loading.
@@ -22,6 +23,8 @@ use yii\scaffold\Manifest\{FileMapping, ManifestLoader, ManifestSchema};
 #[Group('manifest')]
 final class ManifestLoaderTest extends TestCase
 {
+    use TempDirectoryTrait;
+
     public function testAllFileMappingsAreInstancesOfFileMapping(): void
     {
         $package = self::createStub(PackageInterface::class);
@@ -119,19 +122,20 @@ final class ManifestLoaderTest extends TestCase
 
     public function testExternalManifestWhenFileGetContentsFailsThrows(): void
     {
-        $providerPath = sys_get_temp_dir() . '/scaffold-unreadable-manifest-' . uniqid();
-
-        mkdir($providerPath, 0777, recursive: true);
-
-        $manifestPath = "{$providerPath}/scaffold.json";
+        $manifestPath = "{$this->tempDir}/scaffold.json";
 
         file_put_contents($manifestPath, '{}');
 
+        /**
+         * `default: true` forces the mocker to return `false` for every `file_get_contents` in the Manifest namespace,
+         * independent of how the host platform normalizes the path (Windows backslashes vs. POSIX forward slashes).
+         */
         MockerState::addCondition(
             'yii\\scaffold\\Manifest',
             'file_get_contents',
-            [$manifestPath, false, null, 0, null],
+            [],
             false,
+            default: true,
         );
 
         $package = self::createStub(PackageInterface::class);
@@ -139,15 +143,10 @@ final class ManifestLoaderTest extends TestCase
         $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
         $package->method('getName')->willReturn('yii2-extensions/bad');
 
-        try {
-            $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('could not read manifest file');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('could not read manifest file');
 
-            (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
-        } finally {
-            @unlink($manifestPath);
-            @rmdir($providerPath);
-        }
+        (new ManifestLoader(new ManifestSchema()))->load($package, $this->tempDir);
     }
 
     public function testExternalManifestWithBackslashAbsolutePathThrows(): void
@@ -280,14 +279,8 @@ final class ManifestLoaderTest extends TestCase
 
     public function testExternalManifestWithNonObjectJsonThrows(): void
     {
-        $providerPath = sys_get_temp_dir() . '/scaffold-non-object-manifest-' . uniqid();
-
-        if (!mkdir($providerPath, 0777, recursive: true)) {
-            self::fail("Could not create fixture directory '{$providerPath}'.");
-        }
-
         // write a JSON payload that decodes to a scalar, not an object.
-        file_put_contents("{$providerPath}/scaffold.json", '"just a string"');
+        file_put_contents("{$this->tempDir}/scaffold.json", '"just a string"');
 
         $package = self::createStub(PackageInterface::class);
 
@@ -302,15 +295,10 @@ final class ManifestLoaderTest extends TestCase
             ->method('getName')
             ->willReturn('yii2-extensions/bad');
 
-        try {
-            $this->expectException(RuntimeException::class);
-            $this->expectExceptionMessage('must decode to an object');
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('must decode to an object');
 
-            (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
-        } finally {
-            @unlink("{$providerPath}/scaffold.json");
-            @rmdir($providerPath);
-        }
+        (new ManifestLoader(new ManifestSchema()))->load($package, $this->tempDir);
     }
 
     public function testExternalManifestWithTraversalPathThrows(): void
@@ -505,5 +493,15 @@ final class ManifestLoaderTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
+    }
+
+    protected function setUp(): void
+    {
+        $this->setUpTempDirectory();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->tearDownTempDirectory();
     }
 }

@@ -62,8 +62,6 @@ final class EventSubscriberTest extends TestCase
 
         $composer->method('getConfig')->willReturn($config);
 
-        $this->resetFlag();
-
         (new EventSubscriber())->onPostInstall(
             new ScriptEvent(ScriptEvents::POST_INSTALL_CMD, $composer, $io, true),
         );
@@ -76,12 +74,15 @@ final class EventSubscriberTest extends TestCase
     }
 
     /**
-     * Resets the private static flag so each test runs with a clean lifecycle slate.
+     * Resets {@see EventSubscriber::$installScaffoldRan} so each test starts with a clean lifecycle slate; keeps the
+     * suite order-independent regardless of which event handlers previous tests invoked.
      */
-    private function resetFlag(): void
+    protected function setUp(): void
     {
         $reflection = new ReflectionClass(EventSubscriber::class);
+
         $property = $reflection->getProperty('installScaffoldRan');
+
         $property->setValue(null, false);
     }
 }

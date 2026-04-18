@@ -6,6 +6,7 @@ namespace yii\scaffold\tests\unit\Commands;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Xepozz\InternalMocker\MockerState;
 use Yii;
 use yii\console\ExitCode;
 use yii\scaffold\Commands\StatusController;
@@ -137,18 +138,9 @@ final class StatusControllerTest extends TestCase
 
     public function testGetStatusesMarksEntryAsErrorWhenHashThrows(): void
     {
-        if (DIRECTORY_SEPARATOR === '\\') {
-            self::markTestSkipped('POSIX chmod is required to make a file unreadable; Windows lacks an equivalent.');
-        }
-
-        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
-            self::markTestSkipped("Test cannot run as root because 'chmod 0000' does not block root reads.");
-        }
-
         $filePath = "{$this->tempDir}/unreadable.txt";
 
         file_put_contents($filePath, 'content');
-        chmod($filePath, 0000);
 
         (new LockFile($this->tempDir))->write(
             [
@@ -164,17 +156,26 @@ final class StatusControllerTest extends TestCase
             ],
         );
 
-        try {
-            $statuses = $this->makeController()->getStatuses($this->tempDir);
+        /**
+         * force `is_readable` to return false inside the Lock namespace, making `Hasher::hash()` throw. The controller
+         * must catch it and surface status 'error'. `default: true` keeps the test platform-agnostic no `chmod` or
+         * uid gates are needed, so it runs on Windows, macOS, and as root.
+         */
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'is_readable',
+            [],
+            false,
+            default: true,
+        );
 
-            self::assertSame(
-                'error',
-                $statuses['unreadable.txt']['status'] ?? null,
-                "When hash throws because the file is unreadable, the destination must surface with status 'error'.",
-            );
-        } finally {
-            chmod($filePath, 0644);
-        }
+        $statuses = $this->makeController()->getStatuses($this->tempDir);
+
+        self::assertSame(
+            'error',
+            $statuses['unreadable.txt']['status'] ?? null,
+            "When 'hash' throws because the file is unreadable, the destination must surface with status 'error'.",
+        );
     }
 
     public function testGetStatusesReturnsAllEntriesPreservingOrder(): void
