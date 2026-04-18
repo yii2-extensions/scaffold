@@ -212,27 +212,6 @@ final class PathResolverTest extends TestCase
         );
     }
 
-    public function testResolveProviderRootReturnsLockPathWhenInsideVendor(): void
-    {
-        $vendor = $this->tempDir;
-
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
-
-        $insidePath = "{$vendor}/pkg/name";
-
-        $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $insidePath]);
-
-        self::assertSame(
-            realpath($insidePath),
-            $result['root'],
-            'When the lock-recorded path is inside vendor, it must be honored.',
-        );
-        self::assertNull(
-            $result['warning'],
-            'No warning must be emitted when the lock-recorded provider path is valid and inside vendor.',
-        );
-    }
-
     public function testResolveProviderRootResolvesRelativeLockPathAgainstProjectRoot(): void
     {
         $projectRoot = $this->tempDir;
@@ -255,6 +234,27 @@ final class PathResolverTest extends TestCase
         self::assertNull(
             $result['warning'],
             'No warning must be emitted when the relative path resolves inside the vendor directory.',
+        );
+    }
+
+    public function testResolveProviderRootReturnsLockPathWhenInsideVendor(): void
+    {
+        $vendor = $this->tempDir;
+
+        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+
+        $insidePath = "{$vendor}/pkg/name";
+
+        $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $insidePath]);
+
+        self::assertSame(
+            realpath($insidePath),
+            $result['root'],
+            'When the lock-recorded path is inside vendor, it must be honored.',
+        );
+        self::assertNull(
+            $result['warning'],
+            'No warning must be emitted when the lock-recorded provider path is valid and inside vendor.',
         );
     }
 

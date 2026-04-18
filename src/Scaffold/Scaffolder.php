@@ -18,6 +18,7 @@ use function rtrim;
 use function sprintf;
 use function str_replace;
 use function str_starts_with;
+use function stripos;
 use function strlen;
 use function substr;
 
@@ -232,6 +233,9 @@ final class Scaffolder
      * Returns the input unchanged (with forward slashes) when it lies outside the project root; storing an absolute
      * path is a safe fallback for unusual deployments where the provider lives outside the root.
      *
+     * The prefix check is case-insensitive on Windows because NTFS is case-insensitive and Composer may hand back paths
+     * whose casing differs between `projectRoot` and `packagePath` (for example, `C:\Users\foo` vs. `c:\users\FOO`).
+     *
      * @param string $absolutePath Absolute path to convert.
      * @param string $projectRoot Absolute path to the project root.
      *
@@ -241,8 +245,13 @@ final class Scaffolder
     {
         $normalizedRoot = rtrim(str_replace('\\', '/', $projectRoot), '/') . '/';
         $normalizedPath = str_replace('\\', '/', $absolutePath);
+        $haystack = $normalizedPath . '/';
 
-        if (str_starts_with($normalizedPath . '/', $normalizedRoot)) {
+        $matches = DIRECTORY_SEPARATOR === '\\'
+            ? stripos($haystack, $normalizedRoot) === 0
+            : str_starts_with($haystack, $normalizedRoot);
+
+        if ($matches) {
             return rtrim(substr($normalizedPath, strlen($normalizedRoot)), '/');
         }
 

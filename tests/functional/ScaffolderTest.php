@@ -147,11 +147,13 @@ final class ScaffolderTest extends TestCase
 
         $providerEntry = $lockData['providers']['yii2-extensions/test'] ?? null;
 
+        $expectedPath = str_replace('\\', '/', $builder->getVendorDir() . '/yii2-extensions/test');
+
         self::assertSame(
-            ['version' => '2.0.0', 'path' => $builder->getVendorDir() . '/yii2-extensions/test'],
+            ['version' => '2.0.0', 'path' => $expectedPath],
             $providerEntry,
             'Provider entry must record both version and path (path stays absolute when vendor lives outside the '
-            . 'project root, as in this fixture).',
+            . 'project root, as in this fixture); separators are normalized to forward slashes.',
         );
     }
 
@@ -670,10 +672,13 @@ final class ScaffolderTest extends TestCase
 
         $providerEntry = $lockData['providers']['yii2-extensions/test'] ?? null;
 
+        $expectedPath = str_replace('\\', '/', $builder->getVendorDir() . '/yii2-extensions/test');
+
         self::assertSame(
-            ['version' => '2.0.0', 'path' => $builder->getVendorDir() . '/yii2-extensions/test'],
+            ['version' => '2.0.0', 'path' => $expectedPath],
             $providerEntry,
-            'Provider-entry updates alone must mark the lock dirty so the fresh {version, path} is persisted to disk.',
+            'Provider-entry updates alone must mark the lock dirty so the fresh {version, path} is persisted to disk; '
+            . 'path separators are normalized to forward slashes for cross-platform stability.',
         );
     }
 
