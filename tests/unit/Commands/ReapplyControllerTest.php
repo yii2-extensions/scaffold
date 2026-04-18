@@ -100,30 +100,12 @@ final class ReapplyControllerTest extends TestCase
         $this->writeLockEntry('nested/deep.php', $stub, 'replace');
 
         /**
-         * projectRoot inside the controller is `Yii::$app->basePath`, already realpath-canonicalized (backslashes-only
-         * on Windows). Use it here so the mocker condition matches the real mkdir call.
+         * Use `default: true` to intercept all `is_dir` and `mkdir` calls in the Scaffold namespace regardless of
+         * platform path-separator differences; the test only cares that ensureDirectory explodes and the controller
+         * surfaces a skip-with-reason.
          */
-        $destPath = PathResolver::destination(Yii::$app->basePath, 'nested/deep.php');
-
-        $parentDir = dirname($destPath);
-
-        MockerState::addCondition(
-            'yii\\scaffold\\Scaffold',
-            'is_dir',
-            [$parentDir],
-            false,
-        );
-        MockerState::addCondition(
-            'yii\\scaffold\\Scaffold',
-            'mkdir',
-            [
-                $parentDir,
-                0777,
-                true,
-                null,
-            ],
-            false,
-        );
+        MockerState::addCondition('yii\\scaffold\\Scaffold', 'is_dir', [], false, default: true);
+        MockerState::addCondition('yii\\scaffold\\Scaffold', 'mkdir', [], false, default: true);
 
         $controller = $this->makeController(force: true);
 
@@ -181,12 +163,16 @@ final class ReapplyControllerTest extends TestCase
         mkdir(dirname($destPath), 0777, recursive: true);
         file_put_contents($destPath, 'existing');
 
-        // force the pre-write hash check to explode by making `is_readable` report false on the destination.
+        /**
+         * default-mock `is_readable` so every lookup returns false and the pre-write hash throws, independent of how
+         * the path is spelled on disk (matters on Windows where separators can differ).
+         */
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'is_readable',
-            [$destPath],
+            [],
             false,
+            default: true,
         );
 
         $controller = $this->makeController(force: false);
@@ -242,17 +228,16 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
-
         /**
-         * `is_readable` reports false ONLY for the destination, making the post-write hash fail. Does not interfere
-         * with the stub path.
+         * default-mock `is_readable` to always report false; both the pre-write and post-write hash checks fail, and
+         * the `--force` flag bypasses the pre-write one, so the test specifically exercises the post-write branch.
          */
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'is_readable',
-            [$destPath],
+            [],
             false,
+            default: true,
         );
 
         $controller = $this->makeController(force: true);
@@ -297,7 +282,7 @@ final class ReapplyControllerTest extends TestCase
     {
         /**
          * Preserve mode only skips when the destination ALREADY exists. When the destination is gone (user deleted it),
-         * reapply must re-create it from the stub — this exercises the "preserve + file absent" branch.
+         * reapply must re-create it from the stub this exercises the "preserve + file absent" branch.
          */
         $stub = "initial stub\n";
 
@@ -502,18 +487,15 @@ final class ReapplyControllerTest extends TestCase
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
         /**
-         * resolveProviderRoot realpaths the recorded path; match the exact absolute stub path the controller passes to
-         * `file_get_contents`, including DIRECTORY_SEPARATOR on Windows.
+         * default-mock `file_get_contents` to always return false the only call in `Commands` is the stub read, so
+         * this deterministically forces the "Could not read stub" branch on any platform.
          */
-        $providerRoot = (string) realpath("{$this->tempDir}/vendor/pkg/name");
-
-        $stubPath = PathResolver::source($providerRoot, 'stubs/config/params.php');
-
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
             'file_get_contents',
-            [$stubPath, false, null, 0, null],
+            [],
             false,
+            default: true,
         );
 
         $controller = $this->makeController(force: true);
@@ -534,18 +516,13 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
-
+        // default-mock `file_put_contents` to always return false; controller must surface "Could not write" error.
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
             'file_put_contents',
-            [
-                $destPath,
-                $stub,
-                0,
-                null,
-            ],
+            [],
             false,
+            default: true,
         );
 
         $controller = $this->makeController(force: true);

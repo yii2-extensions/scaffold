@@ -8,6 +8,7 @@ use PHPUnit\Event\Test\{Finished, FinishedSubscriber, PreparationStarted, Prepar
 use PHPUnit\Event\TestSuite\{Started, StartedSubscriber};
 use PHPUnit\Runner\Extension\{Extension, Facade, ParameterCollection};
 use PHPUnit\TextUI\Configuration\Configuration;
+use ReflectionClass;
 use Xepozz\InternalMocker\{Mocker, MockerState};
 
 /**
@@ -38,12 +39,14 @@ final class MockerExtension implements Extension
                 public function notify(PreparationStarted $event): void
                 {
                     MockerState::resetState();
+                    MockerExtension::resetDefaults();
                 }
             },
             new class implements FinishedSubscriber {
                 public function notify(Finished $event): void
                 {
                     MockerState::resetState();
+                    MockerExtension::resetDefaults();
                 }
             },
         );
@@ -73,10 +76,37 @@ final class MockerExtension implements Extension
         $mocksPath = __DIR__ . '/../../runtime/.phpunit.cache/internal-mocker/mocks.php';
         $stubPath = __DIR__ . '/internal-mocker-stubs.php';
 
+        /**
+         * Force regeneration of the namespaced wrappers on every run so a stale cache persisted by a CI runner,
+         * an opcache layer, or a previous local session with a different mock list cannot silently shadow the current
+         * configuration. `Mocker::load()` uses `require_once`, so the very first require in this process binds the
+         * namespaced function symbols; deleting the cached file here ensures that require loads the freshly generated
+         * content rather than an outdated copy.
+         */
+        if (is_file($mocksPath)) {
+            unlink($mocksPath);
+        }
+
         $mocker = new Mocker($mocksPath, $stubPath);
 
         $mocker->load($mocks);
 
         MockerState::saveState();
+    }
+
+    /**
+     * Clears {@see MockerState::$defaults} via reflection between tests.
+     *
+     * `MockerState::resetState()` only restores `$state` to its saved snapshot but leaves the `$defaults` map
+     * (populated via `addCondition(..., default: true)`) untouched. That causes a default set in one test to silently
+     * shadow real function calls in every subsequent test. This helper restores clean isolation.
+     */
+    public static function resetDefaults(): void
+    {
+        $reflection = new ReflectionClass(MockerState::class);
+
+        $property = $reflection->getProperty('defaults');
+
+        $property->setValue(null, []);
     }
 }

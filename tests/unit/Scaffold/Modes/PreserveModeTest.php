@@ -47,7 +47,7 @@ final class PreserveModeTest extends TestCase
 
     public function testLockHashIsIgnored(): void
     {
-        // preserveMode never overwrites — the lock hash is irrelevant.
+        // preserveMode never overwrites the lock hash is irrelevant.
         $projectDir = "{$this->tempDir}/project";
 
         mkdir($projectDir, 0777, recursive: true);

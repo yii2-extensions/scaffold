@@ -12,7 +12,6 @@ use yii\console\ExitCode;
 use yii\scaffold\Commands\DiffController;
 use yii\scaffold\Module;
 use yii\scaffold\Scaffold\Lock\LockFile;
-use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\ConsoleApplicationTrait;
 use yii\scaffold\tests\support\Spies\DiffControllerSpy;
 
@@ -122,16 +121,16 @@ final class DiffControllerTest extends TestCase
         $this->writeLockEntry('config/params.php');
 
         /**
-         * `Yii::$app->basePath` was realpath-canonicalized during setup; the mocker condition must use that exact value
-         * (not `$this->tempDir`, which can still carry mixed separators on Windows).
+         * `default: true` makes the mocker return `false` for every call to `file_get_contents` in this namespace,
+         * regardless of the arguments. This keeps the test robust to path-separator differences between Linux and
+         * Windows (mixed backslash/forward-slash paths would otherwise break argument matching).
          */
-        $currentPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
-
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
             'file_get_contents',
-            [$currentPath, false, null, 0, null],
+            [],
             false,
+            default: true,
         );
 
         $spy = $this->makeSpy();

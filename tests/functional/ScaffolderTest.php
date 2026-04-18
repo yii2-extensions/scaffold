@@ -122,7 +122,7 @@ final class ScaffolderTest extends TestCase
 
         $afterFirst = file_get_contents($builder->getProjectRoot() . '/.gitignore');
 
-        // second run: partial (install) — append is already in lock, must be skipped.
+        // second run: partial (install) append is already in lock, must be skipped.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), false);
 
         self::assertSame(
@@ -829,7 +829,7 @@ final class ScaffolderTest extends TestCase
 
         /**
          * pre-populate the lock with an outdated provider path but a correct file entry. The upcoming scaffold run must
-         * only set `$dirty = true` through the provider-path branch (L141) — the preserve branch leaves `$dirty` alone.
+         * only set `$dirty = true` through the provider-path branch (L141) the preserve branch leaves `$dirty` alone.
          */
         (new LockFile($builder->getProjectRoot()))->write(
             [

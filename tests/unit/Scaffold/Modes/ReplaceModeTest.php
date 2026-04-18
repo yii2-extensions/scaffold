@@ -216,7 +216,7 @@ final class ReplaceModeTest extends TestCase
             $this->makeMapping(),
             $projectDir,
             new Hasher(),
-            null, // no lock hash — treat as untracked, overwrite unconditionally
+            null, // no lock hash treat as untracked, overwrite unconditionally
         );
 
         self::assertSame(

@@ -139,7 +139,7 @@ final class LockFileTest extends TestCase
 
         $first = $lock->read();
 
-        // remove the file from disk — subsequent reads must still hit the in-memory cache.
+        // remove the file from disk subsequent reads must still hit the in-memory cache.
         unlink($this->tempDir . '/scaffold-lock.json');
 
         self::assertSame(
@@ -225,7 +225,7 @@ final class LockFileTest extends TestCase
 
     public function testReadThrowsWhenJsonDecodesToNonObject(): void
     {
-        // valid JSON, but it decodes to a scalar — `is_array($decoded)` must be `false`, triggering the structural check.
+        // valid JSON, but it decodes to a scalar `is_array($decoded)` must be `false`, triggering the structural check.
         file_put_contents($this->tempDir . '/scaffold-lock.json', '"just a string"');
 
         $this->expectException(RuntimeException::class);
