@@ -76,7 +76,7 @@ Example lock entry:
 }
 ```
 
-Provider paths are recorded **relative to the project root** so the lock file stays stable across developer machines.
+Provider paths are recorded **relative to the project root** so the lockfile stays stable across developer machines.
 Versions come from Composer's `getPrettyVersion()`.
 
 ## Event differentiation

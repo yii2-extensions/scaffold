@@ -25,10 +25,12 @@ final class ReapplyControllerTest extends TestCase
 {
     use ConsoleApplicationTrait;
 
-    public function testAppendModeCannotBeReapplied(): void
+    public function testAppendAndPrependModesCannotBeReapplied(): void
     {
         $this->seedProviderStub('stubs/.gitignore', "/runtime/\n");
         $this->writeLockEntry('.gitignore', "/runtime/\n", 'append');
+        $this->seedProviderStub('stubs/.env', "APP_ENV=dev\n");
+        $this->writeLockEntry('.env', "APP_ENV=dev\n", 'prepend');
 
         $controller = $this->makeController(force: false);
 
@@ -37,12 +39,17 @@ final class ReapplyControllerTest extends TestCase
         self::assertSame(
             ExitCode::OK,
             $exitCode,
-            "Reapply must return 'ExitCode::OK' even when append-mode entries are present; they are simply skipped.",
+            "Reapply must return 'ExitCode::OK' even when append/prepend entries are present; they are simply skipped.",
         );
         self::assertStringContainsString(
             'uses mode "append" and cannot be safely reapplied',
             $controller->stdoutBuffer,
             'Append mode must emit a clear skip message rather than silently continuing.',
+        );
+        self::assertStringContainsString(
+            'uses mode "prepend" and cannot be safely reapplied',
+            $controller->stdoutBuffer,
+            'Prepend mode must emit a clear skip message rather than silently continuing.',
         );
     }
 

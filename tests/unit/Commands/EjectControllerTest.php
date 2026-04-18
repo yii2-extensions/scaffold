@@ -108,6 +108,11 @@ final class EjectControllerTest extends TestCase
             $diskFile,
             'The on-disk file must remain after ejection; only the lock entry is removed.',
         );
+        self::assertStringEqualsFile(
+            $diskFile,
+            'user content',
+            'The on-disk file content must remain byte-for-byte unchanged after ejection.',
+        );
         self::assertStringContainsString(
             'was not deleted from disk',
             $controller->stdoutBuffer,

@@ -5,7 +5,7 @@ tests when contributing.
 
 ## Suite layout
 
-```
+```text
 tests/
 ├── unit/                  # pure, fast unit tests per src/ namespace
 │   ├── Commands/          # console controllers via spies (no real stdout writes)
@@ -60,7 +60,7 @@ Functional tests spin up a **real `Composer\Composer` instance** against a fake 
 directory, seed its local repository with mock provider packages, and dispatch the same script events the plugin
 subscribes to in production. They exercise the entire chain
 
-```
+```text
 Script event → EventSubscriber → Scaffolder → modes → lock file
 ```
 
