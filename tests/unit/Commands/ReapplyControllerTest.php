@@ -99,9 +99,12 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/nested/deep.php', $stub);
         $this->writeLockEntry('nested/deep.php', $stub, 'replace');
 
-        // parent directory must match exactly what `PathResolver::ensureDirectory()` computes internally, otherwise
-        // the mocker won't intercept and the real mkdir succeeds.
-        $destPath = PathResolver::destination($this->tempDir, 'nested/deep.php');
+        /**
+         * projectRoot inside the controller is `Yii::$app->basePath`, already realpath-canonicalized (backslashes-only
+         * on Windows). Use it here so the mocker condition matches the real mkdir call.
+         */
+        $destPath = PathResolver::destination(Yii::$app->basePath, 'nested/deep.php');
+
         $parentDir = dirname($destPath);
 
         MockerState::addCondition(
@@ -113,7 +116,12 @@ final class ReapplyControllerTest extends TestCase
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold',
             'mkdir',
-            [$parentDir, 0777, true, null],
+            [
+                $parentDir,
+                0777,
+                true,
+                null,
+            ],
             false,
         );
 
@@ -168,7 +176,7 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = PathResolver::destination($this->tempDir, 'config/params.php');
+        $destPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
 
         mkdir(dirname($destPath), 0777, recursive: true);
         file_put_contents($destPath, 'existing');
@@ -234,7 +242,7 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = PathResolver::destination($this->tempDir, 'config/params.php');
+        $destPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
 
         /**
          * `is_readable` reports false ONLY for the destination, making the post-write hash fail. Does not interfere
@@ -314,6 +322,7 @@ final class ReapplyControllerTest extends TestCase
         $this->writeLockEntry('config/params.php', $stub, 'preserve');
 
         $destination = "{$this->tempDir}/config/params.php";
+
         mkdir(dirname($destination), 0777, recursive: true);
         file_put_contents($destination, "user kept\n");
 
@@ -525,12 +534,17 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = PathResolver::destination($this->tempDir, 'config/params.php');
+        $destPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
 
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
             'file_put_contents',
-            [$destPath, $stub, 0, null],
+            [
+                $destPath,
+                $stub,
+                0,
+                null,
+            ],
             false,
         );
 

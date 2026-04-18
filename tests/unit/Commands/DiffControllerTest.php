@@ -118,9 +118,14 @@ final class DiffControllerTest extends TestCase
     public function testActionIndexReturnsErrorWhenCurrentFileReadFails(): void
     {
         $this->seedStubAndDestination('config/params.php', "content\n");
+
         $this->writeLockEntry('config/params.php');
 
-        $currentPath = PathResolver::destination($this->tempDir, 'config/params.php');
+        /**
+         * `Yii::$app->basePath` was realpath-canonicalized during setup; the mocker condition must use that exact value
+         * (not `$this->tempDir`, which can still carry mixed separators on Windows).
+         */
+        $currentPath = PathResolver::destination(Yii::$app->basePath, 'config/params.php');
 
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
