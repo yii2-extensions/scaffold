@@ -6,11 +6,10 @@ namespace yii\scaffold;
 
 use Composer\Composer;
 use Composer\IO\IOInterface;
-use Composer\Plugin\Capable;
-use Composer\Plugin\PluginInterface;
+use Composer\Plugin\{Capable, PluginInterface};
 
 /**
- * Composer plugin entry point for yii2-extensions/scaffold.
+ * Composer plugin entry point for scaffold.
  *
  * Registers the event subscriber that orchestrates multi-layer file scaffolding during `composer install`,
  * `composer update`, and `composer create-project`.
@@ -20,6 +19,9 @@ use Composer\Plugin\PluginInterface;
  */
 final class Plugin implements PluginInterface, Capable
 {
+    /**
+     * Event subscriber instance registered with Composer, or `null` if not currently registered.
+     */
     private EventSubscriber|null $subscriber = null;
 
     public function activate(Composer $composer, IOInterface $io): void

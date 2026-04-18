@@ -2,58 +2,48 @@
 
 declare(strict_types=1);
 
-namespace yii\scaffold\Commands;
+namespace yii\scaffold\Services;
 
 use RuntimeException;
 use Throwable;
-use Yii;
-use yii\console\{Controller, ExitCode};
+use yii\scaffold\Console\{ExitCode, OutputWriter};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\Security\PathValidator;
 
+use function is_file;
 use function sprintf;
 
 /**
  * Re-applies scaffold stubs to the project, optionally overwriting user-modified files.
  *
- * Usage example:
- * ```bash
- * yii scaffold/reapply
- * yii scaffold/reapply config/params.php
- * yii scaffold/reapply config/params.php --force
- * yii scaffold/reapply --provider=yii2-extensions/app-base
- * ```
+ * Framework-free: invoked by both the console controller wrapper and the Symfony Console command.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-class ReapplyController extends Controller
+final class ReapplyService
 {
     /**
-     * When `true`, overwrites user-modified files without prompting.
-     */
-    public bool $force = false;
-
-    /**
-     * Optional provider package name filter (for example, `yii2-extensions/app-base`). When empty, all providers are
-     * processed.
-     */
-    public string $provider = '';
-
-    /**
-     * Re-applies scaffold files from vendor stubs, updating lock hashes on success.
+     * Re-applies scaffold stubs under the given constraints.
      *
-     * @param string $file Optional destination path to reapply (for example, `config/params.php`). When empty, all
-     * tracked files are processed.
+     * @param string $projectRoot Absolute path to the project root.
+     * @param string $vendorDir Absolute path to the Composer vendor directory.
+     * @param string $file Optional destination path filter (empty string = all).
+     * @param string $provider Optional provider package name filter (empty string = all).
+     * @param bool $force When `true`, overwrites user-modified files without prompting.
+     * @param OutputWriter $out Output sink.
      *
-     * @return int Exit code indicating success or failure of the operation.
+     * @return int `0` on success (including no-op), non-zero when a file/provider filter matched nothing.
      */
-    public function actionIndex(string $file = ''): int
-    {
-        $projectRoot = Yii::$app->basePath;
-        $vendorDir = Yii::$app->vendorPath;
-
+    public function run(
+        string $projectRoot,
+        string $vendorDir,
+        string $file,
+        string $provider,
+        bool $force,
+        OutputWriter $out,
+    ): int {
         $lock = new LockFile($projectRoot);
 
         $data = $lock->read();
@@ -71,7 +61,7 @@ class ReapplyController extends Controller
                 continue;
             }
 
-            if ($this->provider !== '' && $entry['provider'] !== $this->provider) {
+            if ($provider !== '' && $entry['provider'] !== $provider) {
                 continue;
             }
 
@@ -87,14 +77,14 @@ class ReapplyController extends Controller
             $providerRoot = $resolved['root'];
 
             if ($resolved['warning'] !== null) {
-                $this->stderr($resolved['warning'] . PHP_EOL);
+                $out->writeStderr($resolved['warning'] . PHP_EOL);
             }
 
             try {
                 $validator->validateDestination($destination, $projectRoot);
                 $validator->validateSource($entry['source'], $providerRoot);
             } catch (RuntimeException $e) {
-                $this->stderr(
+                $out->writeStderr(
                     sprintf('[scaffold] Unsafe lock entry for "%s": %s Skipping.', $destination, $e->getMessage())
                     . PHP_EOL,
                 );
@@ -105,7 +95,7 @@ class ReapplyController extends Controller
             $mode = $entry['mode'];
 
             if ($mode === 'append' || $mode === 'prepend') {
-                $this->stdout(
+                $out->writeStdout(
                     sprintf(
                         '[scaffold] "%s" uses mode "%s" and cannot be safely reapplied; run composer install instead.',
                         $destination,
@@ -119,8 +109,8 @@ class ReapplyController extends Controller
             $destPath = PathResolver::destination($projectRoot, $destination);
             $stubPath = PathResolver::source($providerRoot, $entry['source']);
 
-            if ($mode === 'preserve' && !$this->force && is_file($destPath)) {
-                $this->stdout(
+            if ($mode === 'preserve' && !$force && is_file($destPath)) {
+                $out->writeStdout(
                     sprintf('[scaffold] "%s" uses mode "preserve". Use --force to overwrite.', $destination) . PHP_EOL,
                 );
 
@@ -128,18 +118,18 @@ class ReapplyController extends Controller
             }
 
             if (!is_file($stubPath)) {
-                $this->stderr(
+                $out->writeStderr(
                     sprintf('[scaffold] Stub not found: "%s". Skipping.', $stubPath) . PHP_EOL,
                 );
 
                 continue;
             }
 
-            if (!$this->force && is_file($destPath)) {
+            if (!$force && is_file($destPath)) {
                 try {
                     $currentHash = $hasher->hash($destPath);
                 } catch (Throwable $e) {
-                    $this->stderr(
+                    $out->writeStderr(
                         sprintf('[scaffold] Could not hash "%s": %s Skipping.', $destination, $e->getMessage())
                         . PHP_EOL,
                     );
@@ -148,7 +138,7 @@ class ReapplyController extends Controller
                 }
 
                 if (!$hasher->equals($currentHash, $entry['hash'])) {
-                    $this->stdout(
+                    $out->writeStdout(
                         sprintf(
                             '[scaffold] "%s" is user-modified. Use --force to overwrite.',
                             $destination,
@@ -162,7 +152,7 @@ class ReapplyController extends Controller
             $stubContent = file_get_contents($stubPath);
 
             if ($stubContent === false) {
-                $this->stderr(
+                $out->writeStderr(
                     sprintf('[scaffold] Could not read stub "%s". Skipping.', $stubPath) . PHP_EOL,
                 );
 
@@ -172,7 +162,7 @@ class ReapplyController extends Controller
             try {
                 PathResolver::ensureDirectory($destPath);
             } catch (RuntimeException $e) {
-                $this->stderr(
+                $out->writeStderr(
                     sprintf('[scaffold] %s Skipping.', $e->getMessage()) . PHP_EOL,
                 );
 
@@ -180,7 +170,7 @@ class ReapplyController extends Controller
             }
 
             if (file_put_contents($destPath, $stubContent) === false) {
-                $this->stderr(
+                $out->writeStderr(
                     sprintf('[scaffold] Could not write "%s". Skipping.', $destPath) . PHP_EOL,
                 );
 
@@ -192,9 +182,12 @@ class ReapplyController extends Controller
             try {
                 $newHash = $hasher->hash($destPath);
             } catch (Throwable $e) {
-                $this->stderr(
-                    sprintf('[scaffold] Could not hash written file "%s": %s Skipping lock update.', $destination, $e->getMessage())
-                    . PHP_EOL,
+                $out->writeStderr(
+                    sprintf(
+                        '[scaffold] Could not hash written file "%s": %s Skipping lock update.',
+                        $destination,
+                        $e->getMessage(),
+                    ) . PHP_EOL,
                 );
 
                 continue;
@@ -209,34 +202,19 @@ class ReapplyController extends Controller
 
             $anyUpdated = true;
 
-            $this->stdout(sprintf('[scaffold] Reapplied "%s".', $destination) . PHP_EOL);
+            $out->writeStdout(sprintf('[scaffold] Reapplied "%s".', $destination) . PHP_EOL);
         }
 
-        if (($file !== '' || $this->provider !== '') && !$anyMatched) {
-            $this->stderr('[scaffold] No tracked files matched the given filter.' . PHP_EOL);
+        if (($file !== '' || $provider !== '') && !$anyMatched) {
+            $out->writeStderr('[scaffold] No tracked files matched the given filter.' . PHP_EOL);
 
-            return ExitCode::UNSPECIFIED_ERROR;
+            return ExitCode::Error->value;
         }
 
         if ($anyUpdated) {
             $lock->write(['providers' => $data['providers'], 'files' => $updatedFiles]);
         }
 
-        return ExitCode::OK;
-    }
-
-    /**
-     * Returns the list of available options for the specified action.
-     *
-     * @param string $actionID ID of the action being executed.
-     *
-     * @return array<string> List of available options for the specified action. This method is used by the console
-     * application to determine which options are valid for a given action.
-     */
-    public function options($actionID): array
-    {
-        return [
-            ...parent::options($actionID), 'force', 'provider',
-        ];
+        return ExitCode::Ok->value;
     }
 }

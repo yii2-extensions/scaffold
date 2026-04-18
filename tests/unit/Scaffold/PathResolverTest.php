@@ -293,7 +293,7 @@ final class PathResolverTest extends TestCase
         );
     }
 
-    public function testSyncPermissionsCopiesSourcePermissionBitsOntoDestination(): void
+    public function testSyncPermissionsCopiesSourcePermissionBitsOntoDestinationUnderPermissiveUmask(): void
     {
         if (DIRECTORY_SEPARATOR === '\\') {
             self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
@@ -308,14 +308,51 @@ final class PathResolverTest extends TestCase
         chmod($source, 0755);
         chmod($destination, 0644);
 
-        PathResolver::syncPermissions($source, $destination);
+        $oldUmask = umask(0022);
 
-        self::assertSame(
-            0755,
-            fileperms($destination) & 0777,
-            "'syncPermissions()' must copy the source permission bits (including the executable bit) onto the "
-            . 'destination so scaffolded CLI stubs remain executable.',
-        );
+        try {
+            PathResolver::syncPermissions($source, $destination);
+
+            self::assertSame(
+                0755,
+                fileperms($destination) & 0777,
+                "Under a permissive '0022' umask, 'syncPermissions()' must preserve the source executable bit so "
+                . 'scaffolded CLI stubs remain directly runnable.',
+            );
+        } finally {
+            umask($oldUmask);
+        }
+    }
+
+    public function testSyncPermissionsHonorsRestrictiveUmaskToAvoidSilentlyWideningPermissions(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
+        }
+
+        $source = "{$this->tempDir}/world-readable.sh";
+        $destination = "{$this->tempDir}/world-readable-copy.sh";
+
+        file_put_contents($source, "#!/bin/sh\n");
+        file_put_contents($destination, "#!/bin/sh\n");
+
+        chmod($source, 0755);
+        chmod($destination, 0600);
+
+        $oldUmask = umask(0077);
+
+        try {
+            PathResolver::syncPermissions($source, $destination);
+
+            self::assertSame(
+                0700,
+                fileperms($destination) & 0777,
+                "Under a restrictive '0077' umask, 'syncPermissions()' must mask the source permissions and drop "
+                . 'group/other bits so security-restrictive setups are never silently widened.',
+            );
+        } finally {
+            umask($oldUmask);
+        }
     }
 
     public function testSyncPermissionsReturnsEarlyWhenSourceFilepermsIsFalse(): void

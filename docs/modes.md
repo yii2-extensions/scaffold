@@ -82,7 +82,7 @@ When a `replace` file has been user-modified, the scaffold process warns and ski
 To intentionally overwrite the file with the current stub, use the console command:
 
 ```bash
-yii scaffold/reapply config/params.php --force
+vendor/bin/scaffold reapply config/params.php --force
 ```
 
 This overwrites the file, computes the new hash, and updates `scaffold-lock.json`.

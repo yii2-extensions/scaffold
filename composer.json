@@ -1,7 +1,7 @@
 {
     "name": "yii2-extensions/scaffold",
     "type": "composer-plugin",
-    "description": "Declarative multi-layer file scaffolding for Yii2 projects.",
+    "description": "Declarative multi-layer file scaffolding for PHP projects via Composer providers and a Symfony Console CLI.",
     "keywords": [
         "yii2-extensions",
         "composer-plugin",
@@ -16,18 +16,21 @@
         "composer-plugin-api": "^2.3",
         "composer/composer": "^2.9",
         "sebastian/diff": "^7.0",
-        "yiisoft/yii2": "^22.0@dev"
+        "symfony/console": "^7.0"
     },
+    "bin": [
+        "bin/scaffold"
+    ],
     "require-dev": {
         "composer/composer": "^2.7",
         "infection/infection": "^0.32",
         "maglnet/composer-require-checker": "^4.1",
         "php-forge/coding-standard": "^0.1",
         "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.1",
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^12.5",
-        "xepozz/internal-mocker": "^1.4",
-        "yii2-extensions/phpstan": "^0.5@dev"
+        "xepozz/internal-mocker": "^1.4"
     },
     "autoload": {
         "psr-4": {

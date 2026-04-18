@@ -69,9 +69,8 @@ final class MockerExtension implements Extension
             ['namespace' => 'yii\\scaffold\\Scaffold', 'name' => 'mkdir'],
             ['namespace' => 'yii\\scaffold\\Scaffold', 'name' => 'is_dir'],
             ['namespace' => 'yii\\scaffold\\Manifest', 'name' => 'file_get_contents'],
-            ['namespace' => 'yii\\scaffold\\Commands', 'name' => 'file_get_contents'],
-            ['namespace' => 'yii\\scaffold\\Commands', 'name' => 'file_put_contents'],
-            ['namespace' => 'yii\\scaffold\\Commands', 'name' => 'glob'],
+            ['namespace' => 'yii\\scaffold\\Services', 'name' => 'file_get_contents'],
+            ['namespace' => 'yii\\scaffold\\Services', 'name' => 'file_put_contents'],
         ];
 
         $mocksPath = __DIR__ . '/../../runtime/.phpunit.cache/internal-mocker/mocks.php';
