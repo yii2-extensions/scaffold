@@ -51,6 +51,8 @@ final class ReplaceMode implements ModeInterface
             );
         }
 
+        PathResolver::syncPermissions($source, $destination);
+
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
     }
 }

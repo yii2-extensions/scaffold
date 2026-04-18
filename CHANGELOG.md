@@ -14,3 +14,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - test: add real-Composer functional tests for `post-install-cmd`, `post-create-project-cmd`, and multi-layer provider precedence.
 - test: cover `eject`, `providers`, and `reapply` console commands via buffered-output spies (un-final'd for subclassing); add `docs/testing.md` and a lock-example fix.
 - test: raise suite to 100% line/method/class coverage by exercising error paths via `xepozz/internal-mocker` intercepts and removing dead defensive code.
+- feat: add `scaffold/help` console command listing module subcommands with descriptions.

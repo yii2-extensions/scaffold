@@ -31,5 +31,6 @@ final class Module extends BaseModule
     public function init(): void
     {
         $this->controllerNamespace = 'yii\\scaffold\\Commands';
+        $this->setControllerPath(__DIR__ . '/Commands');
     }
 }
