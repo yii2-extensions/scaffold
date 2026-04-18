@@ -38,6 +38,26 @@ final class FakeProjectBuilder
     }
 
     /**
+     * Writes a `composer.json` at the project root from the given array.
+     *
+     * @param array<string, mixed> $config Root composer.json content to serialize.
+     *
+     * @return string Absolute path to the written `composer.json`.
+     */
+    public function createComposerJson(array $config): string
+    {
+        $path = $this->projectRoot . '/composer.json';
+
+        $json = json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+        if (file_put_contents($path, $json) === false) {
+            throw new RuntimeException(sprintf('Could not write composer.json at "%s".', $path));
+        }
+
+        return $path;
+    }
+
+    /**
      * Creates a file in the project root (simulates a pre-existing project file).
      *
      * @param string $relPath Path relative to the project root.
