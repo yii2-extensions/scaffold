@@ -38,9 +38,7 @@
         // `realRoot` (the loop guard), and ancestors of `realRoot` are never visited. Removing the return cannot
         // reach an unsafe resolution that the original would have missed.
         ReturnRemoval: {
-            ignoreSourceCodeByRegex: [
-                ".*return;$",
-            ],
+            ignoreSourceCodeByRegex: [".*return;$"],
         },
         // On POSIX, `normalizePath` trims a trailing separator only when the relative segment is empty. The outer
         // `str_starts_with` boundary check uses `$normalized . DIR_SEP`, and `realpath` strips trailing slashes when
