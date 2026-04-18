@@ -10,6 +10,7 @@ use function dirname;
 use function is_array;
 use function is_string;
 use function ltrim;
+use function preg_match;
 use function realpath;
 use function rtrim;
 use function sprintf;
@@ -73,15 +74,24 @@ final class PathResolver
      * Resolves the absolute root of a provider package, honoring the lock-recorded path when it stays inside the vendor
      * directory.
      *
+     * Accepts both relative paths (resolved against `$projectRoot`) and legacy absolute paths written by earlier plugin
+     * versions.
+     *
      * @param string $vendorDir Absolute path to the Composer vendor directory.
      * @param string $providerName Provider package name (for example, `yii2-extensions/app-base`).
      * @param mixed $providerLock Decoded `providers.<name>` entry from `scaffold-lock.json`, when present.
+     * @param string $projectRoot Absolute path to the project root; required to expand relative lock paths. Pass an
+     * empty string only when the caller knows that lock-recorded paths are absolute (legacy).
      *
      * @return array{root: string, warning: string|null} An array containing the resolved provider root and an optional
      * warning message when the lock-recorded path is invalid.
      */
-    public static function resolveProviderRoot(string $vendorDir, string $providerName, mixed $providerLock): array
-    {
+    public static function resolveProviderRoot(
+        string $vendorDir,
+        string $providerName,
+        mixed $providerLock,
+        string $projectRoot = '',
+    ): array {
         $safeVendorDir = self::realpathOrFallback($vendorDir);
 
         $defaultRoot = $safeVendorDir . DIRECTORY_SEPARATOR . $providerName;
@@ -90,7 +100,16 @@ final class PathResolver
             return ['root' => $defaultRoot, 'warning' => null];
         }
 
-        $candidate = self::realpathOrFallback($providerLock['path']);
+        $recordedPath = $providerLock['path'];
+
+        $isAbsolute = str_starts_with($recordedPath, '/')
+            || str_starts_with($recordedPath, '\\')
+            || preg_match('/^[A-Za-z]:/', $recordedPath) === 1;
+        $expanded = $isAbsolute || $projectRoot === ''
+            ? $recordedPath
+            : rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . $recordedPath;
+
+        $candidate = self::realpathOrFallback($expanded);
 
         if (str_starts_with($candidate . DIRECTORY_SEPARATOR, $safeVendorDir . DIRECTORY_SEPARATOR)) {
             return ['root' => $candidate, 'warning' => null];

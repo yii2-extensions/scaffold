@@ -58,6 +58,7 @@ final class DiffController extends Controller
             Yii::$app->vendorPath,
             $entry['provider'],
             $data['providers'][$entry['provider']] ?? null,
+            $projectRoot,
         );
 
         $providerRoot = $resolved['root'];
