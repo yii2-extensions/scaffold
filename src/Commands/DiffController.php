@@ -27,7 +27,7 @@ use function sprintf;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class DiffController extends Controller
+class DiffController extends Controller
 {
     /**
      * Outputs the diff between the provider stub and the current file for `$file`.

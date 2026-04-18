@@ -13,3 +13,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - feat: record `providers[name]` in `scaffold-lock.json` as `{version, path}` with project-root-relative paths so committed locks stay stable across machines.
 - test: add real-Composer functional tests for `post-install-cmd`, `post-create-project-cmd`, and multi-layer provider precedence.
 - test: cover `eject`, `providers`, and `reapply` console commands via buffered-output spies (un-final'd for subclassing); add `docs/testing.md` and a lock-example fix.
+- test: raise suite to 100% line/method/class coverage by exercising error paths via `xepozz/internal-mocker` intercepts and removing dead defensive code.

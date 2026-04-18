@@ -26,10 +26,40 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    'a.php' => ['source' => 'stubs/a.php', 'mode' => 'replace'],
-                    'b.php' => ['source' => 'stubs/b.php', 'mode' => 'preserve'],
-                    'c.txt' => ['source' => 'stubs/c.txt', 'mode' => 'append'],
-                    'd.txt' => ['source' => 'stubs/d.txt', 'mode' => 'prepend'],
+                    'a.php' => [
+                        'source' => 'stubs/a.php',
+                        'mode' => 'replace',
+                    ],
+                    'b.php' => [
+                        'source' => 'stubs/b.php',
+                        'mode' => 'preserve',
+                    ],
+                    'c.txt' => [
+                        'source' => 'stubs/c.txt',
+                        'mode' => 'append',
+                    ],
+                    'd.txt' => [
+                        'source' => 'stubs/d.txt',
+                        'mode' => 'prepend',
+                    ],
+                ],
+            ],
+        );
+    }
+
+    public function testDestinationKeyWithIntegerThrows(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('file-mapping key must be a non-empty string');
+
+        (new ManifestSchema())->validate(
+            [
+                // an integer key bypasses PHP's string-key conversion and triggers the is_string check.
+                'file-mapping' => [
+                    [
+                        'source' => 'stubs/x.php',
+                        'mode' => 'replace',
+                    ],
                 ],
             ],
         );
@@ -54,7 +84,10 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    'config/params.php' => ['source' => '', 'mode' => 'preserve'],
+                    'config/params.php' => [
+                        'source' => '',
+                        'mode' => 'preserve',
+                    ],
                 ],
             ],
         );
@@ -68,7 +101,10 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    'config/params.php' => ['source' => 'stubs/params.php', 'mode' => 'unknown-mode'],
+                    'config/params.php' => [
+                        'source' => 'stubs/params.php',
+                        'mode' => 'unknown-mode',
+                    ],
                 ],
             ],
         );
@@ -142,7 +178,10 @@ final class ManifestSchemaTest extends TestCase
         $result = (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    'nginx.conf' => ['source' => 'stubs/nginx.conf', 'mode' => 'replace'],
+                    'nginx.conf' => [
+                        'source' => 'stubs/nginx.conf',
+                        'mode' => 'replace',
+                    ],
                 ],
             ],
         );
@@ -172,7 +211,10 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    '.gitignore' => ['source' => 'stubs/.gitignore', 'mode' => 'append'],
+                    '.gitignore' => [
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
                 ],
             ],
         );
@@ -185,7 +227,10 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    '.env.dist' => ['source' => 'stubs/.env.dist', 'mode' => 'prepend'],
+                    '.env.dist' => [
+                        'source' => 'stubs/.env.dist',
+                        'mode' => 'prepend',
+                    ],
                 ],
             ],
         );
@@ -198,7 +243,10 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    'config/params.php' => ['source' => 'stubs/params.php', 'mode' => 'preserve'],
+                    'config/params.php' => [
+                        'source' => 'stubs/params.php',
+                        'mode' => 'preserve',
+                    ],
                 ],
             ],
         );
@@ -210,7 +258,10 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(
             [
                 'file-mapping' => [
-                    'config/web.php' => ['source' => 'stubs/web.php', 'mode' => 'replace'],
+                    'config/web.php' => [
+                        'source' => 'stubs/web.php',
+                        'mode' => 'replace',
+                    ],
                 ],
             ],
         );

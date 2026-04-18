@@ -9,9 +9,6 @@ use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\PathResolver;
 
-use function file_exists;
-use function file_get_contents;
-use function file_put_contents;
 use function sprintf;
 
 /**

@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\unit;
 
+use Composer\Composer;
+use Composer\Config;
+use Composer\IO\BufferIO;
+use Composer\Script\Event as ScriptEvent;
 use Composer\Script\ScriptEvents;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use yii\scaffold\EventSubscriber;
 
 /**
@@ -43,5 +48,41 @@ final class EventSubscriberTest extends TestCase
             EventSubscriber::getSubscribedEvents(),
             'Event subscriber does not register for the post-update-cmd event.',
         );
+    }
+
+    public function testRunScaffoldAbortsWhenVendorDirIsEmpty(): void
+    {
+        $io = new BufferIO();
+
+        $config = self::createStub(Config::class);
+
+        $config->method('get')->willReturn('');
+
+        $composer = self::createStub(Composer::class);
+
+        $composer->method('getConfig')->willReturn($config);
+
+        (new EventSubscriber())->onPostInstall(
+            new ScriptEvent(ScriptEvents::POST_INSTALL_CMD, $composer, $io, true),
+        );
+
+        self::assertStringContainsString(
+            'Unable to resolve vendor-dir',
+            $io->getOutput(),
+            'An empty vendor-dir must short-circuit the scaffold run with a clear error on stderr.',
+        );
+    }
+
+    /**
+     * Resets {@see EventSubscriber::$installScaffoldRan} so each test starts with a clean lifecycle slate; keeps the
+     * suite order-independent regardless of which event handlers previous tests invoked.
+     */
+    protected function setUp(): void
+    {
+        $reflection = new ReflectionClass(EventSubscriber::class);
+
+        $property = $reflection->getProperty('installScaffoldRan');
+
+        $property->setValue(null, false);
     }
 }

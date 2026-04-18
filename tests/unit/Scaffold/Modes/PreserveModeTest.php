@@ -5,10 +5,11 @@ declare(strict_types=1);
 namespace yii\scaffold\tests\unit\Scaffold\Modes;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
-use yii\scaffold\Scaffold\Modes\ApplyOutcome;
-use yii\scaffold\Scaffold\Modes\PreserveMode;
+use yii\scaffold\Scaffold\Modes\{ApplyOutcome, PreserveMode};
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -27,19 +28,27 @@ final class PreserveModeTest extends TestCase
 
         $result = (new PreserveMode())->apply(
             $this->makeMapping('a/b/c/deep.txt', 'stubs/nested/deep.txt'),
-            $this->tempDir . '/project',
+            "{$this->tempDir}/project",
             new Hasher(),
             null,
         );
 
-        self::assertSame(ApplyOutcome::Written, $result->outcome);
-        self::assertFileExists($this->tempDir . '/project/a/b/c/deep.txt');
+        self::assertSame(
+            ApplyOutcome::Written,
+            $result->outcome,
+            'Expected file to be written when intermediate directories are created.',
+        );
+        self::assertFileExists(
+            "{$this->tempDir}/project/a/b/c/deep.txt",
+            'Expected file to exist after creating intermediate directories.',
+        );
     }
 
     public function testLockHashIsIgnored(): void
     {
-        // PreserveMode never overwrites — the lock hash is irrelevant.
-        $projectDir = $this->tempDir . '/project';
+        // preserveMode never overwrites the lock hash is irrelevant.
+        $projectDir = "{$this->tempDir}/project";
+
         mkdir($projectDir, 0777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user content');
 
@@ -52,13 +61,22 @@ final class PreserveModeTest extends TestCase
             'sha256:some-recorded-hash',
         );
 
-        self::assertSame(ApplyOutcome::Skipped, $result->outcome);
-        self::assertSame('user content', file_get_contents($projectDir . '/output.txt'));
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            'PreserveMode must skip the file when it already exists.',
+        );
+        self::assertSame(
+            'user content',
+            file_get_contents($projectDir . '/output.txt'),
+            'Existing file content must not be modified.',
+        );
     }
 
     public function testSkippedResultHashIsHashOfExistingFile(): void
     {
-        $projectDir = $this->tempDir . '/project';
+        $projectDir = "{$this->tempDir}/project";
+
         mkdir($projectDir, 0777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user content');
 
@@ -74,12 +92,17 @@ final class PreserveModeTest extends TestCase
             null,
         );
 
-        self::assertSame($expected, $result->newHash);
+        self::assertSame(
+            $expected,
+            $result->newHash,
+            'PreserveMode must return the correct hash for the existing file.',
+        );
     }
 
     public function testSkipsFileWhenDestinationAlreadyExists(): void
     {
-        $projectDir = $this->tempDir . '/project';
+        $projectDir = "{$this->tempDir}/project";
+
         mkdir($projectDir, 0777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user content');
 
@@ -92,10 +115,39 @@ final class PreserveModeTest extends TestCase
             null,
         );
 
-        self::assertSame(ApplyOutcome::Skipped, $result->outcome);
-        // Existing file must not be modified.
-        self::assertSame('user content', file_get_contents($projectDir . '/output.txt'));
-        self::assertNull($result->warning);
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            'PreserveMode must skip the file when it already exists.',
+        );
+        // existing file must not be modified.
+        self::assertSame(
+            'user content',
+            file_get_contents($projectDir . '/output.txt'),
+            'Existing file content must not be modified.',
+        );
+        self::assertNull(
+            $result->warning,
+            'PreserveMode must not produce a warning when skipping a file.',
+        );
+    }
+
+    public function testThrowsWhenCopyFails(): void
+    {
+        $this->makeSourceFile('content');
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Modes',
+            'copy',
+            [],
+            false,
+            default: true,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not copy');
+
+        (new PreserveMode())->apply($this->makeMapping(), "{$this->tempDir}/project", new Hasher(), null);
     }
 
     public function testWritesFileWhenDestinationDoesNotExist(): void
@@ -104,15 +156,29 @@ final class PreserveModeTest extends TestCase
 
         $result = (new PreserveMode())->apply(
             $this->makeMapping(),
-            $this->tempDir . '/project',
+            "{$this->tempDir}/project",
             new Hasher(),
             null,
         );
 
-        self::assertSame(ApplyOutcome::Written, $result->outcome);
-        self::assertStringStartsWith('sha256:', $result->newHash);
-        self::assertNull($result->warning);
-        self::assertFileExists($this->tempDir . '/project/output.txt');
+        self::assertSame(
+            ApplyOutcome::Written,
+            $result->outcome,
+            'PreserveMode must write the file when it does not already exist.',
+        );
+        self::assertStringStartsWith(
+            'sha256:',
+            $result->newHash,
+            "PreserveMode must return a hash starting with 'sha256'.",
+        );
+        self::assertNull(
+            $result->warning,
+            'PreserveMode must not produce a warning when writing a file.',
+        );
+        self::assertFileExists(
+            "{$this->tempDir}/project/output.txt",
+            'PreserveMode must create the output file.',
+        );
     }
 
     protected function setUp(): void
@@ -132,13 +198,14 @@ final class PreserveModeTest extends TestCase
             source: $source,
             mode: 'preserve',
             providerName: 'test/provider',
-            providerPath: $this->tempDir . '/provider',
+            providerPath: "{$this->tempDir}/provider",
         );
     }
 
     private function makeSourceFile(string $content = 'stub content', string $relative = 'stubs/source.txt'): void
     {
-        $path = $this->tempDir . '/provider/' . $relative;
+        $path = "{$this->tempDir}/provider/{$relative}";
+
         mkdir(dirname($path), 0777, recursive: true);
         file_put_contents($path, $content);
     }

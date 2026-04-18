@@ -131,6 +131,31 @@ final class HasherTest extends TestCase
         (new Hasher())->hash($file);
     }
 
+    public function testHashThrowsWhenHashFileReturnsFalse(): void
+    {
+        $file = "{$this->tempDir}/broken-hash.txt";
+
+        file_put_contents($file, 'content');
+
+        // real file is readable; force `hash_file()` itself to report false to hit the post-read failure branch.
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'hash_file',
+            [
+                'sha256',
+                $file,
+                false,
+                [],
+            ],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('file is unreadable or does not exist');
+
+        (new Hasher())->hash($file);
+    }
+
     protected function setUp(): void
     {
         $this->setUpTempDirectory();

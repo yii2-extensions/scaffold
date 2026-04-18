@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\functional;
 
-use Composer\IO\{IOInterface, NullIO};
+use Composer\IO\{BufferIO, IOInterface, NullIO};
 use Composer\Package\PackageInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use yii\scaffold\Manifest\{ManifestLoader, ManifestSchema};
 use yii\scaffold\Scaffold\{Applier, Scaffolder};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
@@ -25,6 +26,36 @@ use yii\scaffold\tests\support\{FakeProjectBuilder, TempDirectoryTrait};
 final class ScaffolderTest extends TestCase
 {
     use TempDirectoryTrait;
+
+    public function testAllowedPackageNotInstalledEmitsSkipMessage(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        // root authorizes a provider that was never added to the installed-packages list.
+        $root = $this->makeRootPackage(['yii2-extensions/missing']);
+
+        $io = new BufferIO();
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(
+                new PackageAllowlist(['yii2-extensions/missing']),
+                new PathValidator(),
+                new Hasher(),
+                $io,
+            ),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        $scaffolder->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertStringContainsString(
+            'Provider "yii2-extensions/missing" is not installed',
+            $io->getOutput(),
+            'Allowed providers that Composer did not install must emit a clear skip message so typos in '
+            . "'allowed-packages' are noticed.",
+        );
+    }
 
     public function testAppendModeAppliedOnFullScaffoldEvenIfAlreadyInLock(): void
     {
@@ -91,13 +122,59 @@ final class ScaffolderTest extends TestCase
 
         $afterFirst = file_get_contents($builder->getProjectRoot() . '/.gitignore');
 
-        // second run: partial (install) — append is already in lock, must be skipped.
+        // second run: partial (install) append is already in lock, must be skipped.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), false);
 
         self::assertSame(
             $afterFirst,
             file_get_contents($builder->getProjectRoot() . '/.gitignore'),
             'Append mode file should not be re-appended on install if already in lock.',
+        );
+    }
+
+    public function testApplierExceptionIsLoggedAndScaffoldingContinues(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        /**
+         * An allowlist of `['safe/provider']` authorizes only that provider; when the actual provider is
+         * `yii2-extensions/test`, the Applier will throw with "Package not allowed" inside apply(). That throw must be
+         * caught by the Scaffolder loop and reported via writeError.
+         */
+        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'content');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+
+        $io = new BufferIO();
+
+        // allowlist only admits a DIFFERENT provider, so assertAllowed throws RuntimeException during apply().
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(new PackageAllowlist(['safe/other']), new PathValidator(), new Hasher(), $io),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertStringContainsString(
+            'Error applying "app.php"',
+            $io->getOutput(),
+            'Applier exceptions must be caught per-destination, reported via writeError, and must not abort the rest '
+            . 'of the scaffold loop.',
         );
     }
 
@@ -111,6 +188,62 @@ final class ScaffolderTest extends TestCase
         $this
             ->makeScaffolder([], $builder)
             ->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+    }
+
+    public function testEmptyAllowedPackagesListEmitsSkipMessage(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        // root with `extra.scaffold` present but the allowed-packages list explicitly empty.
+        $root = self::createStub(PackageInterface::class);
+        $root->method('getExtra')->willReturn(['scaffold' => ['allowed-packages' => []]]);
+
+        $io = new BufferIO();
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(new PackageAllowlist([]), new PathValidator(), new Hasher(), $io),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        $scaffolder->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertStringContainsString(
+            'No allowed-packages configured',
+            $io->getOutput(),
+            'Empty allowed-packages list (as opposed to missing scaffold extra) must emit the configured-but-empty '
+            . 'skip message.',
+        );
+    }
+
+    public function testFailedManifestLoadIsLoggedAndSkippedInsteadOfFatal(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/bad',
+            [
+                // `manifest: "../escape.json"` triggers a traversal RuntimeException inside the loader.
+                'scaffold' => ['manifest' => '../escape.json'],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/bad']);
+
+        $io = new BufferIO();
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(new PackageAllowlist(['yii2-extensions/bad']), new PathValidator(), new Hasher(), $io),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertStringContainsString(
+            'Failed to load manifest for "yii2-extensions/bad"',
+            $io->getOutput(),
+            'A manifest-loader exception must be caught and reported per-provider rather than aborting the entire run.',
+        );
     }
 
     public function testFirstScaffoldPersistsProviderPathInLock(): void
@@ -161,8 +294,10 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        // simulate the realistic layout where vendor is nested under the project root; the scaffolder must record a
-        // relative path so the committed lock stays stable across machines.
+        /**
+         * Simulate the realistic layout where vendor is nested under the project root; the scaffolder must record a
+         * relative path so the committed lock stays stable across machines.
+         */
         $providerRootInsideProject = $builder->getProjectRoot() . '/vendor/yii2-extensions/test';
 
         mkdir($providerRootInsideProject . '/stubs', 0777, recursive: true);
@@ -173,7 +308,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'app.php' => ['source' => 'stubs/app.php', 'mode' => 'replace'],
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
@@ -281,7 +419,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'nginx.conf' => ['source' => 'stubs/nginx.conf', 'mode' => 'replace'],
+                        'nginx.conf' => [
+                            'source' => 'stubs/nginx.conf',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
@@ -316,6 +457,7 @@ final class ScaffolderTest extends TestCase
         $builder = new FakeProjectBuilder($this->tempDir);
 
         $root = self::createStub(PackageInterface::class);
+
         $root->method('getExtra')->willReturn([]);
 
         $io = $this->createMock(IOInterface::class);
@@ -344,8 +486,14 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'a.php' => ['source' => 'stubs/a.php', 'mode' => 'replace'],
-                        'b.php' => ['source' => 'stubs/b.php', 'mode' => 'replace'],
+                        'a.php' => [
+                            'source' => 'stubs/a.php',
+                            'mode' => 'replace',
+                        ],
+                        'b.php' => [
+                            'source' => 'stubs/b.php',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
@@ -387,6 +535,34 @@ final class ScaffolderTest extends TestCase
             ->scaffold($this->makeRootPackage([]), [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
     }
 
+    public function testPrefixMatchesHonorsCaseInsensitiveFlag(): void
+    {
+        $method = new ReflectionMethod(Scaffolder::class, 'prefixMatches');
+
+        // case-sensitive branch matches identical casing but rejects differing casing.
+        self::assertTrue(
+            (bool) $method->invoke(null, '/Project/vendor/foo', '/Project/', false),
+            'Byte-exact comparison must accept an exact casing prefix.',
+        );
+        self::assertFalse(
+            (bool) $method->invoke(null, '/project/vendor/foo', '/Project/', false),
+            'Byte-exact comparison must reject a prefix that only differs in casing.',
+        );
+
+        /**
+         * case-insensitive branch is the Windows path; it must match regardless of casing. Covers the otherwise
+         * Linux-unreachable stripos branch used for NTFS compatibility.
+         */
+        self::assertTrue(
+            (bool) $method->invoke(null, '/project/vendor/foo', '/Project/', true),
+            'Case-insensitive comparison must accept a prefix that only differs in casing.',
+        );
+        self::assertFalse(
+            (bool) $method->invoke(null, '/elsewhere/vendor/foo', '/Project/', true),
+            'Case-insensitive comparison must still reject a prefix that is genuinely different.',
+        );
+    }
+
     public function testPrependModeSkippedOnPartialRunWhenAlreadyInLock(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -399,7 +575,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'prepend.txt' => ['source' => 'stubs/prepend.txt', 'mode' => 'prepend'],
+                        'prepend.txt' => [
+                            'source' => 'stubs/prepend.txt',
+                            'mode' => 'prepend',
+                        ],
                     ],
                 ],
             ],
@@ -408,12 +587,12 @@ final class ScaffolderTest extends TestCase
         $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
-        // First run records a lock entry for the prepend mapping.
+        // first run records a lock entry for the prepend mapping.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
 
         $afterFirst = file_get_contents($builder->getProjectRoot() . '/prepend.txt');
 
-        // Partial run must leave the prepended file untouched because it already lives in the lock.
+        // ´artial run must leave the prepended file untouched because it already lives in the lock.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), false);
 
         self::assertSame(
@@ -435,21 +614,23 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'config.php' => ['source' => 'stubs/config.php', 'mode' => 'preserve'],
+                        'config.php' => [
+                            'source' => 'stubs/config.php',
+                            'mode' => 'preserve',
+                        ],
                     ],
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
-        // First run records the current hash in the lock.
+        // first run records the current hash in the lock.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
 
         $initialHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('config.php');
 
-        // User modifies the file in place; a second preserve run must NOT overwrite the lock entry.
+        // user modifies the file in place; a second preserve run must NOT overwrite the lock entry.
         file_put_contents($builder->getProjectRoot() . '/config.php', 'user-modified');
 
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
@@ -473,7 +654,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'config/params.php' => ['source' => 'stubs/config/params.php', 'mode' => 'preserve'],
+                        'config/params.php' => [
+                            'source' => 'stubs/config/params.php',
+                            'mode' => 'preserve',
+                        ],
                     ],
                 ],
             ],
@@ -517,7 +701,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'config.php' => ['source' => 'stubs/config.php', 'mode' => 'preserve'],
+                        'config.php' => [
+                            'source' => 'stubs/config.php',
+                            'mode' => 'preserve',
+                        ],
                     ],
                 ],
             ],
@@ -564,7 +751,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'config/params.php' => ['source' => 'stubs/config/params.php', 'mode' => 'replace'],
+                        'config/params.php' => [
+                            'source' => 'stubs/config/params.php',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
@@ -595,7 +785,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'app.php' => ['source' => 'stubs/app.php', 'mode' => 'replace'],
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
@@ -607,9 +800,8 @@ final class ScaffolderTest extends TestCase
 
         $firstHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('app.php');
 
-        // Change the stub so the second run writes different content.
+        // change the stub so the second run writes different content.
         $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'v2');
-
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
 
         $secondHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('app.php');
@@ -635,8 +827,10 @@ final class ScaffolderTest extends TestCase
 
         $userHash = (new Hasher())->hash($builder->getProjectRoot() . '/config.php');
 
-        // pre-populate the lock with an outdated provider path but a correct file entry. The upcoming scaffold run must
-        // only set `$dirty = true` through the provider-path branch (L141) — the preserve branch leaves `$dirty` alone.
+        /**
+         * pre-populate the lock with an outdated provider path but a correct file entry. The upcoming scaffold run must
+         * only set `$dirty = true` through the provider-path branch (L141) the preserve branch leaves `$dirty` alone.
+         */
         (new LockFile($builder->getProjectRoot()))->write(
             [
                 'providers' => [
@@ -658,7 +852,10 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'config.php' => ['source' => 'stubs/config.php', 'mode' => 'preserve'],
+                        'config.php' => [
+                            'source' => 'stubs/config.php',
+                            'mode' => 'preserve',
+                        ],
                     ],
                 ],
             ],
@@ -695,8 +892,14 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'append.txt' => ['source' => 'stubs/append.txt', 'mode' => 'append'],
-                        'fresh.txt' => ['source' => 'stubs/fresh.txt', 'mode' => 'replace'],
+                        'append.txt' => [
+                            'source' => 'stubs/append.txt',
+                            'mode' => 'append',
+                        ],
+                        'fresh.txt' => [
+                            'source' => 'stubs/fresh.txt',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],

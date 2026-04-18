@@ -9,7 +9,9 @@ use JsonException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\{FileMapping, ManifestLoader, ManifestSchema};
+use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
  * Unit tests for {@see ManifestLoader} inline and external manifest loading.
@@ -21,6 +23,8 @@ use yii\scaffold\Manifest\{FileMapping, ManifestLoader, ManifestSchema};
 #[Group('manifest')]
 final class ManifestLoaderTest extends TestCase
 {
+    use TempDirectoryTrait;
+
     public function testAllFileMappingsAreInstancesOfFileMapping(): void
     {
         $package = self::createStub(PackageInterface::class);
@@ -114,6 +118,35 @@ final class ManifestLoaderTest extends TestCase
             $first->providerPath,
             "Expected providerPath to be '{$providerPath}'",
         );
+    }
+
+    public function testExternalManifestWhenFileGetContentsFailsThrows(): void
+    {
+        $manifestPath = "{$this->tempDir}/scaffold.json";
+
+        file_put_contents($manifestPath, '{}');
+
+        /**
+         * `default: true` forces the mocker to return `false` for every `file_get_contents` in the Manifest namespace,
+         * independent of how the host platform normalizes the path (Windows backslashes vs. POSIX forward slashes).
+         */
+        MockerState::addCondition(
+            'yii\\scaffold\\Manifest',
+            'file_get_contents',
+            [],
+            false,
+            default: true,
+        );
+
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
+        $package->method('getName')->willReturn('yii2-extensions/bad');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('could not read manifest file');
+
+        (new ManifestLoader(new ManifestSchema()))->load($package, $this->tempDir);
     }
 
     public function testExternalManifestWithBackslashAbsolutePathThrows(): void
@@ -242,6 +275,51 @@ final class ManifestLoaderTest extends TestCase
         $this->expectExceptionMessage('not found');
 
         (new ManifestLoader(new ManifestSchema()))->load($package, '/nonexistent/path');
+    }
+
+    public function testExternalManifestWithNonObjectJsonThrows(): void
+    {
+        // write a JSON payload that decodes to a scalar, not an object.
+        file_put_contents("{$this->tempDir}/scaffold.json", '"just a string"');
+
+        $package = self::createStub(PackageInterface::class);
+
+        $package
+            ->method('getExtra')
+            ->willReturn(
+                [
+                    'scaffold' => ['manifest' => 'scaffold.json'],
+                ],
+            );
+        $package
+            ->method('getName')
+            ->willReturn('yii2-extensions/bad');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('must decode to an object');
+
+        (new ManifestLoader(new ManifestSchema()))->load($package, $this->tempDir);
+    }
+
+    public function testExternalManifestWithTraversalPathThrows(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package
+            ->method('getExtra')
+            ->willReturn(
+                [
+                    'scaffold' => ['manifest' => '../escape.json'],
+                ],
+            );
+        $package
+            ->method('getName')
+            ->willReturn('yii2-extensions/bad');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('must be a relative path inside the provider root');
+
+        (new ManifestLoader(new ManifestSchema()))->load($package, '/vendor/yii2-extensions/bad');
     }
 
     public function testInlineFileMappingCarriesProviderNameAndPath(): void
@@ -415,5 +493,15 @@ final class ManifestLoaderTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
+    }
+
+    protected function setUp(): void
+    {
+        $this->setUpTempDirectory();
+    }
+
+    protected function tearDown(): void
+    {
+        $this->tearDownTempDirectory();
     }
 }
