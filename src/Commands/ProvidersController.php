@@ -19,7 +19,7 @@ use yii\scaffold\Scaffold\Lock\LockFile;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class ProvidersController extends Controller
+class ProvidersController extends Controller
 {
     /**
      * Outputs a summary table of all providers tracked in `scaffold-lock.json`.

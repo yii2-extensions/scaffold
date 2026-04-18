@@ -28,7 +28,7 @@ use function sprintf;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class ReapplyController extends Controller
+class ReapplyController extends Controller
 {
     /**
      * When `true`, overwrites user-modified files without prompting.
@@ -36,8 +36,8 @@ final class ReapplyController extends Controller
     public bool $force = false;
 
     /**
-     * Optional provider package name filter (for example, `yii2-extensions/app-base`). When empty, all
-     * providers are processed.
+     * Optional provider package name filter (for example, `yii2-extensions/app-base`). When empty, all providers are
+     * processed.
      */
     public string $provider = '';
 

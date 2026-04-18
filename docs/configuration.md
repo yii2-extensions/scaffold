@@ -59,7 +59,12 @@ Example lock entry:
 
 ```json
 {
-    "providers": {},
+    "providers": {
+        "yii2-extensions/app-base": {
+            "version": "0.1.0",
+            "path": "vendor/yii2-extensions/app-base"
+        }
+    },
     "files": {
         "config/params.php": {
             "hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -70,6 +75,9 @@ Example lock entry:
     }
 }
 ```
+
+Provider paths are recorded **relative to the project root** so the lock file stays stable across developer machines.
+Versions come from Composer's `getPrettyVersion()`.
 
 ## Event differentiation
 
