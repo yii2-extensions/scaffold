@@ -10,7 +10,6 @@ use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyOutcome, ReplaceMode};
-use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -148,28 +147,20 @@ final class ReplaceModeTest extends TestCase
 
     public function testThrowsWhenCopyFails(): void
     {
-        $projectDir = "{$this->tempDir}/project";
-
-        $destination = PathResolver::destination($projectDir, 'output.txt');
-        $sourcePath = PathResolver::source("{$this->tempDir}/provider", 'stubs/source.txt');
-
         $this->makeSourceFile('content');
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'copy',
-            [
-                $sourcePath,
-                $destination,
-                null,
-            ],
+            [],
             false,
+            default: true,
         );
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Could not copy');
 
-        (new ReplaceMode())->apply($this->makeMapping(), $projectDir, new Hasher(), null);
+        (new ReplaceMode())->apply($this->makeMapping(), "{$this->tempDir}/project", new Hasher(), null);
     }
 
     public function testWritesFileWhenDestinationDoesNotExist(): void

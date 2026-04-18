@@ -10,7 +10,6 @@ use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome};
-use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -113,20 +112,18 @@ final class AppendModeTest extends TestCase
 
     public function testThrowsWhenSourceReadFails(): void
     {
+        $this->makeSourceFile('x');
+
         /**
-         * Compute the exact source path via `PathResolver::source()` so the mocker match aligns with
-         * `DIRECTORY_SEPARATOR` on every platform (Windows NTFS path normalization differs from POSIX).
+         * `default: true` makes the mocker unconditionally fail every `file_get_contents` in the Modes namespace no
+         * strict argument matching, so the test is immune to future changes in how the mode assembles paths.
          */
-        $sourcePath = PathResolver::source("{$this->tempDir}/provider", 'stubs/source.txt');
-
-        mkdir(dirname($sourcePath), 0777, recursive: true);
-        file_put_contents($sourcePath, 'x');
-
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_get_contents',
-            [$sourcePath, false, null, 0, null],
+            [],
             false,
+            default: true,
         );
 
         $this->expectException(RuntimeException::class);
@@ -142,22 +139,14 @@ final class AppendModeTest extends TestCase
 
     public function testThrowsWhenWriteFails(): void
     {
-        $projectDir = "{$this->tempDir}/project";
-
-        $destination = PathResolver::destination($projectDir, 'output.txt');
-
         $this->makeSourceFile('data');
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_put_contents',
-            [
-                $destination,
-                'data',
-                0,
-                null,
-            ],
+            [],
             false,
+            default: true,
         );
 
         $this->expectException(RuntimeException::class);
@@ -165,7 +154,7 @@ final class AppendModeTest extends TestCase
 
         (new AppendMode())->apply(
             $this->makeMapping(),
-            $projectDir,
+            "{$this->tempDir}/project",
             new Hasher(),
             null,
         );

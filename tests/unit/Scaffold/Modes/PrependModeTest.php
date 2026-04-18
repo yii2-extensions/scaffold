@@ -10,7 +10,6 @@ use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyOutcome, PrependMode};
-use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -144,18 +143,32 @@ final class PrependModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        $destination = PathResolver::destination($projectDir, 'output.txt');
-
         mkdir($projectDir, 0777, recursive: true);
-        file_put_contents($destination, 'existing');
+        file_put_contents("{$projectDir}/output.txt", 'existing');
 
-        $this->makeSourceFile('source');
+        $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";
+        mkdir(dirname($sourcePath), 0777, recursive: true);
+        file_put_contents($sourcePath, 'source');
+
+        /**
+         * `PrependMode::apply()` calls `file_get_contents` twice — once for the source, once for the destination. This
+         * test must exercise ONLY the destination branch, so we cannot use `default: true` here (it would trip the
+         * source branch first). A callable-as-result with `default: true` also does not work because the mocker stores
+         * defaults verbatim and returns them without invocation. Strict argument matching on the destination path is
+         * the only mechanism left for this narrow case.
+         */
+        $destBasename = 'output.txt';
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_get_contents',
             [
-                $destination,
+                /**
+                 * match the destination argument by absolute path. `PrependMode` uses `PathResolver::destination`,
+                 * which concatenates `rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . $mapping->destination` we
+                 * reproduce that exactly here.
+                 */
+                rtrim($projectDir, '/\\') . DIRECTORY_SEPARATOR . $destBasename,
                 false,
                 null,
                 0,
@@ -172,22 +185,14 @@ final class PrependModeTest extends TestCase
 
     public function testThrowsWhenSourceReadFails(): void
     {
-        $sourcePath = PathResolver::source("{$this->tempDir}/provider", 'stubs/source.txt');
-
-        mkdir(dirname($sourcePath), 0777, recursive: true);
-        file_put_contents($sourcePath, 'x');
+        $this->makeSourceFile('x');
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_get_contents',
-            [
-                $sourcePath,
-                false,
-                null,
-                0,
-                null,
-            ],
+            [],
             false,
+            default: true,
         );
 
         $this->expectException(RuntimeException::class);
@@ -203,27 +208,20 @@ final class PrependModeTest extends TestCase
 
     public function testThrowsWhenWriteFails(): void
     {
-        $projectDir = "{$this->tempDir}/project";
-        $destination = PathResolver::destination($projectDir, 'output.txt');
-
         $this->makeSourceFile('source');
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_put_contents',
-            [
-                $destination,
-                'source',
-                0,
-                null,
-            ],
+            [],
             false,
+            default: true,
         );
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Could not write to');
 
-        (new PrependMode())->apply($this->makeMapping(), $projectDir, new Hasher(), null);
+        (new PrependMode())->apply($this->makeMapping(), "{$this->tempDir}/project", new Hasher(), null);
     }
 
     public function testWritesFileWhenDestinationDoesNotExist(): void
