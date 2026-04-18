@@ -6,7 +6,9 @@ namespace yii\scaffold\Scaffold;
 
 use RuntimeException;
 
+use function chmod;
 use function dirname;
+use function fileperms;
 use function is_array;
 use function is_string;
 use function ltrim;
@@ -140,5 +142,27 @@ final class PathResolver
         return rtrim($providerPath, '/\\')
             . DIRECTORY_SEPARATOR
             . str_replace('/', DIRECTORY_SEPARATOR, ltrim($source, '/\\'));
+    }
+
+    /**
+     * Copies the source file's permission bits onto the destination, preserving the executable bit for CLI stubs
+     * such as `yii` or shell scripts.
+     *
+     * On POSIX systems, PHP's `copy()` and `file_put_contents()` honor the current umask rather than the source's
+     * permissions, which silently drops the executable bit. This helper brings the destination back in line with the
+     * source. Failures are swallowed because permission changes are best-effort on Windows and restricted mounts.
+     *
+     * @param string $source Absolute path to the source file.
+     * @param string $destination Absolute path to the destination file.
+     */
+    public static function syncPermissions(string $source, string $destination): void
+    {
+        $perms = @fileperms($source);
+
+        if ($perms === false) {
+            return;
+        }
+
+        @chmod($destination, $perms & 0777);
     }
 }

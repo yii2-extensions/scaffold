@@ -187,6 +187,8 @@ class ReapplyController extends Controller
                 continue;
             }
 
+            PathResolver::syncPermissions($stubPath, $destPath);
+
             try {
                 $newHash = $hasher->hash($destPath);
             } catch (Throwable $e) {

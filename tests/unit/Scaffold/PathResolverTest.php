@@ -293,6 +293,53 @@ final class PathResolverTest extends TestCase
         );
     }
 
+    public function testSyncPermissionsCopiesSourcePermissionBitsOntoDestination(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
+        }
+
+        $source = "{$this->tempDir}/exec.sh";
+        $destination = "{$this->tempDir}/exec-copy.sh";
+
+        file_put_contents($source, "#!/bin/sh\necho hello\n");
+        file_put_contents($destination, "#!/bin/sh\necho hello\n");
+
+        chmod($source, 0755);
+        chmod($destination, 0644);
+
+        PathResolver::syncPermissions($source, $destination);
+
+        self::assertSame(
+            0755,
+            fileperms($destination) & 0777,
+            "'syncPermissions()' must copy the source permission bits (including the executable bit) onto the "
+            . 'destination so scaffolded CLI stubs remain executable.',
+        );
+    }
+
+    public function testSyncPermissionsReturnsEarlyWhenSourceFilepermsIsFalse(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
+        }
+
+        $destination = "{$this->tempDir}/unchanged.sh";
+
+        file_put_contents($destination, "#!/bin/sh\n");
+
+        chmod($destination, 0644);
+
+        PathResolver::syncPermissions("{$this->tempDir}/does-not-exist", $destination);
+
+        self::assertSame(
+            0644,
+            fileperms($destination) & 0777,
+            "When 'fileperms()' on the source returns 'false' (missing/unreadable source), 'syncPermissions()' "
+            . 'must return early and leave the destination permissions untouched.',
+        );
+    }
+
     protected function setUp(): void
     {
         $this->setUpTempDirectory();
