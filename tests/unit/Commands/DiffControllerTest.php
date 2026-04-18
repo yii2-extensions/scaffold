@@ -231,7 +231,7 @@ final class DiffControllerTest extends TestCase
         );
     }
 
-    public function testActionIndexShowsFullStubAsAddedWhenDestinationIsAbsent(): void
+    public function testActionIndexShowsFullStubAsRemovedWhenDestinationIsAbsent(): void
     {
         $this->seedStub('config/params.php', "line1\nline2\n");
 
