@@ -52,7 +52,7 @@ class HelpController extends Controller
 
         if (is_array($files)) {
             foreach ($files as $file) {
-                $id = Inflector::camel2id(substr(basename($file), 0, -14));
+                $id = Inflector::camel2id(basename($file, 'Controller.php'));
 
                 $result = Yii::$app->createController('scaffold/' . $id);
 
