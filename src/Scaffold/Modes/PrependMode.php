@@ -22,10 +22,6 @@ use function sprintf;
  */
 final class PrependMode implements ModeInterface
 {
-    /**
-     * @param string|null $hashAtScaffold Intentionally unused — prepend mode is content-agnostic and relies on the
-     * Scaffolder to skip already-locked entries on partial runs.
-     */
     public function apply(
         FileMapping $mapping,
         string $projectRoot,

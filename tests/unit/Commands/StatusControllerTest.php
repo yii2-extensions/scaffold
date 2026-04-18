@@ -24,11 +24,63 @@ final class StatusControllerTest extends TestCase
 {
     use ConsoleApplicationTrait;
 
+    public function testGetStatusesReturnsAllEntriesPreservingOrder(): void
+    {
+        $lock = new LockFile($this->tempDir);
+
+        $lock->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'a.txt' => [
+                        'hash' => 'sha256:a',
+                        'provider' => 'pkg/a',
+                        'source' => 'stubs/a.txt',
+                        'mode' => 'replace',
+                    ],
+                    'b.txt' => [
+                        'hash' => 'sha256:b',
+                        'provider' => 'pkg/b',
+                        'source' => 'stubs/b.txt',
+                        'mode' => 'preserve',
+                    ],
+                ],
+            ],
+        );
+
+        $statuses = $this->makeController()->getStatuses($this->tempDir);
+
+        self::assertCount(
+            2,
+            $statuses,
+            'All tracked destinations must be returned without truncation.',
+        );
+        self::assertArrayHasKey(
+            'a.txt',
+            $statuses,
+            "Expected 'a.txt' key in statuses.",
+        );
+        self::assertArrayHasKey(
+            'b.txt',
+            $statuses,
+            "Expected 'b.txt' key in statuses.",
+        );
+        self::assertSame(
+            ['a.txt', 'b.txt'],
+            array_keys($statuses),
+            'Entries must be returned in the same order as declared in the lock file.',
+        );
+    }
+
     public function testGetStatusesReturnsEmptyArrayWhenNoLockFile(): void
     {
         $controller = $this->makeController();
 
-        self::assertSame([], $controller->getStatuses($this->tempDir));
+        self::assertSame(
+            [],
+            $controller->getStatuses($this->tempDir),
+            'Expected empty array when no lock file is present.',
+        );
     }
 
     public function testGetStatusesReturnsMissingWhenFileAbsentFromDisk(): void
@@ -54,13 +106,13 @@ final class StatusControllerTest extends TestCase
         $entry = $statuses['config/params.php'] ?? null;
 
         if ($entry === null) {
-            self::fail('Expected "config/params.php" key in statuses.');
+            self::fail("Expected 'config/params.php' key in statuses.");
         }
 
         self::assertSame(
             'missing',
             $entry['status'],
-            'Expected status to be "missing" when file is absent from disk.',
+            "Expected status to be 'missing' when file is absent from disk.",
         );
         self::assertSame(
             'pkg/name',
@@ -101,7 +153,7 @@ final class StatusControllerTest extends TestCase
         $entry = $statuses['output.txt'] ?? null;
 
         if ($entry === null) {
-            self::fail('Expected "output.txt" key in statuses.');
+            self::fail("Expected 'output.txt' key in statuses.");
         }
 
         self::assertSame(
@@ -142,7 +194,7 @@ final class StatusControllerTest extends TestCase
         $entry = $statuses['output.txt'] ?? null;
 
         if ($entry === null) {
-            self::fail('Expected "output.txt" key in statuses.');
+            self::fail("Expected 'output.txt' key in statuses.");
         }
 
         self::assertSame(

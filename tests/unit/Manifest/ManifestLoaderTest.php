@@ -31,8 +31,14 @@ final class ManifestLoaderTest extends TestCase
                 [
                     'scaffold' => [
                         'file-mapping' => [
-                            'a.php' => ['source' => 'stubs/a.php', 'mode' => 'replace'],
-                            'b.php' => ['source' => 'stubs/b.php', 'mode' => 'preserve'],
+                            'a.php' => [
+                                'source' => 'stubs/a.php',
+                                'mode' => 'replace',
+                            ],
+                            'b.php' => [
+                                'source' => 'stubs/b.php',
+                                'mode' => 'preserve',
+                            ],
                         ],
                     ],
                 ],
@@ -110,6 +116,48 @@ final class ManifestLoaderTest extends TestCase
         );
     }
 
+    public function testExternalManifestWithBackslashAbsolutePathThrows(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package
+            ->method('getExtra')
+            ->willReturn(
+                [
+                    'scaffold' => ['manifest' => '\\absolute\\path.json'],
+                ],
+            );
+        $package
+            ->method('getName')
+            ->willReturn('yii2-extensions/test');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('must be a relative path inside the provider root');
+
+        (new ManifestLoader(new ManifestSchema()))->load($package, '/some/path');
+    }
+
+    public function testExternalManifestWithDriveLetterAbsolutePathThrows(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package
+            ->method('getExtra')
+            ->willReturn(
+                [
+                    'scaffold' => ['manifest' => 'C:/absolute/path.json'],
+                ],
+            );
+        $package
+            ->method('getName')
+            ->willReturn('yii2-extensions/test');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('must be a relative path inside the provider root');
+
+        (new ManifestLoader(new ManifestSchema()))->load($package, '/some/path');
+    }
+
     public function testExternalManifestWithEmptyPathThrows(): void
     {
         $package = self::createStub(PackageInterface::class);
@@ -153,6 +201,28 @@ final class ManifestLoaderTest extends TestCase
         (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
     }
 
+    public function testExternalManifestWithMidPathColonIsNotTreatedAsAbsolute(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package
+            ->method('getExtra')
+            ->willReturn(
+                [
+                    'scaffold' => ['manifest' => 'nested/C:file.json'],
+                ],
+            );
+        $package
+            ->method('getName')
+            ->willReturn('yii2-extensions/test');
+
+        $this->expectException(RuntimeException::class);
+        // Must fall through to the "not found" branch rather than being caught by the absolute-path regex.
+        $this->expectExceptionMessage('manifest file not found');
+
+        (new ManifestLoader(new ManifestSchema()))->load($package, '/nonexistent/provider');
+    }
+
     public function testExternalManifestWithMissingFileThrows(): void
     {
         $package = self::createStub(PackageInterface::class);
@@ -184,7 +254,10 @@ final class ManifestLoaderTest extends TestCase
                 [
                     'scaffold' => [
                         'file-mapping' => [
-                            'nginx.conf' => ['source' => 'stubs/nginx.conf', 'mode' => 'replace'],
+                            'nginx.conf' => [
+                                'source' => 'stubs/nginx.conf',
+                                'mode' => 'replace',
+                            ],
                         ],
                     ],
                 ],
@@ -228,8 +301,14 @@ final class ManifestLoaderTest extends TestCase
                 [
                     'scaffold' => [
                         'file-mapping' => [
-                            'config/params.php' => ['source' => 'stubs/params.php', 'mode' => 'preserve'],
-                            'vite.config.js' => ['source' => 'stubs/vite.config.js', 'mode' => 'replace'],
+                            'config/params.php' => [
+                                'source' => 'stubs/params.php',
+                                'mode' => 'preserve',
+                            ],
+                            'vite.config.js' => [
+                                'source' => 'stubs/vite.config.js',
+                                'mode' => 'replace',
+                            ],
                         ],
                     ],
                 ],

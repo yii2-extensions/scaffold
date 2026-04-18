@@ -8,10 +8,8 @@ use RuntimeException;
 
 use function dirname;
 use function is_array;
-use function is_dir;
 use function is_string;
 use function ltrim;
-use function mkdir;
 use function realpath;
 use function rtrim;
 use function sprintf;

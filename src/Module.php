@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace yii\scaffold;
 
+use Override;
 use yii\base\Module as BaseModule;
 
 /**
@@ -26,10 +27,9 @@ final class Module extends BaseModule
      */
     public $defaultRoute = 'status';
 
+    #[Override]
     public function init(): void
     {
-        parent::init();
-
         $this->controllerNamespace = 'yii\\scaffold\\Commands';
     }
 }

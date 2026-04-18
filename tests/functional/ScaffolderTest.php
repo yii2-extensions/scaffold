@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\functional;
 
-use Composer\IO\NullIO;
+use Composer\IO\{IOInterface, NullIO};
 use Composer\Package\PackageInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use yii\scaffold\Manifest\{ManifestLoader, ManifestSchema};
-use yii\scaffold\Scaffold\Applier;
+use yii\scaffold\Scaffold\{Applier, Scaffolder};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
-use yii\scaffold\Scaffold\Scaffolder;
 use yii\scaffold\Security\{PackageAllowlist, PathValidator};
 use yii\scaffold\tests\support\{FakeProjectBuilder, TempDirectoryTrait};
 
@@ -39,12 +38,14 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        '.gitignore' => ['source' => 'stubs/.gitignore', 'mode' => 'append'],
+                        '.gitignore' => [
+                            'source' => 'stubs/.gitignore',
+                            'mode' => 'append',
+                        ],
                     ],
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
@@ -82,7 +83,6 @@ final class ScaffolderTest extends TestCase
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
@@ -108,10 +108,54 @@ final class ScaffolderTest extends TestCase
         $builder = new FakeProjectBuilder($this->tempDir);
 
         $root = $this->makeRootPackage([]);
-
         $this
             ->makeScaffolder([], $builder)
             ->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+    }
+
+    public function testFirstScaffoldPersistsProviderPathInLock(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'a');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $this
+            ->makeScaffolder(['yii2-extensions/test'], $builder)
+            ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $lockData = (new LockFile($builder->getProjectRoot()))->read();
+
+        self::assertArrayHasKey(
+            'yii2-extensions/test',
+            $lockData['providers'],
+            'Lock file must persist the provider entry after the first scaffold run.',
+        );
+
+        $providerEntry = $lockData['providers']['yii2-extensions/test'] ?? null;
+
+        self::assertIsArray(
+            $providerEntry,
+            'Provider entry in lock must be an array.',
+        );
+        self::assertSame(
+            $builder->getVendorDir() . '/yii2-extensions/test',
+            $providerEntry['path'] ?? null,
+            'Provider entry must record the resolved provider path.',
+        );
     }
 
     public function testLastProviderWinsForSameDestination(): void
@@ -126,25 +170,28 @@ final class ScaffolderTest extends TestCase
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'app.php' => ['source' => 'stubs/app.php', 'mode' => 'replace'],
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
         );
-
         $override = $this->makeProviderPackage(
             'yii2-extensions/override',
             [
                 'scaffold' => [
                     'file-mapping' => [
-                        'app.php' => ['source' => 'stubs/app.php', 'mode' => 'replace'],
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
                     ],
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/base', 'yii2-extensions/override']);
-
         $this
             ->makeScaffolder(['yii2-extensions/base', 'yii2-extensions/override'], $builder)
             ->scaffold(
@@ -197,9 +244,7 @@ final class ScaffolderTest extends TestCase
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/app-base-scaffold']);
-
         $this
             ->makeScaffolder(['yii2-extensions/app-base-scaffold'], $builder)
             ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
@@ -224,6 +269,27 @@ final class ScaffolderTest extends TestCase
         );
     }
 
+    public function testLogsSkipMessageWhenRootPackageHasNoScaffoldExtra(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $root = self::createStub(PackageInterface::class);
+        $root->method('getExtra')->willReturn([]);
+
+        $io = $this->createMock(IOInterface::class);
+
+        $io->expects(self::once())
+            ->method('write')
+            ->with(self::stringContains('No extra.scaffold configuration'));
+
+        (new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(new PackageAllowlist([]), new PathValidator(), new Hasher(), new NullIO()),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        ))->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+    }
+
     public function testMultipleFilesFromSameProvider(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -242,9 +308,7 @@ final class ScaffolderTest extends TestCase
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/test']);
-
         $this
             ->makeScaffolder(['yii2-extensions/test'], $builder)
             ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
@@ -281,6 +345,80 @@ final class ScaffolderTest extends TestCase
             ->scaffold($this->makeRootPackage([]), [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
     }
 
+    public function testPrependModeSkippedOnPartialRunWhenAlreadyInLock(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/prepend.txt', 'header');
+        $builder->createProjectFile('prepend.txt', 'existing');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'prepend.txt' => ['source' => 'stubs/prepend.txt', 'mode' => 'prepend'],
+                    ],
+                ],
+            ],
+        );
+
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
+
+        // First run records a lock entry for the prepend mapping.
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $afterFirst = file_get_contents($builder->getProjectRoot() . '/prepend.txt');
+
+        // Partial run must leave the prepended file untouched because it already lives in the lock.
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), false);
+
+        self::assertSame(
+            $afterFirst,
+            file_get_contents($builder->getProjectRoot() . '/prepend.txt'),
+            'Prepend mode must be skipped on partial runs when the destination is already recorded in the lock.',
+        );
+    }
+
+    public function testPreserveDoesNotOverwriteAlreadyTrackedLockEntry(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/config.php', 'stub');
+        $builder->createProjectFile('config.php', 'user-content');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'config.php' => ['source' => 'stubs/config.php', 'mode' => 'preserve'],
+                    ],
+                ],
+            ],
+        );
+
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
+
+        // First run records the current hash in the lock.
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $initialHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('config.php');
+
+        // User modifies the file in place; a second preserve run must NOT overwrite the lock entry.
+        file_put_contents($builder->getProjectRoot() . '/config.php', 'user-modified');
+
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertSame(
+            $initialHash,
+            (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('config.php'),
+            'Preserve mode must not overwrite an already-tracked lock entry even when the on-disk file changes.',
+        );
+    }
+
     public function testPreserveFileIsNotOverwritten(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -300,7 +438,6 @@ final class ScaffolderTest extends TestCase
         );
 
         $root = $this->makeRootPackage(['yii2-extensions/test']);
-
         $this
             ->makeScaffolder(['yii2-extensions/test'], $builder)
             ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
@@ -326,6 +463,54 @@ final class ScaffolderTest extends TestCase
         }
     }
 
+    public function testPreserveRecordsExistingUntrackedFileInLock(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/config.php', 'stub');
+        $builder->createProjectFile('config.php', 'user-content');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'config.php' => ['source' => 'stubs/config.php', 'mode' => 'preserve'],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $this
+            ->makeScaffolder(['yii2-extensions/test'], $builder)
+            ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/scaffold-lock.json',
+            'Lock file must be written when preserve mode records an existing untracked file.',
+        );
+
+        $lockData = (new LockFile($builder->getProjectRoot()))->read();
+
+        self::assertArrayHasKey(
+            'config.php',
+            $lockData['files'],
+            'Preserve mode must record untracked existing files in the lock.',
+        );
+
+        $entry = $lockData['files']['config.php'] ?? null;
+
+        self::assertNotNull(
+            $entry,
+            'Lock entry must exist for the preserved file.',
+        );
+        self::assertSame(
+            (new Hasher())->hash($builder->getProjectRoot() . '/config.php'),
+            $entry['hash'],
+            'Recorded hash must match the untouched user content.',
+        );
+    }
+
     public function testReplaceFileIsWrittenAndLockCreated(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -342,9 +527,7 @@ final class ScaffolderTest extends TestCase
                 ],
             ],
         );
-
         $root = $this->makeRootPackage(['yii2-extensions/app-base-scaffold']);
-
         $this
             ->makeScaffolder(['yii2-extensions/app-base-scaffold'], $builder)
             ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
@@ -356,6 +539,142 @@ final class ScaffolderTest extends TestCase
         self::assertFileExists(
             $builder->getProjectRoot() . '/scaffold-lock.json',
             'Lock file should be created when replace mode file is written.',
+        );
+    }
+
+    public function testReplaceOverwritesLockEntryForPreviouslyTrackedDestination(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'v1');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => ['source' => 'stubs/app.php', 'mode' => 'replace'],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
+
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $firstHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('app.php');
+
+        // Change the stub so the second run writes different content.
+        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'v2');
+
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $secondHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('app.php');
+
+        self::assertNotSame(
+            $firstHash,
+            $secondHash,
+            'Lock entry must be overwritten when replace mode re-writes a previously tracked destination.',
+        );
+        self::assertSame(
+            (new Hasher())->hash($builder->getProjectRoot() . '/app.php'),
+            $secondHash,
+            'Lock entry must match the hash of the newly written content.',
+        );
+    }
+
+    public function testScaffoldPersistsUpdatedProviderPathWhenOnlyProviderChanged(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/config.php', 'stub');
+        $builder->createProjectFile('config.php', 'user-content');
+
+        $userHash = (new Hasher())->hash($builder->getProjectRoot() . '/config.php');
+
+        // pre-populate the lock with an outdated provider path but a correct file entry. The upcoming scaffold run must
+        // only set `$dirty = true` through the provider-path branch (L141) — the preserve branch leaves `$dirty` alone.
+        (new LockFile($builder->getProjectRoot()))->write(
+            [
+                'providers' => [
+                    'yii2-extensions/test' => ['path' => '/obsolete/path'],
+                ],
+                'files' => [
+                    'config.php' => [
+                        'hash' => $userHash,
+                        'provider' => 'yii2-extensions/test',
+                        'source' => 'stubs/config.php',
+                        'mode' => 'preserve',
+                    ],
+                ],
+            ],
+        );
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'config.php' => ['source' => 'stubs/config.php', 'mode' => 'preserve'],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $this
+            ->makeScaffolder(['yii2-extensions/test'], $builder)
+            ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $lockData = (new LockFile($builder->getProjectRoot()))->read();
+
+        $providerEntry = $lockData['providers']['yii2-extensions/test'] ?? null;
+
+        self::assertIsArray(
+            $providerEntry,
+            'Lock entry must exist for the preserved file.',
+        );
+        self::assertSame(
+            $builder->getVendorDir() . '/yii2-extensions/test',
+            $providerEntry['path'] ?? null,
+            'Provider-path updates alone must mark the lock dirty so the new path is persisted to disk.',
+        );
+    }
+
+    public function testSubsequentFileAppliedAfterFirstEntryIsSkipped(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/test', 'stubs/append.txt', 'appended');
+        $builder->createStubFile('yii2-extensions/test', 'stubs/fresh.txt', 'fresh content');
+        $builder->createProjectFile('append.txt', 'existing');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'append.txt' => ['source' => 'stubs/append.txt', 'mode' => 'append'],
+                        'fresh.txt' => ['source' => 'stubs/fresh.txt', 'mode' => 'replace'],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
+
+        // first full run records both entries in the lock.
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        // delete `fresh.txt` so the second run must re-create it even though `append.txt` is locked and skipped first.
+        unlink($builder->getProjectRoot() . '/fresh.txt');
+
+        // partial run: append.txt is skipped (continue), but the loop must continue to process fresh.txt.
+        $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), false);
+
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/fresh.txt',
+            'A file following a skipped append entry must still be applied (loop continues, not breaks).',
         );
     }
 
