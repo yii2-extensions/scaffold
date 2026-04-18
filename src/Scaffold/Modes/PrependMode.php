@@ -22,9 +22,6 @@ use function sprintf;
  */
 final class PrependMode implements ModeInterface
 {
-    /**
-     * @throws RuntimeException when the source file cannot be read or the destination cannot be written.
-     */
     public function apply(
         FileMapping $mapping,
         string $projectRoot,

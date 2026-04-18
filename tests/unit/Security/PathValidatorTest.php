@@ -62,8 +62,8 @@ final class PathValidatorTest extends TestCase
         $root = "{$this->tempDir}/root";
 
         mkdir($root, 0777, recursive: true);
-        symlink($root, $root . '/loop');
 
+        $this->createSymlinkOrSkip($root, $root . '/loop');
         $this->expectNotToPerformAssertions();
 
         (new PathValidator())->validateDestination('loop/missing-file.txt', $root);
@@ -86,7 +86,7 @@ final class PathValidatorTest extends TestCase
         mkdir($root, 0777, recursive: true);
         mkdir($sibling, 0777, recursive: true);
 
-        symlink($sibling, $root . '/link');
+        $this->createSymlinkOrSkip($sibling, $root . '/link');
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Destination path escapes the root via symlink');
@@ -101,8 +101,8 @@ final class PathValidatorTest extends TestCase
 
         mkdir($root, 0777, recursive: true);
         mkdir($outside, 0777, recursive: true);
-        symlink($outside, $root . '/escape');
 
+        $this->createSymlinkOrSkip($outside, $root . '/escape');
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Destination path escapes the root via symlink');
 
@@ -117,8 +117,8 @@ final class PathValidatorTest extends TestCase
 
         mkdir($root, 0777, recursive: true);
         mkdir($outside, 0777, recursive: true);
-        symlink($outside, "{$root}/escape");
 
+        $this->createSymlinkOrSkip($outside, "{$root}/escape");
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Destination path escapes the root via symlink');
 
@@ -133,8 +133,8 @@ final class PathValidatorTest extends TestCase
 
         mkdir($root, 0777, recursive: true);
         mkdir($sibling, 0777, recursive: true);
-        symlink($sibling, "{$root}/link");
 
+        $this->createSymlinkOrSkip($sibling, "{$root}/link");
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Destination path escapes the root via symlink');
 
@@ -224,8 +224,8 @@ final class PathValidatorTest extends TestCase
 
         mkdir($root, 0777, recursive: true);
         mkdir($outside, 0777, recursive: true);
-        symlink($outside, "{$root}/escape");
 
+        $this->createSymlinkOrSkip($outside, "{$root}/escape");
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('symlink');
 
@@ -285,5 +285,19 @@ final class PathValidatorTest extends TestCase
     protected function tearDown(): void
     {
         $this->tearDownTempDirectory();
+    }
+
+    /**
+     * Creates a filesystem symlink or skips the current test when the environment does not support symlink creation
+     * (for example, Windows without developer mode, restricted container mounts, or chroots without `CAP_SYS_ADMIN`).
+     *
+     * @param string $target The target path the symlink should point to.
+     * @param string $link The path where the symlink should be created.
+     */
+    private function createSymlinkOrSkip(string $target, string $link): void
+    {
+        if (@symlink($target, $link) === false) {
+            self::markTestSkipped('Symlink creation is not supported in this environment.');
+        }
     }
 }

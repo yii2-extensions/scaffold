@@ -101,7 +101,6 @@ final class PathResolverTest extends TestCase
             [$dir, 0777, true, null],
             false,
         );
-
         PathResolver::ensureDirectory($dir . '/file.txt');
 
         self::assertGreaterThanOrEqual(
@@ -171,6 +170,7 @@ final class PathResolverTest extends TestCase
     public function testResolveProviderRootFallsBackToDefaultWhenLockPathEscapesVendor(): void
     {
         $vendor = $this->tempDir;
+
         mkdir($vendor . '/pkg/name', 0777, recursive: true);
 
         $result = PathResolver::resolveProviderRoot(
@@ -234,10 +234,10 @@ final class PathResolverTest extends TestCase
         $result = PathResolver::resolveProviderRoot($this->tempDir, 'pkg/name', null);
 
         self::assertSame(
-            $this->tempDir . DIRECTORY_SEPARATOR . 'pkg/name',
+            PathResolver::realpathOrFallback($this->tempDir) . DIRECTORY_SEPARATOR . 'pkg/name',
             $result['root'],
             'When the lock record is missing or does not contain a path, resolveProviderRoot must fall back to the '
-            . 'default root.',
+            . 'default root (canonicalized via realpathOrFallback to match implementation behavior).',
         );
         self::assertNull(
             $result['warning'],
