@@ -10,6 +10,7 @@ use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -112,7 +113,11 @@ final class AppendModeTest extends TestCase
 
     public function testThrowsWhenSourceReadFails(): void
     {
-        $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";
+        /**
+         * Compute the exact source path via `PathResolver::source()` so the mocker match aligns with
+         * `DIRECTORY_SEPARATOR` on every platform (Windows NTFS path normalization differs from POSIX).
+         */
+        $sourcePath = PathResolver::source("{$this->tempDir}/provider", 'stubs/source.txt');
 
         mkdir(dirname($sourcePath), 0777, recursive: true);
         file_put_contents($sourcePath, 'x');
@@ -138,7 +143,8 @@ final class AppendModeTest extends TestCase
     public function testThrowsWhenWriteFails(): void
     {
         $projectDir = "{$this->tempDir}/project";
-        $destination = "{$projectDir}/output.txt";
+
+        $destination = PathResolver::destination($projectDir, 'output.txt');
 
         $this->makeSourceFile('data');
 

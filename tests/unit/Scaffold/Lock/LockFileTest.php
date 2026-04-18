@@ -203,7 +203,11 @@ final class LockFileTest extends TestCase
 
     public function testReadThrowsWhenFileGetContentsFails(): void
     {
-        $path = "{$this->tempDir}/scaffold-lock.json";
+        $lock = new LockFile($this->tempDir);
+
+        // ask the LockFile for the exact path so the mocker match honors the platform's DIRECTORY_SEPARATOR.
+        $path = $lock->getPath();
+
         file_put_contents($path, '{"providers":{},"files":{}}');
 
         MockerState::addCondition(
@@ -216,7 +220,7 @@ final class LockFileTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Could not read lock file');
 
-        (new LockFile($this->tempDir))->read();
+        $lock->read();
     }
 
     public function testReadThrowsWhenJsonDecodesToNonObject(): void
@@ -295,7 +299,10 @@ final class LockFileTest extends TestCase
 
     public function testWriteThrowsWhenPersistenceFails(): void
     {
-        $path = "{$this->tempDir}/scaffold-lock.json";
+        $lock = new LockFile($this->tempDir);
+
+        $path = $lock->getPath();
+
         $tmp = "{$path}.tmp";
 
         // simulate `file_put_contents` succeeding but `rename` failing, exercising the cleanup + throw branch.
@@ -313,7 +320,7 @@ final class LockFileTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Could not write lock file');
 
-        (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
+        $lock->write(['providers' => [], 'files' => []]);
     }
 
     public function testWriteUsesUnescapedSlashes(): void

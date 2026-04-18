@@ -9,8 +9,8 @@ use RuntimeException;
 use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
-use yii\scaffold\Scaffold\Modes\ApplyOutcome;
-use yii\scaffold\Scaffold\Modes\PreserveMode;
+use yii\scaffold\Scaffold\Modes\{ApplyOutcome, PreserveMode};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -136,8 +136,9 @@ final class PreserveModeTest extends TestCase
     public function testThrowsWhenCopyFails(): void
     {
         $projectDir = "{$this->tempDir}/project";
-        $destination = "{$projectDir}/output.txt";
-        $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";
+
+        $destination = PathResolver::destination($projectDir, 'output.txt');
+        $sourcePath = PathResolver::source("{$this->tempDir}/provider", 'stubs/source.txt');
 
         $this->makeSourceFile('content');
 

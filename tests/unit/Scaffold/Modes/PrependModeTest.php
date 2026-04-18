@@ -10,6 +10,7 @@ use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyOutcome, PrependMode};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -142,7 +143,8 @@ final class PrependModeTest extends TestCase
     public function testThrowsWhenDestinationReadFails(): void
     {
         $projectDir = "{$this->tempDir}/project";
-        $destination = "{$projectDir}/output.txt";
+
+        $destination = PathResolver::destination($projectDir, 'output.txt');
 
         mkdir($projectDir, 0777, recursive: true);
         file_put_contents($destination, 'existing');
@@ -152,7 +154,13 @@ final class PrependModeTest extends TestCase
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_get_contents',
-            [$destination, false, null, 0, null],
+            [
+                $destination,
+                false,
+                null,
+                0,
+                null,
+            ],
             false,
         );
 
@@ -164,7 +172,7 @@ final class PrependModeTest extends TestCase
 
     public function testThrowsWhenSourceReadFails(): void
     {
-        $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";
+        $sourcePath = PathResolver::source("{$this->tempDir}/provider", 'stubs/source.txt');
 
         mkdir(dirname($sourcePath), 0777, recursive: true);
         file_put_contents($sourcePath, 'x');
@@ -172,7 +180,13 @@ final class PrependModeTest extends TestCase
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_get_contents',
-            [$sourcePath, false, null, 0, null],
+            [
+                $sourcePath,
+                false,
+                null,
+                0,
+                null,
+            ],
             false,
         );
 
@@ -190,14 +204,19 @@ final class PrependModeTest extends TestCase
     public function testThrowsWhenWriteFails(): void
     {
         $projectDir = "{$this->tempDir}/project";
-        $destination = "{$projectDir}/output.txt";
+        $destination = PathResolver::destination($projectDir, 'output.txt');
 
         $this->makeSourceFile('source');
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_put_contents',
-            [$destination, 'source', 0, null],
+            [
+                $destination,
+                'source',
+                0,
+                null,
+            ],
             false,
         );
 

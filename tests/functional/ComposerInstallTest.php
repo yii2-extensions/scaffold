@@ -230,7 +230,7 @@ final class ComposerInstallTest extends TestCase
         $builder->createStubFile(
             'demo/scaffold',
             'stubs/.env.dist',
-            "APP_ENV=dev\n"
+            "APP_ENV=dev\n",
         );
         $builder->createComposerJson(
             [

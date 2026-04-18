@@ -11,6 +11,7 @@ use Yii;
 use yii\console\ExitCode;
 use yii\scaffold\Module;
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\ConsoleApplicationTrait;
 use yii\scaffold\tests\support\Spies\ReapplyControllerSpy;
 
@@ -98,7 +99,10 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/nested/deep.php', $stub);
         $this->writeLockEntry('nested/deep.php', $stub, 'replace');
 
-        $parentDir = "{$this->tempDir}/nested";
+        // parent directory must match exactly what `PathResolver::ensureDirectory()` computes internally, otherwise
+        // the mocker won't intercept and the real mkdir succeeds.
+        $destPath = PathResolver::destination($this->tempDir, 'nested/deep.php');
+        $parentDir = dirname($destPath);
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold',
@@ -164,7 +168,7 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = "{$this->tempDir}/config/params.php";
+        $destPath = PathResolver::destination($this->tempDir, 'config/params.php');
 
         mkdir(dirname($destPath), 0777, recursive: true);
         file_put_contents($destPath, 'existing');
@@ -230,7 +234,7 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = "{$this->tempDir}/config/params.php";
+        $destPath = PathResolver::destination($this->tempDir, 'config/params.php');
 
         /**
          * `is_readable` reports false ONLY for the destination, making the post-write hash fail. Does not interfere
@@ -488,7 +492,13 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $stubPath = "{$this->tempDir}/vendor/pkg/name/stubs/config/params.php";
+        /**
+         * resolveProviderRoot realpaths the recorded path; match the exact absolute stub path the controller passes to
+         * `file_get_contents`, including DIRECTORY_SEPARATOR on Windows.
+         */
+        $providerRoot = (string) realpath("{$this->tempDir}/vendor/pkg/name");
+
+        $stubPath = PathResolver::source($providerRoot, 'stubs/config/params.php');
 
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
@@ -515,7 +525,7 @@ final class ReapplyControllerTest extends TestCase
         $this->seedProviderStub('stubs/config/params.php', $stub);
         $this->writeLockEntry('config/params.php', $stub, 'replace');
 
-        $destPath = "{$this->tempDir}/config/params.php";
+        $destPath = PathResolver::destination($this->tempDir, 'config/params.php');
 
         MockerState::addCondition(
             'yii\\scaffold\\Commands',

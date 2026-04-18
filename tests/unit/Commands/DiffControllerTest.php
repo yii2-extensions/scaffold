@@ -12,6 +12,7 @@ use yii\console\ExitCode;
 use yii\scaffold\Commands\DiffController;
 use yii\scaffold\Module;
 use yii\scaffold\Scaffold\Lock\LockFile;
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\tests\support\ConsoleApplicationTrait;
 use yii\scaffold\tests\support\Spies\DiffControllerSpy;
 
@@ -119,7 +120,7 @@ final class DiffControllerTest extends TestCase
         $this->seedStubAndDestination('config/params.php', "content\n");
         $this->writeLockEntry('config/params.php');
 
-        $currentPath = "{$this->tempDir}/config/params.php";
+        $currentPath = PathResolver::destination($this->tempDir, 'config/params.php');
 
         MockerState::addCondition(
             'yii\\scaffold\\Commands',
