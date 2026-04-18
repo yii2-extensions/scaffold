@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\unit\Security;
 
-use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\{Group, RequiresOperatingSystemFamily};
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use yii\scaffold\Security\PathValidator;
@@ -100,6 +100,7 @@ final class PathValidatorTest extends TestCase
         (new PathValidator())->validateDestination('link/missing-leaf.txt', $root);
     }
 
+    #[RequiresOperatingSystemFamily('Linux')]
     public function testDestinationRejectsNonExistentPathBeneathSymlinkEscapingAncestor(): void
     {
         $root = "{$this->tempDir}/root";
@@ -116,6 +117,7 @@ final class PathValidatorTest extends TestCase
         (new PathValidator())->validateDestination('escape/missing/file.txt', $root);
     }
 
+    #[RequiresOperatingSystemFamily('Linux')]
     public function testDestinationRejectsSymlinkEscapingOutsideRoot(): void
     {
         $root = "{$this->tempDir}/root";
@@ -223,6 +225,7 @@ final class PathValidatorTest extends TestCase
         (new PathValidator())->validateSource('', $this->tempDir);
     }
 
+    #[RequiresOperatingSystemFamily('Linux')]
     public function testSourceRejectsSymlinkEscapingOutsideRoot(): void
     {
         $root = "{$this->tempDir}/provider";
