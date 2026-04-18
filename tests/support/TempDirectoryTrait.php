@@ -5,9 +5,13 @@ declare(strict_types=1);
 namespace yii\scaffold\tests\support;
 
 use RuntimeException;
+use yii\helpers\FileHelper;
 
 /**
  * Provides a temporary directory that is created before each test and removed after.
+ *
+ * Delegates recursive cleanup to {@see FileHelper::removeDirectory()} so Windows directory symlinks are handled
+ * correctly regardless of whether the symlink target has already been removed earlier in the walk.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -30,43 +34,7 @@ trait TempDirectoryTrait
     protected function tearDownTempDirectory(): void
     {
         if ($this->tempDir !== '' && is_dir($this->tempDir)) {
-            $this->removeDirectory($this->tempDir);
+            FileHelper::removeDirectory($this->tempDir);
         }
-    }
-
-    private function removeDirectory(string $path): void
-    {
-        $entries = scandir($path);
-
-        if ($entries === false) {
-            return;
-        }
-
-        foreach ($entries as $entry) {
-            if ($entry === '.' || $entry === '..') {
-                continue;
-            }
-
-            $full = "{$path}/{$entry}";
-
-            if (is_link($full)) {
-                // On Windows, directory symlinks must be removed with `rmdir()`; file symlinks with `unlink()`. When
-                // the symlink target has already been cleaned up earlier in the walk, `is_dir()` reports `false` on the
-                // link itself, so we try both in order and rely on the first that succeeds.
-                if (DIRECTORY_SEPARATOR === '\\') {
-                    if (@rmdir($full) === false) {
-                        @unlink($full);
-                    }
-                } else {
-                    unlink($full);
-                }
-            } elseif (is_dir($full)) {
-                $this->removeDirectory($full);
-            } else {
-                unlink($full);
-            }
-        }
-
-        rmdir($path);
     }
 }
