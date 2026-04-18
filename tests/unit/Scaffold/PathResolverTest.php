@@ -42,6 +42,10 @@ final class PathResolverTest extends TestCase
 
     public function testEnsureDirectoryCreatesUsing0777Mode(): void
     {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
+        }
+
         $oldUmask = umask(0022);
 
         try {
@@ -247,9 +251,10 @@ final class PathResolverTest extends TestCase
 
     public function testSourceStripsLeadingSeparatorFromSource(): void
     {
+        // single segment avoids `str_replace('/', DIRECTORY_SEPARATOR, ...)` normalization differences on Windows.
         self::assertSame(
-            '/tmp/provider' . DIRECTORY_SEPARATOR . 'stubs/a.txt',
-            PathResolver::source('/tmp/provider', '/stubs/a.txt'),
+            '/tmp/provider' . DIRECTORY_SEPARATOR . 'file.txt',
+            PathResolver::source('/tmp/provider', '/file.txt'),
             'Leading separator in source must not produce a double separator.',
         );
     }
@@ -257,8 +262,8 @@ final class PathResolverTest extends TestCase
     public function testSourceStripsTrailingSeparatorFromProviderPath(): void
     {
         self::assertSame(
-            '/tmp/provider' . DIRECTORY_SEPARATOR . 'stubs/a.txt',
-            PathResolver::source('/tmp/provider/', 'stubs/a.txt'),
+            '/tmp/provider' . DIRECTORY_SEPARATOR . 'file.txt',
+            PathResolver::source('/tmp/provider/', 'file.txt'),
             'Trailing separator in provider path must not produce a double separator.',
         );
     }

@@ -124,8 +124,9 @@ final class AppendModeTest extends TestCase
             'yii\\scaffold\\Scaffold\\Modes',
             'file_put_contents',
             [
-                "{$projectDir}/output.txt",
-                'extra', FILE_APPEND,
+                $projectDir . DIRECTORY_SEPARATOR . 'output.txt',
+                'extra',
+                FILE_APPEND,
                 null,
             ],
             static function (string $file, string $data, int $flag) use (&$capturedFlag): int {
@@ -161,7 +162,7 @@ final class AppendModeTest extends TestCase
             'yii\\scaffold\\Scaffold\\Modes',
             'file_put_contents',
             [
-                "{$projectDir}/output.txt",
+                $projectDir . DIRECTORY_SEPARATOR . 'output.txt',
                 'hello',
                 0,
                 null,

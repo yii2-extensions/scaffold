@@ -58,6 +58,12 @@ final class PathValidatorTest extends TestCase
 
     public function testDestinationAcceptsSymlinkThatLoopsBackToRoot(): void
     {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            // Windows canonicalizes symlink targets with short-path/long-path variance that shifts the prefix used by
+            // `realpath`, so the POSIX "loop-to-root" equivalence this test models is not reproducible reliably there.
+            self::markTestSkipped('Symlink canonicalization on Windows is not equivalent to POSIX.');
+        }
+
         // a symlink whose resolved target is `realRoot` itself must pass when used as an ancestor of a missing leaf.
         $root = "{$this->tempDir}/root";
 

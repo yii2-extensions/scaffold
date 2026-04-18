@@ -50,7 +50,12 @@ trait TempDirectoryTrait
             $full = "{$path}/{$entry}";
 
             if (is_link($full)) {
-                unlink($full);
+                // Windows directory symlinks cannot be removed with `unlink()`; `rmdir()` is required for them.
+                if (DIRECTORY_SEPARATOR === '\\' && is_dir($full)) {
+                    rmdir($full);
+                } else {
+                    unlink($full);
+                }
             } elseif (is_dir($full)) {
                 $this->removeDirectory($full);
             } else {
