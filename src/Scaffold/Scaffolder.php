@@ -214,6 +214,25 @@ final class Scaffolder
     }
 
     /**
+     * Byte-exact or case-insensitive prefix match, depending on `$caseInsensitive`.
+     *
+     * Extracted from {@see self::toProjectRelative()} so both branches remain reachable under tests regardless of the
+     * host platform's `DIRECTORY_SEPARATOR`.
+     *
+     * @param string $haystack String to inspect.
+     * @param string $needle Prefix to look for.
+     * @param bool $caseInsensitive `true` to match case-insensitively (Windows/NTFS semantics), `false` for byte-exact.
+     *
+     * @return bool `true` when `$haystack` starts with `$needle` under the requested comparison.
+     */
+    private static function prefixMatches(string $haystack, string $needle, bool $caseInsensitive): bool
+    {
+        return $caseInsensitive
+            ? stripos($haystack, $needle) === 0
+            : str_starts_with($haystack, $needle);
+    }
+
+    /**
      * Resolves a mode string to its corresponding ModeInterface implementation.
      *
      * @param string $mode Mode name (for example, 'replace', 'preserve', 'append', 'prepend').
@@ -245,13 +264,8 @@ final class Scaffolder
     {
         $normalizedRoot = rtrim(str_replace('\\', '/', $projectRoot), '/') . '/';
         $normalizedPath = str_replace('\\', '/', $absolutePath);
-        $haystack = $normalizedPath . '/';
 
-        $matches = DIRECTORY_SEPARATOR === '\\'
-            ? stripos($haystack, $normalizedRoot) === 0
-            : str_starts_with($haystack, $normalizedRoot);
-
-        if ($matches) {
+        if (self::prefixMatches($normalizedPath . '/', $normalizedRoot, DIRECTORY_SEPARATOR === '\\')) {
             return rtrim(substr($normalizedPath, strlen($normalizedRoot)), '/');
         }
 

@@ -7,6 +7,8 @@ namespace yii\scaffold\tests\unit\Scaffold\Lock;
 use JsonException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
+use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Scaffold\Lock\LockFile;
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
@@ -199,6 +201,35 @@ final class LockFileTest extends TestCase
         (new LockFile($this->tempDir))->read();
     }
 
+    public function testReadThrowsWhenFileGetContentsFails(): void
+    {
+        $path = "{$this->tempDir}/scaffold-lock.json";
+        file_put_contents($path, '{"providers":{},"files":{}}');
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'file_get_contents',
+            [$path, false, null, 0, null],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not read lock file');
+
+        (new LockFile($this->tempDir))->read();
+    }
+
+    public function testReadThrowsWhenJsonDecodesToNonObject(): void
+    {
+        // valid JSON, but it decodes to a scalar — `is_array($decoded)` must be `false`, triggering the structural check.
+        file_put_contents($this->tempDir . '/scaffold-lock.json', '"just a string"');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('does not contain a valid JSON object');
+
+        (new LockFile($this->tempDir))->read();
+    }
+
     public function testWriteAndReadRoundTrip(): void
     {
         $lock = new LockFile($this->tempDir);
@@ -260,6 +291,29 @@ final class LockFileTest extends TestCase
             $decoded,
             'Decoded JSON should be an array',
         );
+    }
+
+    public function testWriteThrowsWhenPersistenceFails(): void
+    {
+        $path = "{$this->tempDir}/scaffold-lock.json";
+        $tmp = "{$path}.tmp";
+
+        // simulate `file_put_contents` succeeding but `rename` failing, exercising the cleanup + throw branch.
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'rename',
+            [
+                $tmp,
+                $path,
+                null,
+            ],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not write lock file');
+
+        (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
     }
 
     public function testWriteUsesUnescapedSlashes(): void

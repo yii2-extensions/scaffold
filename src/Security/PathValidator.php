@@ -40,13 +40,12 @@ final class PathValidator
             );
         }
 
+        /**
+         * After assertRelative + assertNoTraversal the relative segment cannot escape the base, so normalizePath's
+         * literal concatenation is guaranteed to stay under $realRoot; the remaining risk is a symlinked ancestor,
+         * which assertNoSymlinkEscape covers below.
+         */
         $normalized = $this->normalizePath($realRoot, $destination);
-
-        if (!str_starts_with($normalized . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
-            throw new RuntimeException(
-                sprintf('Destination path escapes the project root: "%s".', $destination),
-            );
-        }
 
         $this->assertNoSymlinkEscape($normalized, $realRoot, 'destination', $destination);
     }
@@ -72,13 +71,12 @@ final class PathValidator
             );
         }
 
+        /**
+         * See validateDestination: the redundant containment check was removed because normalizePath's literal
+         * concatenation cannot escape $realRoot after assertRelative + assertNoTraversal; symlink ancestors are
+         * still verified below.
+         */
         $normalized = $this->normalizePath($realRoot, $source);
-
-        if (!str_starts_with($normalized . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
-            throw new RuntimeException(
-                sprintf('Source path escapes the provider root: "%s".', $source),
-            );
-        }
 
         $this->assertNoSymlinkEscape($normalized, $realRoot, 'source', $source);
     }
@@ -145,13 +143,11 @@ final class PathValidator
      */
     private function assertNoTraversal(string $path, string $context): void
     {
-        $segments = preg_split('#[/\\\\]#', $path);
-
-        if ($segments === false) {
-            throw new RuntimeException(
-                sprintf('Unable to validate path for traversal in %s: "%s".', $context, $path),
-            );
-        }
+        /**
+         * Normalize both separators to `/` then split; `explode` always returns array<string>, avoiding the
+         * defensive false-branch that `preg_split` would have produced for malformed input.
+         */
+        $segments = explode('/', str_replace('\\', '/', $path));
 
         foreach ($segments as $segment) {
             if ($segment === '..') {

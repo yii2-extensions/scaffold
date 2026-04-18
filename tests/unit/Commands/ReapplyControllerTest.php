@@ -6,6 +6,7 @@ namespace yii\scaffold\tests\unit\Commands;
 
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Xepozz\InternalMocker\MockerState;
 use Yii;
 use yii\console\ExitCode;
 use yii\scaffold\Module;
@@ -28,10 +29,10 @@ final class ReapplyControllerTest extends TestCase
     public function testAppendAndPrependModesCannotBeReapplied(): void
     {
         $this->seedProviderStub('stubs/.gitignore', "/runtime/\n");
+
         $this->writeLockEntry('.gitignore', "/runtime/\n", 'append');
         $this->seedProviderStub('stubs/.env', "APP_ENV=dev\n");
         $this->writeLockEntry('.env', "APP_ENV=dev\n", 'prepend');
-
         $controller = $this->makeController(force: false);
 
         $exitCode = $controller->actionIndex();
@@ -53,6 +54,76 @@ final class ReapplyControllerTest extends TestCase
         );
     }
 
+    public function testEmitsWarningWhenProviderPathEscapesVendor(): void
+    {
+        /**
+         * Lock records a provider path that resolves outside vendor; PathResolver returns a warning that must reach
+         * stderr before scaffold falls back to the default vendor-relative path.
+         */
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [
+                    'pkg/name' => [
+                        'version' => '1.0.0',
+                        'path' => '/etc',
+                    ],
+                ],
+                'files' => [
+                    'config/params.php' => [
+                        'hash' => 'sha256:' . hash('sha256', "stub\n"),
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/config/params.php',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $this->seedProviderStub('stubs/config/params.php', "stub\n");
+        $controller = $this->makeController(force: false);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertStringContainsString(
+            'resolves outside vendor dir',
+            $controller->stderrBuffer,
+            'A provider path that escapes vendor must emit a visible warning before the fallback resolution.',
+        );
+    }
+
+    public function testEnsureDirectoryFailureIsReportedAsError(): void
+    {
+        $stub = "stub\n";
+
+        $this->seedProviderStub('stubs/nested/deep.php', $stub);
+        $this->writeLockEntry('nested/deep.php', $stub, 'replace');
+
+        $parentDir = "{$this->tempDir}/nested";
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold',
+            'is_dir',
+            [$parentDir],
+            false,
+        );
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold',
+            'mkdir',
+            [$parentDir, 0777, true, null],
+            false,
+        );
+
+        $controller = $this->makeController(force: true);
+
+        $controller->actionIndex('nested/deep.php');
+
+        self::assertStringContainsString(
+            'Could not create directory',
+            $controller->stderrBuffer,
+            'ensureDirectory exceptions must be surfaced as a skip-with-reason instead of crashing the reapply loop.',
+        );
+    }
+
     public function testForceOverwritesUserModifiedFileAndUpdatesLockHash(): void
     {
         $stubContent = "stub v2\n";
@@ -62,6 +133,7 @@ final class ReapplyControllerTest extends TestCase
         $this->writeLockEntry('config/params.php', "stub v1\n", 'replace');
 
         $destination = "{$this->tempDir}/config/params.php";
+
         mkdir(dirname($destination), 0777, recursive: true);
         file_put_contents($destination, $userContent);
 
@@ -85,9 +157,107 @@ final class ReapplyControllerTest extends TestCase
         );
     }
 
+    public function testHashFailureBeforeWriteIsReported(): void
+    {
+        $stub = "stub\n";
+
+        $this->seedProviderStub('stubs/config/params.php', $stub);
+        $this->writeLockEntry('config/params.php', $stub, 'replace');
+
+        $destPath = "{$this->tempDir}/config/params.php";
+
+        mkdir(dirname($destPath), 0777, recursive: true);
+        file_put_contents($destPath, 'existing');
+
+        // force the pre-write hash check to explode by making `is_readable` report false on the destination.
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'is_readable',
+            [$destPath],
+            false,
+        );
+
+        $controller = $this->makeController(force: false);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertStringContainsString(
+            'Could not hash',
+            $controller->stderrBuffer,
+            'A failure to hash the destination before write must be surfaced as a skip-with-reason message.',
+        );
+    }
+
+    public function testMissingStubIsReportedAsError(): void
+    {
+        // provider directory exists (containment check passes) but the stub file itself is never created.
+        mkdir("{$this->tempDir}/vendor/pkg/name", 0777, recursive: true);
+
+        $this->writeLockEntry('config/params.php', "stub\n", 'replace');
+
+        $controller = $this->makeController(force: false);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertStringContainsString(
+            'Stub not found',
+            $controller->stderrBuffer,
+            'A missing stub must emit a clear "Stub not found" error so broken providers fail loudly.',
+        );
+    }
+
+    public function testOptionsExposesForceAndProviderFlags(): void
+    {
+        $options = $this->makeController(force: false)->options('index');
+
+        self::assertContains(
+            'force',
+            $options,
+            "'reapply' command must expose the '--force' flag in its options() list so Yii's console router accepts it.",
+        );
+        self::assertContains(
+            'provider',
+            $options,
+            "'reapply' command must expose the '--provider' flag in its options() list so Yii's console router accepts "
+            . 'it.',
+        );
+    }
+
+    public function testPostWriteHashFailureSkipsLockUpdate(): void
+    {
+        $stub = "stub\n";
+
+        $this->seedProviderStub('stubs/config/params.php', $stub);
+        $this->writeLockEntry('config/params.php', $stub, 'replace');
+
+        $destPath = "{$this->tempDir}/config/params.php";
+
+        /**
+         * `is_readable` reports false ONLY for the destination, making the post-write hash fail. Does not interfere
+         * with the stub path.
+         */
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'is_readable',
+            [$destPath],
+            false,
+        );
+
+        $controller = $this->makeController(force: true);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertStringContainsString(
+            'Could not hash written file',
+            $controller->stderrBuffer,
+            'A post-write hash failure must be reported without crashing the whole reapply loop.',
+        );
+    }
+
     public function testPreserveModeIsSkippedWithoutForce(): void
     {
         $this->seedProviderStub('stubs/config/params.php', "stub\n");
+
         $this->writeLockEntry('config/params.php', "stub\n", 'preserve');
 
         $destination = "{$this->tempDir}/config/params.php";
@@ -108,6 +278,49 @@ final class ReapplyControllerTest extends TestCase
             'uses mode "preserve". Use --force to overwrite',
             $controller->stdoutBuffer,
             "Preserve-mode skip must guide the user toward the '--force' escape hatch.",
+        );
+    }
+
+    public function testPreserveModeRewritesWhenDestinationIsMissing(): void
+    {
+        /**
+         * Preserve mode only skips when the destination ALREADY exists. When the destination is gone (user deleted it),
+         * reapply must re-create it from the stub — this exercises the "preserve + file absent" branch.
+         */
+        $stub = "initial stub\n";
+
+        $this->seedProviderStub('stubs/config/params.php', $stub);
+        $this->writeLockEntry('config/params.php', $stub, 'preserve');
+
+        $controller = $this->makeController(force: false);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertFileExists(
+            "{$this->tempDir}/config/params.php",
+            'Preserve mode must re-materialize the destination when the file is missing on disk.',
+        );
+    }
+
+    public function testPreserveModeWithForceOverwritesDestination(): void
+    {
+        $stub = "fresh stub\n";
+
+        $this->seedProviderStub('stubs/config/params.php', $stub);
+        $this->writeLockEntry('config/params.php', $stub, 'preserve');
+
+        $destination = "{$this->tempDir}/config/params.php";
+        mkdir(dirname($destination), 0777, recursive: true);
+        file_put_contents($destination, "user kept\n");
+
+        $controller = $this->makeController(force: true);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertSame(
+            $stub,
+            file_get_contents($destination),
+            "'--force' must override preserve-mode protection and rewrite the destination with the current stub.",
         );
     }
 
@@ -159,6 +372,68 @@ final class ReapplyControllerTest extends TestCase
         );
     }
 
+    public function testReappliesSpecificFileWhenFilterMatches(): void
+    {
+        $stub = "stub A\n";
+
+        $this->seedProviderStub('stubs/a.txt', $stub);
+        $this->seedProviderStub('stubs/b.txt', 'stub B');
+        $this->writeLockEntry('a.txt', 'old A', 'replace');
+        $this->writeLockEntry('b.txt', 'old B', 'replace');
+
+        $controller = $this->makeController(force: true);
+
+        // passing a specific file path narrows the reapply to that single destination.
+        $controller->actionIndex('a.txt');
+
+        self::assertFileExists(
+            "{$this->tempDir}/a.txt",
+            'The targeted file must be reapplied.',
+        );
+        self::assertFileDoesNotExist(
+            "{$this->tempDir}/b.txt",
+            'Files outside the file filter must not be touched.',
+        );
+    }
+
+    public function testRejectsLockEntryWithUnsafeDestination(): void
+    {
+        $lock = new LockFile($this->tempDir);
+
+        $lock->write(
+            [
+                'providers' => [
+                    'pkg/name' => [
+                        'version' => '1.0.0',
+                        'path' => 'vendor/pkg/name',
+                    ],
+                ],
+                'files' => [
+                    // path traversal in the recorded destination triggers the PathValidator reject.
+                    '../escape.php' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/escape.php',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        mkdir("{$this->tempDir}/vendor/pkg/name/stubs", 0777, recursive: true);
+        file_put_contents("{$this->tempDir}/vendor/pkg/name/stubs/escape.php", 'content');
+
+        $controller = $this->makeController(force: false);
+
+        $controller->actionIndex();
+
+        self::assertStringContainsString(
+            'Unsafe lock entry',
+            $controller->stderrBuffer,
+            'Unsafe destinations recorded in the lock must be rejected with a clear error message before any I/O.',
+        );
+    }
+
     public function testReturnsErrorWhenFilterMatchesNothing(): void
     {
         $this->writeLockEntry('config/params.php', "stub\n", 'replace');
@@ -182,6 +457,7 @@ final class ReapplyControllerTest extends TestCase
     public function testSkipsUserModifiedFileWithoutForce(): void
     {
         $this->seedProviderStub('stubs/config/params.php', "stub v1\n");
+
         $this->writeLockEntry('config/params.php', "stub v1\n", 'replace');
 
         $destination = "{$this->tempDir}/config/params.php";
@@ -202,6 +478,60 @@ final class ReapplyControllerTest extends TestCase
             'is user-modified. Use --force to overwrite',
             $controller->stdoutBuffer,
             "User-modified skip must name the '--force' flag as the escape hatch.",
+        );
+    }
+
+    public function testStubReadFailureIsReportedAsError(): void
+    {
+        $stub = "stub\n";
+
+        $this->seedProviderStub('stubs/config/params.php', $stub);
+        $this->writeLockEntry('config/params.php', $stub, 'replace');
+
+        $stubPath = "{$this->tempDir}/vendor/pkg/name/stubs/config/params.php";
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Commands',
+            'file_get_contents',
+            [$stubPath, false, null, 0, null],
+            false,
+        );
+
+        $controller = $this->makeController(force: true);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertStringContainsString(
+            'Could not read stub',
+            $controller->stderrBuffer,
+            "An unreadable stub must emit a 'Could not read stub' skip message rather than crashing the command.",
+        );
+    }
+
+    public function testWriteFailureIsReportedAsError(): void
+    {
+        $stub = "stub\n";
+
+        $this->seedProviderStub('stubs/config/params.php', $stub);
+        $this->writeLockEntry('config/params.php', $stub, 'replace');
+
+        $destPath = "{$this->tempDir}/config/params.php";
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Commands',
+            'file_put_contents',
+            [$destPath, $stub, 0, null],
+            false,
+        );
+
+        $controller = $this->makeController(force: true);
+
+        $controller->actionIndex('config/params.php');
+
+        self::assertStringContainsString(
+            'Could not write',
+            $controller->stderrBuffer,
+            'A failed destination write must be reported as a skip-with-reason without aborting subsequent entries.',
         );
     }
 

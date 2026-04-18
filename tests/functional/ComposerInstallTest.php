@@ -28,8 +28,16 @@ final class ComposerInstallTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/config/params.php', "<?php return ['adminEmail' => 'a@b.c'];\n");
-        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createStubFile(
+            'demo/scaffold',
+            'stubs/config/params.php',
+            "<?php return ['adminEmail' => 'a@b.c'];\n",
+        );
+        $builder->createStubFile(
+            'demo/scaffold',
+            'stubs/.gitignore',
+            "/runtime/\n",
+        );
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -91,11 +99,139 @@ final class ComposerInstallTest extends TestCase
         );
     }
 
+    public function testNonStringAllowedPackagesEntryIsReportedAndIgnored(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile(
+            'demo/scaffold',
+            'stubs/config/params.php',
+            "<?php return [];\n",
+        );
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                'extra' => [
+                    'scaffold' => [
+                        // `42` is not a string and must be rejected without aborting the run.
+                        'allowed-packages' => ['demo/scaffold', 42],
+                    ],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->addMockProvider(
+            $composer,
+            'demo/scaffold',
+            [
+                'file-mapping' => [
+                    'config/params.php' => ['source' => 'stubs/config/params.php', 'mode' => 'preserve'],
+                ],
+            ],
+        );
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostInstall($this->makePostInstallEvent($composer, $io));
+
+        self::assertStringContainsString(
+            'Non-string entry in allowed-packages ignored',
+            $io->getOutput(),
+            'Non-string entries in allowed-packages must be reported so configuration errors are visible.',
+        );
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/config/params.php',
+            'Valid providers must still be scaffolded even when a sibling allowed-packages entry is malformed.',
+        );
+    }
+
+    public function testNoScaffoldExtraIsAcceptedAndTreatedAsEmpty(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        /**
+         * `composer.json` has no `extra.scaffold` key at all. runScaffold must continue without errors, emit the
+         * no-config notice inside Scaffolder, and leave the project untouched.
+         */
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostInstall($this->makePostInstallEvent($composer, $io));
+
+        self::assertStringContainsString(
+            'No extra.scaffold configuration found',
+            $io->getOutput(),
+            'Projects without `extra.scaffold` must still dispatch the handler; it must gracefully emit the no-config '
+            . 'notice instead of raising an error.',
+        );
+    }
+
+    public function testPostUpdateTriggersPartialScaffold(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile(
+            'demo/scaffold',
+            'stubs/config/params.php',
+            "<?php return [];\n",
+        );
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                'extra' => [
+                    'scaffold' => [
+                        'allowed-packages' => [
+                            'demo/scaffold',
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->addMockProvider(
+            $composer,
+            'demo/scaffold',
+            [
+                'file-mapping' => [
+                    'config/params.php' => ['source' => 'stubs/config/params.php', 'mode' => 'preserve'],
+                ],
+            ],
+        );
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostUpdate($this->makePostUpdateEvent($composer, $io));
+
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/config/params.php',
+            "'post-update-cmd' must dispatch the same partial scaffold flow as 'post-install-cmd'.",
+        );
+    }
+
     public function testReplaceModeWarnsAndSkipsWhenUserModifiedBetweenRuns(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.env.dist', "APP_ENV=dev\n");
+        $builder->createStubFile(
+            'demo/scaffold',
+            'stubs/.env.dist',
+            "APP_ENV=dev\n"
+        );
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -155,6 +291,89 @@ final class ComposerInstallTest extends TestCase
             'USER_EDIT=1',
             $envContent,
             'Replace mode must preserve the user edit instead of reverting to the provider stub.',
+        );
+    }
+
+    public function testScaffolderExceptionIsLoggedAndHandlerDoesNotCrash(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        /**
+         * `pre-populate` scaffold-lock.json with malformed JSON so LockFile::read() throws inside
+         * `Scaffolder::scaffold()`. The EventSubscriber must catch the Throwable and log
+         * `[scaffold] Scaffolding aborted: ...`.
+         */
+        file_put_contents("{$builder->getProjectRoot()}/scaffold-lock.json", '{ not valid json');
+
+        $builder->createStubFile(
+            'demo/scaffold',
+            'stubs/config/params.php',
+            "<?php return [];\n",
+        );
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                'extra' => [
+                    'scaffold' => [
+                        'allowed-packages' => [
+                            'demo/scaffold',
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->addMockProvider(
+            $composer,
+            'demo/scaffold',
+            [
+                'file-mapping' => [
+                    'config/params.php' => [
+                        'source' => 'stubs/config/params.php',
+                        'mode' => 'preserve',
+                    ],
+                ],
+            ],
+        );
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostInstall($this->makePostInstallEvent($composer, $io));
+
+        self::assertStringContainsString(
+            'Scaffolding aborted',
+            $io->getOutput(),
+            'An exception bubbling out of Scaffolder must be caught and reported without crashing Composer.',
+        );
+    }
+
+    public function testScaffoldExtraWithoutAllowedPackagesKeyIsTreatedAsEmpty(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                // `extra.scaffold` is present but `allowed-packages` is missing entirely.
+                'extra' => ['scaffold' => []],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostInstall($this->makePostInstallEvent($composer, $io));
+
+        self::assertStringContainsString(
+            'No allowed-packages configured',
+            $io->getOutput(),
+            "A scaffold extra without the 'allowed-packages' key must produce the allowed-packages skip message.",
         );
     }
 

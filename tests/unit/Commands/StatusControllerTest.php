@@ -7,10 +7,12 @@ namespace yii\scaffold\tests\unit\Commands;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Yii;
+use yii\console\ExitCode;
 use yii\scaffold\Commands\StatusController;
 use yii\scaffold\Module;
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\tests\support\ConsoleApplicationTrait;
+use yii\scaffold\tests\support\Spies\StatusControllerSpy;
 
 /**
  * Unit tests for {@see StatusController} status computation via {@see StatusController::getStatuses()}.
@@ -23,6 +25,157 @@ use yii\scaffold\tests\support\ConsoleApplicationTrait;
 final class StatusControllerTest extends TestCase
 {
     use ConsoleApplicationTrait;
+
+    public function testActionIndexPrintsEmptyMessageWhenNoFilesTracked(): void
+    {
+        (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
+
+        $spy = $this->makeSpy();
+
+        $exitCode = $spy->actionIndex();
+
+        self::assertSame(
+            ExitCode::OK,
+            $exitCode,
+            'Empty-lock status must still return a success exit code.',
+        );
+        self::assertStringContainsString(
+            'No files tracked in scaffold-lock.json',
+            $spy->stdoutBuffer,
+            'Empty-lock case must emit the user-facing no-files message instead of a blank table.',
+        );
+    }
+
+    public function testActionIndexPrintsHeaderAndRowsForTrackedFiles(): void
+    {
+        $filePath = "{$this->tempDir}/output.txt";
+
+        file_put_contents($filePath, 'synced content');
+
+        $hash = (new Hasher())->hash($filePath);
+
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'output.txt' => [
+                        'hash' => $hash,
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/output.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $spy = $this->makeSpy();
+
+        $exitCode = $spy->actionIndex();
+
+        self::assertSame(
+            ExitCode::OK,
+            $exitCode,
+            "Status command with tracked entries must return 'ExitCode::OK'.",
+        );
+        self::assertStringContainsString(
+            'File',
+            $spy->stdoutBuffer,
+            "Status output must include a 'File' column header.",
+        );
+        self::assertStringContainsString(
+            'Provider',
+            $spy->stdoutBuffer,
+            "Status output must include a 'Provider' column header.",
+        );
+        self::assertStringContainsString(
+            'Mode',
+            $spy->stdoutBuffer,
+            "Status output must include a 'Mode' column header.",
+        );
+        self::assertStringContainsString(
+            'Status',
+            $spy->stdoutBuffer,
+            "Status output must include a 'Status' column header.",
+        );
+        self::assertStringContainsString(
+            'output.txt',
+            $spy->stdoutBuffer,
+            'Tracked destination must appear in the output row.',
+        );
+        self::assertStringContainsString(
+            'synced',
+            $spy->stdoutBuffer,
+            "Matching-hash entries must appear with status 'synced'.",
+        );
+    }
+
+    public function testGetStatusesMarksEntryAsErrorWhenDestinationIsUnsafe(): void
+    {
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    '../escape.php' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/escape.php',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $statuses = $this->makeController()->getStatuses($this->tempDir);
+
+        self::assertSame(
+            'error',
+            $statuses['../escape.php']['status'] ?? null,
+            "Lock entries whose destination fails path validation must surface status 'error' rather than masking the "
+            . 'problem.',
+        );
+    }
+
+    public function testGetStatusesMarksEntryAsErrorWhenHashThrows(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX chmod is required to make a file unreadable; Windows lacks an equivalent.');
+        }
+
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped("Test cannot run as root because 'chmod 0000' does not block root reads.");
+        }
+
+        $filePath = "{$this->tempDir}/unreadable.txt";
+
+        file_put_contents($filePath, 'content');
+        chmod($filePath, 0000);
+
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'unreadable.txt' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/unreadable.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        try {
+            $statuses = $this->makeController()->getStatuses($this->tempDir);
+
+            self::assertSame(
+                'error',
+                $statuses['unreadable.txt']['status'] ?? null,
+                "When hash throws because the file is unreadable, the destination must surface with status 'error'.",
+            );
+        } finally {
+            chmod($filePath, 0644);
+        }
+    }
 
     public function testGetStatusesReturnsAllEntriesPreservingOrder(): void
     {
@@ -221,5 +374,14 @@ final class StatusControllerTest extends TestCase
         assert($module instanceof Module);
 
         return new StatusController('status', $module);
+    }
+
+    private function makeSpy(): StatusControllerSpy
+    {
+        $module = Yii::$app->getModule('scaffold');
+
+        assert($module instanceof Module);
+
+        return new StatusControllerSpy('status', $module);
     }
 }

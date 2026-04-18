@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace yii\scaffold\tests\unit\Scaffold\Modes;
 
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
@@ -50,7 +51,7 @@ final class AppendModeTest extends TestCase
 
         $result = (new AppendMode())->apply(
             $this->makeMapping('a/b/c/deep.txt', 'stubs/nested/deep.txt'),
-            $this->tempDir . '/project',
+            "{$this->tempDir}/project",
             new Hasher(),
             null,
         );
@@ -106,6 +107,61 @@ final class AppendModeTest extends TestCase
             $hasher->hash("{$this->tempDir}/project/output.txt"),
             $result->newHash,
             'AppendMode must return a new hash that matches the actual content of the written file.',
+        );
+    }
+
+    public function testThrowsWhenSourceReadFails(): void
+    {
+        $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";
+
+        mkdir(dirname($sourcePath), 0777, recursive: true);
+        file_put_contents($sourcePath, 'x');
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Modes',
+            'file_get_contents',
+            [$sourcePath, false, null, 0, null],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not read source file');
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            "{$this->tempDir}/project",
+            new Hasher(),
+            null,
+        );
+    }
+
+    public function testThrowsWhenWriteFails(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+        $destination = "{$projectDir}/output.txt";
+
+        $this->makeSourceFile('data');
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Modes',
+            'file_put_contents',
+            [
+                $destination,
+                'data',
+                0,
+                null,
+            ],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not write to');
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
         );
     }
 
@@ -232,7 +288,7 @@ final class AppendModeTest extends TestCase
             source: $source,
             mode: 'append',
             providerName: 'test/provider',
-            providerPath: $this->tempDir . '/provider',
+            providerPath: "{$this->tempDir}/provider",
         );
     }
 

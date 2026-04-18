@@ -120,6 +120,17 @@ final class EjectControllerTest extends TestCase
         );
     }
 
+    public function testOptionsExposesYesFlag(): void
+    {
+        $options = $this->makeController(yes: false)->options('index');
+
+        self::assertContains(
+            'yes',
+            $options,
+            "'eject' command must expose the '--yes' flag in its options() list so Yii's console router accepts it.",
+        );
+    }
+
     public function testReturnsErrorWhenFileNotTracked(): void
     {
         (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
