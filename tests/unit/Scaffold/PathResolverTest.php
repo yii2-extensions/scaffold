@@ -233,6 +233,31 @@ final class PathResolverTest extends TestCase
         );
     }
 
+    public function testResolveProviderRootResolvesRelativeLockPathAgainstProjectRoot(): void
+    {
+        $projectRoot = $this->tempDir;
+        $vendor = "{$projectRoot}/vendor";
+
+        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+
+        $result = PathResolver::resolveProviderRoot(
+            $vendor,
+            'pkg/name',
+            ['path' => 'vendor/pkg/name'],
+            $projectRoot,
+        );
+
+        self::assertSame(
+            realpath($vendor . '/pkg/name'),
+            $result['root'],
+            'A relative lock path must be expanded against the project root before the vendor-containment check.',
+        );
+        self::assertNull(
+            $result['warning'],
+            'No warning must be emitted when the relative path resolves inside the vendor directory.',
+        );
+    }
+
     public function testResolveProviderRootUsesDefaultWhenLockEntryIsMissingPath(): void
     {
         $result = PathResolver::resolveProviderRoot($this->tempDir, 'pkg/name', null);

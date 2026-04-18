@@ -81,6 +81,7 @@ final class ReapplyController extends Controller
                 $vendorDir,
                 $entry['provider'],
                 $data['providers'][$entry['provider']] ?? null,
+                $projectRoot,
             );
 
             $providerRoot = $resolved['root'];

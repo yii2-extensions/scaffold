@@ -14,7 +14,12 @@ use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome, ModeInterface, Prepen
 
 use function is_array;
 use function is_string;
+use function rtrim;
 use function sprintf;
+use function str_replace;
+use function str_starts_with;
+use function strlen;
+use function substr;
 
 /**
  * Orchestrates the full scaffold lifecycle: provider resolution, manifest loading, mode application, and lock writing.
@@ -92,7 +97,7 @@ final class Scaffolder
 
         // merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
         $merged = [];
-        $resolvedProviderPaths = [];
+        $providerEntries = [];
 
         foreach ($rawAllowed as $allowedName) {
             if (!is_string($allowedName)) {
@@ -108,7 +113,10 @@ final class Scaffolder
             }
 
             $packagePath = $installPaths[$allowedName] ?? "{$vendorDir}/{$allowedName}";
-            $resolvedProviderPaths[$allowedName] = $packagePath;
+            $providerEntries[$allowedName] = [
+                'version' => $package->getPrettyVersion(),
+                'path' => self::toProjectRelative($packagePath, $projectRoot),
+            ];
 
             try {
                 $mappings = $this->loader->load($package, $packagePath);
@@ -132,12 +140,11 @@ final class Scaffolder
         $lockData = $this->lockFile->read();
         $dirty = false;
 
-        foreach ($resolvedProviderPaths as $providerName => $providerPath) {
+        foreach ($providerEntries as $providerName => $entry) {
             $existing = $lockData['providers'][$providerName] ?? null;
-            $storedPath = is_array($existing) && is_string($existing['path'] ?? null) ? $existing['path'] : null;
 
-            if ($storedPath !== $providerPath) {
-                $lockData['providers'][$providerName] = ['path' => $providerPath];
+            if (!is_array($existing) || $existing !== $entry) {
+                $lockData['providers'][$providerName] = $entry;
                 $dirty = true;
             }
         }
@@ -217,5 +224,28 @@ final class Scaffolder
     private function resolveMode(string $mode): ModeInterface
     {
         return $this->modes[$mode] ?? throw new RuntimeException(sprintf('Unknown scaffold mode "%s".', $mode));
+    }
+
+    /**
+     * Converts an absolute path to one relative to the project root, using forward slashes.
+     *
+     * Returns the input unchanged (with forward slashes) when it lies outside the project root; storing an absolute
+     * path is a safe fallback for unusual deployments where the provider lives outside the root.
+     *
+     * @param string $absolutePath Absolute path to convert.
+     * @param string $projectRoot Absolute path to the project root.
+     *
+     * @return string Relative path using forward slashes, or the normalized absolute path when outside the root.
+     */
+    private static function toProjectRelative(string $absolutePath, string $projectRoot): string
+    {
+        $normalizedRoot = rtrim(str_replace('\\', '/', $projectRoot), '/') . '/';
+        $normalizedPath = str_replace('\\', '/', $absolutePath);
+
+        if (str_starts_with($normalizedPath . '/', $normalizedRoot)) {
+            return rtrim(substr($normalizedPath, strlen($normalizedRoot)), '/');
+        }
+
+        return rtrim($normalizedPath, '/');
     }
 }

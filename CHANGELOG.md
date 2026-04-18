@@ -10,3 +10,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - fix: update package names in documentation and code references to reflect new naming conventions.
 - refactor: extract `PathResolver` to centralize destination, source, directory and provider-root resolution.
 - test: raise Infection MSI and Covered Code MSI to `100%` via targeted tests, `xepozz/internal-mocker` fixtures, and explicit ignores for POSIX-equivalent mutants.
+- feat: record `providers[name]` in `scaffold-lock.json` as `{version, path}` with project-root-relative paths so committed locks stay stable across machines.

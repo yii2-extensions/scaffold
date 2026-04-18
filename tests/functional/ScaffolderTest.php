@@ -147,14 +147,54 @@ final class ScaffolderTest extends TestCase
 
         $providerEntry = $lockData['providers']['yii2-extensions/test'] ?? null;
 
-        self::assertIsArray(
-            $providerEntry,
-            'Provider entry in lock must be an array.',
-        );
         self::assertSame(
-            $builder->getVendorDir() . '/yii2-extensions/test',
-            $providerEntry['path'] ?? null,
-            'Provider entry must record the resolved provider path.',
+            ['version' => '2.0.0', 'path' => $builder->getVendorDir() . '/yii2-extensions/test'],
+            $providerEntry,
+            'Provider entry must record both version and path (path stays absolute when vendor lives outside the '
+            . 'project root, as in this fixture).',
+        );
+    }
+
+    public function testFirstScaffoldRecordsRelativePathWhenProviderLivesInsideProject(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        // simulate the realistic layout where vendor is nested under the project root; the scaffolder must record a
+        // relative path so the committed lock stays stable across machines.
+        $providerRootInsideProject = $builder->getProjectRoot() . '/vendor/yii2-extensions/test';
+
+        mkdir($providerRootInsideProject . '/stubs', 0777, recursive: true);
+        file_put_contents($providerRootInsideProject . '/stubs/app.php', 'a');
+
+        $provider = $this->makeProviderPackage(
+            'yii2-extensions/test',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => ['source' => 'stubs/app.php', 'mode' => 'replace'],
+                    ],
+                ],
+            ],
+        );
+        $root = $this->makeRootPackage(['yii2-extensions/test']);
+        $this
+            ->makeScaffolder(['yii2-extensions/test'], $builder)
+            ->scaffold(
+                $root,
+                [$provider],
+                $builder->getProjectRoot(),
+                $builder->getVendorDir(),
+                true,
+                ['yii2-extensions/test' => $providerRootInsideProject],
+            );
+
+        $lockData = (new LockFile($builder->getProjectRoot()))->read();
+
+        self::assertSame(
+            ['version' => '2.0.0', 'path' => 'vendor/yii2-extensions/test'],
+            $lockData['providers']['yii2-extensions/test'] ?? null,
+            'When the provider install path lies inside the project root, the lock must store a project-relative path '
+            . 'so the committed scaffold-lock.json stays stable across developer machines.',
         );
     }
 
@@ -630,14 +670,10 @@ final class ScaffolderTest extends TestCase
 
         $providerEntry = $lockData['providers']['yii2-extensions/test'] ?? null;
 
-        self::assertIsArray(
-            $providerEntry,
-            'Lock entry must exist for the preserved file.',
-        );
         self::assertSame(
-            $builder->getVendorDir() . '/yii2-extensions/test',
-            $providerEntry['path'] ?? null,
-            'Provider-path updates alone must mark the lock dirty so the new path is persisted to disk.',
+            ['version' => '2.0.0', 'path' => $builder->getVendorDir() . '/yii2-extensions/test'],
+            $providerEntry,
+            'Provider-entry updates alone must mark the lock dirty so the fresh {version, path} is persisted to disk.',
         );
     }
 
@@ -691,12 +727,13 @@ final class ScaffolderTest extends TestCase
     /**
      * @param array<string, mixed> $extra
      */
-    private function makeProviderPackage(string $name, array $extra): PackageInterface
+    private function makeProviderPackage(string $name, array $extra, string $version = '2.0.0'): PackageInterface
     {
         $pkg = self::createStub(PackageInterface::class);
 
         $pkg->method('getName')->willReturn($name);
         $pkg->method('getExtra')->willReturn($extra);
+        $pkg->method('getPrettyVersion')->willReturn($version);
 
         return $pkg;
     }
