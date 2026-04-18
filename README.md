@@ -96,6 +96,7 @@ Register the console module in `config/console.php` to enable `yii scaffold/*` c
 - 📦 [Creating Providers](docs/providers.md)
 - 🔀 [File Modes](docs/modes.md)
 - 🖥️ [Console Commands](docs/console.md)
+- 🧪 [Testing Guide](docs/testing.md)
 
 ## Package information
 
