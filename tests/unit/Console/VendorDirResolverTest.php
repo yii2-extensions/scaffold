@@ -164,7 +164,6 @@ final class VendorDirResolverTest extends TestCase
         );
     }
 
-
     public function testWindowsAbsoluteDrivePathIsHonoredVerbatim(): void
     {
         putenv('COMPOSER_VENDOR_DIR=C:\\opt\\vendor');
