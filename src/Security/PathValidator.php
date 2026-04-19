@@ -188,9 +188,11 @@ final class PathValidator
      */
     private function normalizePath(string $base, string $relative): string
     {
-        // @codeCoverageIgnoreStart 'str_replace("/", DIRECTORY_SEPARATOR, …)' is a Windows-path adapter.
-        $combined = $base . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+        // @codeCoverageIgnoreStart Windows-path adapter, POSIX-identity.
+        $normalizedRelative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
         // @codeCoverageIgnoreEnd
+
+        $combined = $base . DIRECTORY_SEPARATOR . $normalizedRelative;
 
         return rtrim($combined, DIRECTORY_SEPARATOR);
     }

@@ -243,21 +243,6 @@ final class PathResolverTest extends TestCase
         );
     }
 
-    public function testResolveProviderRootHonorsAbsoluteLockPathRegardlessOfNonEmptyProjectRoot(): void
-    {
-        $vendor = $this->tempDir . '/vendor';
-
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
-
-        $absoluteLockPath = realpath($vendor . '/pkg/name');
-
-        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
-
-        $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $absoluteLockPath], $this->tempDir);
-
-        self::assertNull($result['warning'], 'Absolute lock path must stay absolute when projectRoot is non-empty.');
-    }
-
     public function testResolveProviderRootHonorsAbsoluteLockPathVerbatimWhenProjectRootIsNonEmpty(): void
     {
         $vendor = $this->tempDir . '/vendor';

@@ -47,9 +47,11 @@ final class VendorDirResolver
             return self::absolutize($env, $projectRoot);
         }
 
-        // @codeCoverageIgnoreStart 'rtrim' here is defensive for trailing-separator projectRoot values.
-        $composerJson = rtrim($projectRoot, '/\\') . '/composer.json';
+        // @codeCoverageIgnoreStart defensive rtrim, POSIX-equivalent.
+        $trimmedRoot = rtrim($projectRoot, '/\\');
         // @codeCoverageIgnoreEnd
+
+        $composerJson = $trimmedRoot . '/composer.json';
 
         if (is_file($composerJson)) {
             $raw = file_get_contents($composerJson);
@@ -101,10 +103,10 @@ final class VendorDirResolver
             return rtrim($path, '/\\');
         }
 
-        // @codeCoverageIgnoreStart
-        // The inner 'ltrim($path, "/\\\\")' is defensive; this branch only runs when '$path' does not start with
-        // '/' or '\', so 'ltrim' has nothing to strip. The mutation removing it is equivalent on every platform.
-        return rtrim($projectRoot, '/\\') . '/' . rtrim(ltrim($path, '/\\'), '/\\');
+        // @codeCoverageIgnoreStart defensive ltrim, equivalent in the else branch.
+        $strippedPath = ltrim($path, '/\\');
         // @codeCoverageIgnoreEnd
+
+        return rtrim($projectRoot, '/\\') . '/' . rtrim($strippedPath, '/\\');
     }
 }

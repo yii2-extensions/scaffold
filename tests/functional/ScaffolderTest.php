@@ -518,17 +518,17 @@ final class ScaffolderTest extends TestCase
         // 'bad' is listed first so its manifest-load failure triggers the continue-branch before 'good' is processed.
         $root = $this->makeRootPackage(['yii2-extensions/bad', 'yii2-extensions/good']);
 
-        $io = new BufferIO();
+        $bufferIo = new BufferIO();
         $scaffolder = new Scaffolder(
             new ManifestLoader(new ManifestSchema()),
             new Applier(
                 new PackageAllowlist(['yii2-extensions/bad', 'yii2-extensions/good']),
                 new PathValidator(),
                 new Hasher(),
-                $io,
+                $bufferIo,
             ),
             new LockFile($builder->getProjectRoot()),
-            $io,
+            $bufferIo,
         );
 
         $scaffolder->scaffold(
@@ -574,17 +574,17 @@ final class ScaffolderTest extends TestCase
         // 'missing' is allowed but not installed so its branch triggers the skip-message continue path.
         $root = $this->makeRootPackage(['yii2-extensions/missing', 'yii2-extensions/good']);
 
-        $io = new BufferIO();
+        $bufferIo = new BufferIO();
         $scaffolder = new Scaffolder(
             new ManifestLoader(new ManifestSchema()),
             new Applier(
                 new PackageAllowlist(['yii2-extensions/missing', 'yii2-extensions/good']),
                 new PathValidator(),
                 new Hasher(),
-                $io,
+                $bufferIo,
             ),
             new LockFile($builder->getProjectRoot()),
-            $io,
+            $bufferIo,
         );
 
         // note: only 'good' is passed as installed; 'missing' is absent.
@@ -592,7 +592,7 @@ final class ScaffolderTest extends TestCase
 
         self::assertStringContainsString(
             'Provider "yii2-extensions/missing" is not installed',
-            $io->getOutput(),
+            $bufferIo->getOutput(),
             'The uninstalled allowed-package must emit the skip message before the loop continues.',
         );
         self::assertFileExists(
@@ -686,12 +686,12 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        $io = new BufferIO();
+        $bufferIo = new BufferIO();
         $scaffolder = new Scaffolder(
             new ManifestLoader(new ManifestSchema()),
-            new Applier(new PackageAllowlist(['yii2-extensions/good']), new PathValidator(), new Hasher(), $io),
+            new Applier(new PackageAllowlist(['yii2-extensions/good']), new PathValidator(), new Hasher(), $bufferIo),
             new LockFile($builder->getProjectRoot()),
-            $io,
+            $bufferIo,
         );
 
         $scaffolder->scaffold($root, [$good], $builder->getProjectRoot(), $builder->getVendorDir(), true);

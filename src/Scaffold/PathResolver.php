@@ -140,11 +140,13 @@ final class PathResolver
      */
     public static function source(string $providerPath, string $source): string
     {
-        // @codeCoverageIgnoreStart 'str_replace("/", DIRECTORY_SEPARATOR, …)' is a Windows-path adapter.
-        return rtrim($providerPath, '/\\')
-            . DIRECTORY_SEPARATOR
-            . str_replace('/', DIRECTORY_SEPARATOR, ltrim($source, '/\\'));
+        $relative = ltrim($source, '/\\');
+
+        // @codeCoverageIgnoreStart Windows-path adapter, POSIX-identity.
+        $relative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
         // @codeCoverageIgnoreEnd
+
+        return rtrim($providerPath, '/\\') . DIRECTORY_SEPARATOR . $relative;
     }
 
     /**
