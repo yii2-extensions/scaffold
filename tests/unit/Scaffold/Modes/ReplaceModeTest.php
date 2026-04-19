@@ -7,7 +7,7 @@ namespace yii\scaffold\tests\unit\Scaffold\Modes;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Xepozz\InternalMocker\MockerState;
-use yii\scaffold\Manifest\FileMapping;
+use yii\scaffold\Manifest\{FileMapping, FileMode};
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyOutcome, ReplaceMode};
 use yii\scaffold\tests\support\TempDirectoryTrait;
@@ -245,7 +245,7 @@ final class ReplaceModeTest extends TestCase
         return new FileMapping(
             destination: $destination,
             source: $source,
-            mode: 'replace',
+            mode: FileMode::Replace,
             providerName: 'test/provider',
             providerPath: "{$this->tempDir}/provider",
         );

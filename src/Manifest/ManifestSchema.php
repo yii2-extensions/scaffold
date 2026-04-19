@@ -6,16 +6,20 @@ namespace yii\scaffold\Manifest;
 
 use RuntimeException;
 
-use function in_array;
+use function array_column;
+use function array_key_exists;
+use function implode;
 use function is_array;
 use function is_string;
+use function sprintf;
 
 /**
  * Validates and normalizes the raw decoded JSON structure of a scaffold manifest.
  *
- * Returns a typed file-mapping array when validation succeeds, or throws on the first structural violation found.
+ * Returns a typed file-mapping array (with `mode` already resolved to a {@see FileMode} case) when validation succeeds,
+ * or throws on the first structural violation found.
  *
- * @phpstan-type FileMappingEntry array{source: string, mode: string}
+ * @phpstan-type FileMappingEntry array{source: string, mode: FileMode}
  * @phpstan-type ValidatedFileMapping array<string, FileMappingEntry>
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
@@ -24,18 +28,14 @@ use function is_string;
 final class ManifestSchema
 {
     /**
-     * @var array<string> Allowed mode values for file-mapping entries.
-     */
-    private const array VALID_MODES = ['append', 'prepend', 'preserve', 'replace'];
-
-    /**
      * Validates a raw decoded manifest array and returns the typed file-mapping.
      *
      * @param array<mixed> $raw Decoded JSON content of the manifest.
      *
      * @throws RuntimeException when the manifest structure is invalid.
      *
-     * @return array<string, array{source: string, mode: string}> Validated and typed file-mapping entries.
+     * @return array<string, array{source: string, mode: FileMode}> Validated and typed file-mapping entries with `mode`
+     * resolved to the corresponding {@see FileMode} case.
      */
     public function validate(array $raw): array
     {
@@ -72,18 +72,20 @@ final class ManifestSchema
                 );
             }
 
-            if (!in_array($entry['mode'], self::VALID_MODES, strict: true)) {
+            $mode = FileMode::tryFrom($entry['mode']);
+
+            if ($mode === null) {
                 throw new RuntimeException(
                     sprintf(
                         'Manifest entry for "%s" has invalid mode "%s". Allowed: %s.',
                         $destination,
                         $entry['mode'],
-                        implode(', ', self::VALID_MODES),
+                        implode(', ', array_column(FileMode::cases(), 'value')),
                     ),
                 );
             }
 
-            $typed[$destination] = ['source' => $entry['source'], 'mode' => $entry['mode']];
+            $typed[$destination] = ['source' => $entry['source'], 'mode' => $mode];
         }
 
         return $typed;

@@ -73,21 +73,32 @@ final class VendorDirResolver
     /**
      * Converts `$path` to an absolute path, resolving relative segments against `$projectRoot`.
      *
+     * Absoluteness detection runs on the original `$path` so Windows drive-relative inputs like `C:vendor` (distinct
+     * from the absolute `C:\vendor`) fall through to the `$projectRoot`-joined branch. Drive-root inputs like `C:\` and
+     * `C:/` keep their trailing separator intact because stripping it would turn them into the drive-relative `C:`
+     * token.
+     *
      * @param string $path Absolute or relative filesystem path.
      * @param string $projectRoot Absolute path used as the base for relative `$path` values.
      *
-     * @return string Absolute path with no trailing directory separator.
+     * @return string Absolute path. A drive-root input preserves its trailing separator; every other absolute path has
+     * trailing separators stripped.
      */
     private static function absolutize(string $path, string $projectRoot): string
     {
-        $trimmed = rtrim($path, '/\\');
+        $isAbsolute = str_starts_with($path, '/')
+            || str_starts_with($path, '\\')
+            || preg_match('#^[A-Za-z]:[/\\\\]#', $path) === 1;
 
-        $isAbsolute = str_starts_with($trimmed, '/')
-            || str_starts_with($trimmed, '\\')
-            || preg_match('/^[A-Za-z]:/', $trimmed) === 1;
+        if ($isAbsolute) {
+            // preserve drive-root separator: "C:\" and "C:/" must remain 3 characters.
+            if (preg_match('#^([A-Za-z]:)([/\\\\])$#', $path, $matches) === 1) {
+                return $matches[1] . $matches[2];
+            }
 
-        return $isAbsolute
-            ? $trimmed
-            : rtrim($projectRoot, '/\\') . '/' . ltrim($trimmed, '/\\');
+            return rtrim($path, '/\\');
+        }
+
+        return rtrim($projectRoot, '/\\') . '/' . rtrim(ltrim($path, '/\\'), '/\\');
     }
 }

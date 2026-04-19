@@ -144,6 +144,53 @@ final class VendorDirResolverTest extends TestCase
         );
     }
 
+    public function testWindowsAbsoluteDrivePathIsHonoredVerbatim(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=C:\\opt\\vendor');
+
+        self::assertSame(
+            'C:\\opt\\vendor',
+            VendorDirResolver::resolve($this->tempDir),
+            "An absolute Windows path ('C:\\\\opt\\\\vendor') must be used verbatim without being joined to the "
+            . 'project root.',
+        );
+    }
+
+    public function testWindowsDriveRelativePathIsTreatedAsRelativeAndJoinedWithProjectRoot(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=C:vendor');
+
+        self::assertSame(
+            $this->tempDir . '/C:vendor',
+            VendorDirResolver::resolve($this->tempDir),
+            "Windows drive-relative 'C:vendor' (no separator after the drive letter) is not absolute and must be "
+            . 'resolved against the project root.',
+        );
+    }
+
+    public function testWindowsDriveRootPreservesTrailingSeparator(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=C:\\');
+
+        self::assertSame(
+            'C:\\',
+            VendorDirResolver::resolve($this->tempDir),
+            "The drive root 'C:\\\\' must keep its trailing separator so it stays absolute; stripping it would "
+            . "turn it into the drive-relative 'C:' token.",
+        );
+    }
+
+    public function testWindowsDriveRootWithForwardSlashPreservesTrailingSeparator(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=D:/');
+
+        self::assertSame(
+            'D:/',
+            VendorDirResolver::resolve($this->tempDir),
+            'Forward-slash drive roots must also keep their trailing separator intact for the same reason.',
+        );
+    }
+
     protected function setUp(): void
     {
         $this->setUpTempDirectory();

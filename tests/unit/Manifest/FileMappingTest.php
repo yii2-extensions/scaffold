@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\unit\Manifest;
 
+use Error;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
-use yii\scaffold\Manifest\FileMapping;
+use ReflectionProperty;
+use yii\scaffold\Manifest\{FileMapping, FileMode};
 
 /**
  * Unit tests for {@see FileMapping} value object construction and property access.
@@ -23,7 +25,7 @@ final class FileMappingTest extends TestCase
         $mapping = new FileMapping(
             'config/params.php',
             'stubs/params.php',
-            'preserve',
+            FileMode::Preserve,
             'vendor/pkg',
             '/path',
         );
@@ -40,13 +42,13 @@ final class FileMappingTest extends TestCase
         $mapping = new FileMapping(
             'config/params.php',
             'stubs/params.php',
-            'replace',
+            FileMode::Replace,
             'vendor/pkg',
             '/path',
         );
 
         self::assertSame(
-            'replace',
+            FileMode::Replace,
             $mapping->mode,
             'Constructor should assign the mode property correctly.',
         );
@@ -57,7 +59,7 @@ final class FileMappingTest extends TestCase
         $mapping = new FileMapping(
             'config/params.php',
             'stubs/params.php',
-            'preserve',
+            FileMode::Preserve,
             'yii2-extensions/nginx-scaffold',
             '/path',
         );
@@ -74,7 +76,7 @@ final class FileMappingTest extends TestCase
         $mapping = new FileMapping(
             'config/params.php',
             'stubs/params.php',
-            'preserve',
+            FileMode::Preserve,
             'vendor/pkg',
             '/vendor/yii2-extensions/nginx-scaffold',
         );
@@ -91,7 +93,7 @@ final class FileMappingTest extends TestCase
         $mapping = new FileMapping(
             'config/params.php',
             'stubs/params.php',
-            'preserve',
+            FileMode::Preserve,
             'vendor/pkg',
             '/path',
         );
@@ -108,13 +110,13 @@ final class FileMappingTest extends TestCase
         $mapping = new FileMapping(
             'config/params.php',
             'stubs/params.php',
-            'preserve',
+            FileMode::Preserve,
             'vendor/pkg',
             '/path',
         );
 
-        $this->expectException(\Error::class);
+        $this->expectException(Error::class);
 
-        (new \ReflectionProperty(FileMapping::class, 'destination'))->setValue($mapping, 'other.php');
+        (new ReflectionProperty(FileMapping::class, 'destination'))->setValue($mapping, 'other.php');
     }
 }

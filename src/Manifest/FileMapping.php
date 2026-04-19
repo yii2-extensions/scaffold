@@ -15,7 +15,7 @@ final class FileMapping
     public function __construct(
         public readonly string $destination,
         public readonly string $source,
-        public readonly string $mode,
+        public readonly FileMode $mode,
         public readonly string $providerName,
         public readonly string $providerPath,
     ) {}

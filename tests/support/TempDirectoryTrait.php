@@ -95,7 +95,15 @@ trait TempDirectoryTrait
         foreach ($iterator as $entry) {
             $path = $entry->getPathname();
 
-            if ($entry->isDir() && !is_link($path)) {
+            if ($entry->isDir()) {
+                if (is_link($path)) {
+                    // POSIX 'unlink()' removes any symlink type; Windows rejects directory symlinks under
+                    // 'DeleteFile' and requires 'rmdir()' instead.
+                    @unlink($path) || @rmdir($path);
+
+                    continue;
+                }
+
                 @rmdir($path);
 
                 continue;

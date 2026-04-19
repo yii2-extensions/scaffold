@@ -8,7 +8,7 @@ use Composer\IO\IOInterface;
 use Composer\IO\NullIO;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use yii\scaffold\Manifest\FileMapping;
+use yii\scaffold\Manifest\{FileMapping, FileMode};
 use yii\scaffold\Scaffold\Applier;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyOutcome, PreserveMode, ReplaceMode};
@@ -233,7 +233,7 @@ final class ApplierTest extends TestCase
         return new FileMapping(
             destination: $destination,
             source: $source,
-            mode: 'replace',
+            mode: FileMode::Replace,
             providerName: $providerName,
             providerPath: $this->tempDir . '/provider',
         );
