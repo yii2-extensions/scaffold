@@ -97,9 +97,10 @@ that works in any PHP project (Yii2, Yii3, Laravel, Symfony, plain PHP).
 Typical post-install workflow:
 
 ```bash
-vendor/bin/scaffold status                                      # what changed?
+vendor/bin/scaffold status                                      # what changed
 vendor/bin/scaffold diff config/params.php                      # review one file
 vendor/bin/scaffold reapply config/params.php --force           # accept stub version
+
 # or
 vendor/bin/scaffold eject config/params.php --yes               # keep yours, stop tracking
 ```

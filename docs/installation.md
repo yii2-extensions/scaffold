@@ -76,7 +76,7 @@ vendor/bin/scaffold reapply --force           # replay stubs, overwriting user e
 vendor/bin/scaffold eject config/params.php --yes   # detach a file from the lock
 ```
 
-No framework bootstrap is required — the binary starts directly from Composer's autoloader.
+No framework bootstrap is required the binary starts directly from Composer's autoloader.
 
 ## Next steps
 

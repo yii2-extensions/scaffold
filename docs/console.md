@@ -2,7 +2,7 @@
 
 The scaffold plugin ships a standalone [Symfony Console](https://symfony.com/doc/current/components/console.html) CLI
 at `vendor/bin/scaffold`. It works in any PHP project (Yii2, Yii3, Laravel, Symfony, plain PHP) with no framework
-bootstrap required — the binary starts directly from Composer's autoloader.
+bootstrap required the binary starts directly from Composer's autoloader.
 
 Run `vendor/bin/scaffold list` to discover every available command; each entry below also responds to
 `--help` for detailed option documentation.
@@ -130,4 +130,4 @@ All commands follow standard Symfony Console conventions:
 | `2`  | Input validation error raised by Symfony Console (for example, missing required argument).                                   |
 
 Use the exit code in CI scripts to halt on failures (for example, `vendor/bin/scaffold status` always returns `0`
-regardless of `modified` / `missing` entries — inspect the text output yourself if you want CI to gate on drift).
+regardless of `modified` / `missing` entries inspect the text output yourself if you want CI to gate on drift).
