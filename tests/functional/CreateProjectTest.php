@@ -27,6 +27,71 @@ final class CreateProjectTest extends TestCase
     use ComposerEventHarness;
     use TempDirectoryTrait;
 
+    public function testCreateProjectAppliesAppendEntryOnFullScaffoldEvenIfAlreadyInLock(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                'extra' => [
+                    'scaffold' => [
+                        'allowed-packages' => [
+                            'demo/scaffold',
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        // pre-populate the lock so partial scaffold (fullScaffold=false) would skip '.gitignore'.
+        $builder->createProjectFile('.gitignore', "existing\n");
+        (new LockFile($builder->getProjectRoot()))->write(
+            [
+                'providers' => [
+                    'demo/scaffold' => ['version' => '1.0.0', 'path' => $builder->getVendorDir() . '/demo/scaffold'],
+                ],
+                'files' => [
+                    '.gitignore' => [
+                        'hash' => 'sha256:' . hash('sha256', "existing\n"),
+                        'provider' => 'demo/scaffold',
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->addMockProvider(
+            $composer,
+            'demo/scaffold',
+            [
+                'file-mapping' => [
+                    '.gitignore' => [
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
+                ],
+            ],
+        );
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostCreateProject($this->makePostCreateProjectEvent($composer, $io));
+
+        self::assertSame(
+            "existing\n/runtime/\n",
+            file_get_contents($builder->getProjectRoot() . '/.gitignore'),
+            "'onPostCreateProject' must dispatch with 'fullScaffold=true' so append entries are applied even when the "
+            . "destination is already recorded in the lock; flipping the flag to 'false' would short-circuit the append "
+            . "through the 'isset(\$lockData['files'][\$destination])' guard and leave the file untouched.",
+        );
+    }
+
     public function testCreateProjectAppliesFullScaffoldWhenInstallDidNotRun(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -182,6 +247,134 @@ final class CreateProjectTest extends TestCase
             'config/params.php',
             $lockData['files'],
             'Destinations applied during the create-project flow must be tracked in the lock file.',
+        );
+    }
+
+    public function testOnPostInstallSkipsAppendEntryAlreadyInLockToAvoidDuplication(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                'extra' => [
+                    'scaffold' => [
+                        'allowed-packages' => [
+                            'demo/scaffold',
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $builder->createProjectFile('.gitignore', "existing\n");
+        (new LockFile($builder->getProjectRoot()))->write(
+            [
+                'providers' => [
+                    'demo/scaffold' => ['version' => '1.0.0', 'path' => $builder->getVendorDir() . '/demo/scaffold'],
+                ],
+                'files' => [
+                    '.gitignore' => [
+                        'hash' => 'sha256:' . hash('sha256', "existing\n"),
+                        'provider' => 'demo/scaffold',
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->addMockProvider(
+            $composer,
+            'demo/scaffold',
+            [
+                'file-mapping' => [
+                    '.gitignore' => [
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
+                ],
+            ],
+        );
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostInstall($this->makePostInstallEvent($composer, $io));
+
+        self::assertSame(
+            "existing\n",
+            file_get_contents($builder->getProjectRoot() . '/.gitignore'),
+            "'onPostInstall' must dispatch with 'fullScaffold=false' so append entries already tracked in the lock are "
+            . "skipped; flipping the flag to 'true' would re-apply the stub and duplicate content across composer "
+            . 'install invocations.',
+        );
+    }
+
+    public function testOnPostUpdateSkipsAppendEntryAlreadyInLockToAvoidDuplication(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createComposerJson(
+            [
+                'name' => 'demo/smoke-project',
+                'config' => ['vendor-dir' => $builder->getVendorDir()],
+                'extra' => [
+                    'scaffold' => [
+                        'allowed-packages' => [
+                            'demo/scaffold',
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        $builder->createProjectFile('.gitignore', "existing\n");
+        (new LockFile($builder->getProjectRoot()))->write(
+            [
+                'providers' => [
+                    'demo/scaffold' => ['version' => '1.0.0', 'path' => $builder->getVendorDir() . '/demo/scaffold'],
+                ],
+                'files' => [
+                    '.gitignore' => [
+                        'hash' => 'sha256:' . hash('sha256', "existing\n"),
+                        'provider' => 'demo/scaffold',
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+
+        $composer = $this->buildComposerForProject($builder->getProjectRoot(), $io);
+        $this->addMockProvider(
+            $composer,
+            'demo/scaffold',
+            [
+                'file-mapping' => [
+                    '.gitignore' => [
+                        'source' => 'stubs/.gitignore',
+                        'mode' => 'append',
+                    ],
+                ],
+            ],
+        );
+        $this->resetInstallScaffoldRanFlag();
+
+        (new EventSubscriber())->onPostUpdate($this->makePostUpdateEvent($composer, $io));
+
+        self::assertSame(
+            "existing\n",
+            file_get_contents($builder->getProjectRoot() . '/.gitignore'),
+            "'onPostUpdate' must dispatch with 'fullScaffold=false' so append entries already tracked in the lock are "
+            . "skipped; flipping the flag to 'true' would re-apply the stub and duplicate content across composer "
+            . 'update invocations.',
         );
     }
 

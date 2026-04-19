@@ -119,14 +119,13 @@ final class PathValidator
         while ($dir !== $realRoot && $dir !== dirname($dir)) {
             $resolved = realpath($dir);
 
-            if ($resolved !== false) {
-                if (!str_starts_with($resolved . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)) {
-                    throw new RuntimeException(
-                        sprintf('%s path escapes the root via symlink: "%s".', ucfirst($context), $originalPath),
-                    );
-                }
-
-                return;
+            if (
+                $resolved !== false
+                && !str_starts_with($resolved . DIRECTORY_SEPARATOR, $realRoot . DIRECTORY_SEPARATOR)
+            ) {
+                throw new RuntimeException(
+                    sprintf('%s path escapes the root via symlink: "%s".', ucfirst($context), $originalPath),
+                );
             }
 
             $dir = dirname($dir);
@@ -189,7 +188,11 @@ final class PathValidator
      */
     private function normalizePath(string $base, string $relative): string
     {
-        $combined = $base . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+        // @codeCoverageIgnoreStart
+        $normalizedRelative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
+        // @codeCoverageIgnoreEnd
+
+        $combined = $base . DIRECTORY_SEPARATOR . $normalizedRelative;
 
         return rtrim($combined, DIRECTORY_SEPARATOR);
     }

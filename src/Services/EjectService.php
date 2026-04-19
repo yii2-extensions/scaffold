@@ -37,9 +37,7 @@ final class EjectService
         $data = $lock->read();
 
         if (!isset($data['files'][$file])) {
-            $out->writeStderr(
-                sprintf('[scaffold] "%s" is not tracked in scaffold-lock.json.', $file) . PHP_EOL,
-            );
+            $out->writeStderr(sprintf('[scaffold] "%s" is not tracked in scaffold-lock.json.', $file));
 
             return ExitCode::Error->value;
         }
@@ -49,7 +47,7 @@ final class EjectService
                 sprintf(
                     '[scaffold] Would remove "%s" from scaffold-lock.json. Run with --yes to confirm.',
                     $file,
-                ) . PHP_EOL,
+                ),
             );
 
             return ExitCode::Ok->value;
@@ -63,7 +61,7 @@ final class EjectService
             sprintf(
                 '[scaffold] Removed "%s" from scaffold-lock.json. The file was not deleted from disk.',
                 $file,
-            ) . PHP_EOL,
+            ),
         );
 
         return ExitCode::Ok->value;

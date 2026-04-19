@@ -8,8 +8,8 @@ namespace yii\scaffold\Console;
  * Abstracts `stdout` / `stderr` writes so scaffold service implementations can run unchanged under console controllers,
  * Symfony Console commands, or the standalone `bin/scaffold` binary.
  *
- * Implementations are responsible for appending newlines only when the caller supplies them; services pass
- * pre-formatted strings (including `PHP_EOL`) and expect them to be written verbatim.
+ * Implementations append a single trailing newline to every write (writeln semantics), mirroring Symfony Console's
+ * conventions; services pass pre-formatted strings without a trailing `PHP_EOL`.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -17,16 +17,16 @@ namespace yii\scaffold\Console;
 interface OutputWriter
 {
     /**
-     * Writes `$message` to the standard error stream.
+     * Writes `$message` to the standard error stream followed by a trailing newline.
      *
-     * @param string $message Pre-formatted message, typically terminated with `PHP_EOL`.
+     * @param string $message Message without a trailing newline; the writer appends one.
      */
     public function writeStderr(string $message): void;
 
     /**
-     * Writes `$message` to the standard output stream.
+     * Writes `$message` to the standard output stream followed by a trailing newline.
      *
-     * @param string $message Pre-formatted message, typically terminated with `PHP_EOL`.
+     * @param string $message Message without a trailing newline; the writer appends one.
      */
     public function writeStdout(string $message): void;
 }

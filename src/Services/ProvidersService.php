@@ -59,16 +59,16 @@ final class ProvidersService
         $providers = $this->getProviders($projectRoot);
 
         if ($providers === []) {
-            $out->writeStdout('[scaffold] No providers tracked in scaffold-lock.json.' . PHP_EOL);
+            $out->writeStdout('[scaffold] No providers tracked in scaffold-lock.json.');
 
             return ExitCode::Ok->value;
         }
 
-        $out->writeStdout(sprintf('%-44s %s', 'Provider', 'Files') . PHP_EOL);
-        $out->writeStdout(str_repeat('-', 52) . PHP_EOL);
+        $out->writeStdout(sprintf('%-44s %s', 'Provider', 'Files'));
+        $out->writeStdout(str_repeat('-', 52));
 
         foreach ($providers as $name => $count) {
-            $out->writeStdout(sprintf('%-44s %d', $name, $count) . PHP_EOL);
+            $out->writeStdout(sprintf('%-44s %d', $name, $count));
         }
 
         return ExitCode::Ok->value;

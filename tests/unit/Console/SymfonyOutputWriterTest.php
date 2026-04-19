@@ -26,13 +26,13 @@ final class SymfonyOutputWriterTest extends TestCase
     {
         $output = new BufferedOutput();
 
-        (new SymfonyOutputWriter($output))->writeStderr("plain <output> fallback\n");
+        (new SymfonyOutputWriter($output))->writeStderr('plain <output> fallback');
 
         self::assertSame(
-            "plain <output> fallback\n",
+            'plain <output> fallback' . PHP_EOL,
             $output->fetch(),
             "When the wrapped 'OutputInterface' is not a 'ConsoleOutputInterface', stderr writes must fall back to "
-            . 'the primary output (still preserving raw bytes).',
+            . "the primary output (still preserving raw bytes) and append a single trailing newline via 'writeln'.",
         );
     }
 
@@ -46,26 +46,26 @@ final class SymfonyOutputWriterTest extends TestCase
             'Test setup: the error output must be swapped for a BufferedOutput so we can read it back.',
         );
 
-        (new SymfonyOutputWriter($console))->writeStderr("error <bold>line</bold>\n");
+        (new SymfonyOutputWriter($console))->writeStderr('error <bold>line</bold>');
 
         /** @var BufferedOutput $swapped */
         $swapped = $console->getErrorOutput();
 
         self::assertSame(
-            "error <bold>line</bold>\n",
+            'error <bold>line</bold>' . PHP_EOL,
             $swapped->fetch(),
             "A 'ConsoleOutputInterface' instance must route 'writeStderr' through 'getErrorOutput()' and preserve "
-            . 'any angle-bracket tokens verbatim.',
+            . 'any angle-bracket tokens verbatim while still appending a single trailing newline.',
         );
     }
     public function testWriteStdoutEmitsAngleBracketTokensVerbatimWithoutFormatterInterpretation(): void
     {
         $output = new BufferedOutput();
 
-        (new SymfonyOutputWriter($output))->writeStdout("<?php echo \$user; ?>\n");
+        (new SymfonyOutputWriter($output))->writeStdout('<?php echo $user; ?>');
 
         self::assertSame(
-            "<?php echo \$user; ?>\n",
+            '<?php echo $user; ?>' . PHP_EOL,
             $output->fetch(),
             'Angle-bracket tokens inside a stdout write must survive verbatim instead of being interpreted as '
             . "Symfony formatter tags (a plain 'write()' call would throw 'InvalidArgumentException' or strip the "
@@ -77,10 +77,10 @@ final class SymfonyOutputWriterTest extends TestCase
     {
         $output = new BufferedOutput(OutputInterface::VERBOSITY_NORMAL, decorated: true);
 
-        (new SymfonyOutputWriter($output))->writeStdout("<info>hello</info>\n");
+        (new SymfonyOutputWriter($output))->writeStdout('<info>hello</info>');
 
         self::assertSame(
-            "<info>hello</info>\n",
+            '<info>hello</info>' . PHP_EOL,
             $output->fetch(),
             'Symfony-style tags in service output must be written literally (no ANSI codes applied) even when the '
             . "underlying 'OutputInterface' has decoration enabled.",

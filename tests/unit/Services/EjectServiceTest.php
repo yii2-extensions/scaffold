@@ -22,6 +22,27 @@ final class EjectServiceTest extends TestCase
 {
     use TempDirectoryTrait;
 
+    public function testConfirmedEjectSuccessMessageEndsWithSinglePhpEolSuffix(): void
+    {
+        $this->seedTracked('config/params.php');
+
+        file_put_contents("{$this->tempDir}/config/params.php", "return [];\n");
+
+        $out = new BufferedOutputWriter();
+        (new EjectService())->run($this->tempDir, 'config/params.php', confirmed: true, out: $out);
+
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'Removed' confirmation must end with PHP_EOL so shells render it on its own line.",
+        );
+        self::assertStringStartsNotWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'Removed' confirmation must not be prefixed with PHP_EOL.",
+        );
+    }
+
     public function testDryRunLeavesLockUntouchedWithoutConfirmation(): void
     {
         $this->seedTracked('config/params.php');
@@ -46,6 +67,25 @@ final class EjectServiceTest extends TestCase
             'config/params.php',
             $data['files'],
             'File must remain tracked in the lock file during a dry-run.',
+        );
+    }
+
+    public function testDryRunMessageEndsWithSinglePhpEolSuffix(): void
+    {
+        $this->seedTracked('config/params.php');
+
+        $out = new BufferedOutputWriter();
+        (new EjectService())->run($this->tempDir, 'config/params.php', confirmed: false, out: $out);
+
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The dry-run 'Would remove' message must end with PHP_EOL.",
+        );
+        self::assertStringStartsNotWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The dry-run 'Would remove' message must not be prefixed with PHP_EOL.",
         );
     }
 
@@ -98,6 +138,16 @@ final class EjectServiceTest extends TestCase
             'not tracked',
             $out->stderrBuffer,
             'When the file is not tracked, the output must indicate the error.',
+        );
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stderrBuffer,
+            "The 'not tracked' stderr message must end with PHP_EOL so subsequent stderr writes start on a fresh line.",
+        );
+        self::assertStringStartsNotWith(
+            PHP_EOL,
+            $out->stderrBuffer,
+            "The 'not tracked' stderr message must not begin with PHP_EOL.",
         );
     }
 

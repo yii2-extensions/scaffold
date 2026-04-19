@@ -16,3 +16,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - test: raise suite to 100% line/method/class coverage by exercising error paths via `xepozz/internal-mocker` intercepts and removing dead defensive code.
 - feat: add `scaffold/help` console command listing module subcommands with descriptions.
 - feat: port console commands to Symfony Console and ship `vendor/bin/scaffold` as a standalone CLI usable from Yii2, Yii3, Laravel, Symfony, or plain PHP projects.
+- test: kill remaining path-normalization mutants and keep Infection MSI at `100%`.

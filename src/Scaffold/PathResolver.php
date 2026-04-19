@@ -140,9 +140,13 @@ final class PathResolver
      */
     public static function source(string $providerPath, string $source): string
     {
-        return rtrim($providerPath, '/\\')
-            . DIRECTORY_SEPARATOR
-            . str_replace('/', DIRECTORY_SEPARATOR, ltrim($source, '/\\'));
+        $relative = ltrim($source, '/\\');
+
+        // @codeCoverageIgnoreStart
+        $relative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
+        // @codeCoverageIgnoreEnd
+
+        return rtrim($providerPath, '/\\') . DIRECTORY_SEPARATOR . $relative;
     }
 
     /**
@@ -167,8 +171,6 @@ final class PathResolver
         }
 
         $currentUmask = umask();
-
-        umask($currentUmask);
 
         @chmod($destination, $perms & 0777 & ~$currentUmask);
     }

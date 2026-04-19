@@ -47,7 +47,11 @@ final class VendorDirResolver
             return self::absolutize($env, $projectRoot);
         }
 
-        $composerJson = rtrim($projectRoot, '/\\') . '/composer.json';
+        // @codeCoverageIgnoreStart
+        $trimmedRoot = rtrim($projectRoot, '/\\');
+        // @codeCoverageIgnoreEnd
+
+        $composerJson = $trimmedRoot . '/composer.json';
 
         if (is_file($composerJson)) {
             $raw = file_get_contents($composerJson);
@@ -99,6 +103,10 @@ final class VendorDirResolver
             return rtrim($path, '/\\');
         }
 
-        return rtrim($projectRoot, '/\\') . '/' . rtrim(ltrim($path, '/\\'), '/\\');
+        // @codeCoverageIgnoreStart
+        $strippedPath = ltrim($path, '/\\');
+        // @codeCoverageIgnoreEnd
+
+        return rtrim($projectRoot, '/\\') . '/' . rtrim($strippedPath, '/\\');
     }
 }

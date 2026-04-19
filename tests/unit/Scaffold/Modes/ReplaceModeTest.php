@@ -145,6 +145,40 @@ final class ReplaceModeTest extends TestCase
         );
     }
 
+    public function testSyncsSourceExecutableBitOntoDestinationAfterCopy(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
+        }
+
+        $source = "{$this->tempDir}/provider/stubs/source.txt";
+
+        $this->makeSourceFile('#!/bin/sh');
+
+        chmod($source, 0755);
+
+        $oldUmask = umask(0022);
+
+        try {
+            (new ReplaceMode())->apply(
+                $this->makeMapping(),
+                "{$this->tempDir}/project",
+                new Hasher(),
+                null,
+            );
+
+            self::assertSame(
+                0755,
+                fileperms("{$this->tempDir}/project/output.txt") & 0777,
+                "After 'ReplaceMode::apply' copies the stub, it must invoke 'syncPermissions' so the destination "
+                . "inherits the source executable bit (0755 here); without 'syncPermissions' the file would keep the "
+                . "umask-derived 0644 that 'copy()' produces, breaking scaffolded CLI stubs.",
+            );
+        } finally {
+            umask($oldUmask);
+        }
+    }
+
     public function testThrowsWhenCopyFails(): void
     {
         $this->makeSourceFile('content');

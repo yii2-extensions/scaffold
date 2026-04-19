@@ -24,22 +24,22 @@ final class BufferedOutputWriter implements OutputWriter
     public string $stdoutBuffer = '';
 
     /**
-     * Writes a message to stderr.
+     * Writes a message to stderr followed by a single trailing `PHP_EOL`.
      *
      * @param string $message Message to write.
      */
     public function writeStderr(string $message): void
     {
-        $this->stderrBuffer .= $message;
+        $this->stderrBuffer .= $message . PHP_EOL;
     }
 
     /**
-     * Writes a message to stdout.
+     * Writes a message to stdout followed by a single trailing `PHP_EOL`.
      *
      * @param string $message Message to write.
      */
     public function writeStdout(string $message): void
     {
-        $this->stdoutBuffer .= $message;
+        $this->stdoutBuffer .= $message . PHP_EOL;
     }
 }
