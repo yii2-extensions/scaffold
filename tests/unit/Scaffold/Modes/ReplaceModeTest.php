@@ -54,6 +54,7 @@ final class ReplaceModeTest extends TestCase
         $this->makeSourceFile('updated stub content');
 
         $hasher = new Hasher();
+
         $lockHash = $hasher->hash($projectDir . '/output.txt');
 
         $result = (new ReplaceMode())->apply(
@@ -80,7 +81,6 @@ final class ReplaceModeTest extends TestCase
         $this->makeSourceFile('known content');
 
         $hasher = new Hasher();
-
         $result = (new ReplaceMode())->apply(
             $this->makeMapping(),
             "{$this->tempDir}/project",
@@ -232,6 +232,14 @@ final class ReplaceModeTest extends TestCase
         $this->tearDownTempDirectory();
     }
 
+    /**
+     * Helper to create a FileMapping for testing.
+     *
+     * @param string $destination Relative destination path within the project, defaulting to 'output.txt'.
+     * @param string $source Relative source path within the provider, defaulting to 'stubs/source.txt'.
+     *
+     * @return FileMapping Created FileMapping instance.
+     */
     private function makeMapping(string $destination = 'output.txt', string $source = 'stubs/source.txt'): FileMapping
     {
         return new FileMapping(
@@ -243,11 +251,18 @@ final class ReplaceModeTest extends TestCase
         );
     }
 
+    /**
+     * Helper to create a source file for testing.
+     *
+     * @param string $content Content to write to the source file, defaulting to 'stub content'.
+     * @param string $relative Relative path of the source file within the provider directory, defaulting to 'stubs/source.txt'.
+     */
     private function makeSourceFile(string $content = 'stub content', string $relative = 'stubs/source.txt'): void
     {
         $path = "{$this->tempDir}/provider/{$relative}";
 
-        mkdir(dirname($path), 0777, recursive: true);
+        $this->ensureTestDirectory(dirname($path));
+
         file_put_contents($path, $content);
     }
 }

@@ -199,7 +199,12 @@ final class ApplierTest extends TestCase
     }
 
     /**
-     * @param list<string> $allowedPackages
+     * Creates an instance of Applier with a specified allowlist for testing.
+     *
+     * @param list<string> $allowedPackages List of allowed package names for the Applier's PackageAllowlist; defaults
+     * to ['yii2-extensions/test'].
+     *
+     * @return Applier Configured Applier instance for testing, with the specified allowlist and a NullIO for output.
      */
     private function makeApplier(array $allowedPackages = ['yii2-extensions/test']): Applier
     {
@@ -211,6 +216,15 @@ final class ApplierTest extends TestCase
         );
     }
 
+    /**
+     * Builds a {@see FileMapping} fixture wired to the test provider path for use in the applier scenarios.
+     *
+     * @param string $destination Destination path relative to the project root.
+     * @param string $source Relative source path inside the provider root.
+     * @param string $providerName Provider package name for the mapping.
+     *
+     * @return FileMapping File mapping used for the test, with the specified destination, source, and provider.
+     */
     private function makeMapping(
         string $destination = 'output.txt',
         string $source = 'stubs/source.txt',
@@ -225,11 +239,17 @@ final class ApplierTest extends TestCase
         );
     }
 
+    /**
+     * Creates the provider's stub file and the project's current file with the specified content.
+     *
+     * @param string $content Content to write to the provider's stub file.
+     */
     private function makeSourceFile(string $content = 'stub content'): void
     {
         $path = "{$this->tempDir}/provider/stubs/source.txt";
 
-        mkdir(dirname($path), 0777, recursive: true);
+        $this->ensureTestDirectory(dirname($path));
+
         file_put_contents($path, $content);
     }
 }

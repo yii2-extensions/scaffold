@@ -11,8 +11,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use yii\scaffold\Console\SymfonyOutputWriter;
 use yii\scaffold\Services\EjectService;
 
-use function getcwd;
-
 /**
  * Removes a file entry from `scaffold-lock.json` without deleting the file from disk.
  *
@@ -28,7 +26,7 @@ use function getcwd;
     name: 'eject',
     description: "Removes a file entry from 'scaffold-lock.json' without deleting the file from disk.",
 )]
-final class EjectCommand extends Command
+final class EjectCommand extends AbstractScaffoldCommand
 {
     protected function configure(): void
     {
@@ -39,7 +37,11 @@ final class EjectCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $projectRoot = (string) getcwd();
+        $projectRoot = $this->resolveProjectRoot($output);
+
+        if ($projectRoot === null) {
+            return Command::FAILURE;
+        }
 
         /** @var string $file */
         $file = $input->getArgument('file');

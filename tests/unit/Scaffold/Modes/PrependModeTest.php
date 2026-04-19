@@ -124,7 +124,6 @@ final class PrependModeTest extends TestCase
         $this->makeSourceFile('stub');
 
         $hasher = new Hasher();
-
         $result = (new PrependMode())->apply(
             $this->makeMapping(),
             "{$this->tempDir}/project",
@@ -147,7 +146,9 @@ final class PrependModeTest extends TestCase
         file_put_contents("{$projectDir}/output.txt", 'existing');
 
         $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";
-        mkdir(dirname($sourcePath), 0777, recursive: true);
+
+        $this->ensureTestDirectory(dirname($sourcePath));
+
         file_put_contents($sourcePath, 'source');
 
         /**
@@ -261,6 +262,14 @@ final class PrependModeTest extends TestCase
         $this->tearDownTempDirectory();
     }
 
+    /**
+     * Helper to create a file mapping for testing.
+     *
+     * @param string $destination Destination path relative to the project root.
+     * @param string $source Source path relative to the provider path.
+     *
+     * @return FileMapping Created file mapping instance.
+     */
     private function makeMapping(string $destination = 'output.txt', string $source = 'stubs/source.txt'): FileMapping
     {
         return new FileMapping(
@@ -272,11 +281,18 @@ final class PrependModeTest extends TestCase
         );
     }
 
+    /**
+     * Helper to create a source file with specified content for testing.
+     *
+     * @param string $content Content to write to the source file.
+     * @param string $relative Relative path from the provider path where the source file should be created.
+     */
     private function makeSourceFile(string $content = 'prepended content', string $relative = 'stubs/source.txt'): void
     {
         $path = "{$this->tempDir}/provider/{$relative}";
 
-        mkdir(dirname($path), 0777, recursive: true);
+        $this->ensureTestDirectory(dirname($path));
+
         file_put_contents($path, $content);
     }
 }

@@ -8,10 +8,8 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\{InputArgument, InputInterface};
 use Symfony\Component\Console\Output\OutputInterface;
-use yii\scaffold\Console\SymfonyOutputWriter;
+use yii\scaffold\Console\{SymfonyOutputWriter, VendorDirResolver};
 use yii\scaffold\Services\DiffService;
-
-use function getcwd;
 
 /**
  * Shows a line-by-line diff between the provider stub and the current on-disk file.
@@ -28,7 +26,7 @@ use function getcwd;
     name: 'diff',
     description: 'Shows a line-by-line diff between the provider stub and the current on-disk file.',
 )]
-final class DiffCommand extends Command
+final class DiffCommand extends AbstractScaffoldCommand
 {
     protected function configure(): void
     {
@@ -41,12 +39,20 @@ final class DiffCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $projectRoot = (string) getcwd();
-        $vendorDir = $projectRoot . '/vendor';
+        $projectRoot = $this->resolveProjectRoot($output);
+
+        if ($projectRoot === null) {
+            return Command::FAILURE;
+        }
 
         /** @var string $file */
         $file = $input->getArgument('file');
 
-        return (new DiffService())->run($projectRoot, $vendorDir, $file, new SymfonyOutputWriter($output));
+        return (new DiffService())->run(
+            $projectRoot,
+            VendorDirResolver::resolve($projectRoot),
+            $file,
+            new SymfonyOutputWriter($output),
+        );
     }
 }

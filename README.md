@@ -86,13 +86,13 @@ Minimal `composer.json` for a project using one scaffold provider:
 After `composer install`, the plugin ships a standalone Symfony Console CLI at `vendor/bin/scaffold`
 that works in any PHP project (Yii2, Yii3, Laravel, Symfony, plain PHP).
 
-| Command                          | What it does                                                                                      |
-| -------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `vendor/bin/scaffold status`     | Prints a table comparing every tracked file's on-disk hash to the one recorded in `scaffold-lock.json` (`synced` / `modified` / `missing`). |
-| `vendor/bin/scaffold providers`  | Lists every provider recorded in `scaffold-lock.json` and how many files each one contributed.    |
-| `vendor/bin/scaffold diff <file>`   | Shows a line-by-line diff between the provider stub and the current on-disk file.              |
+| Command                                                            | What it does                                                                                                                                     |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `vendor/bin/scaffold status`                                       | Prints a table comparing every tracked file's on-disk hash to the one recorded in `scaffold-lock.json` (`synced` / `modified` / `missing`).      |
+| `vendor/bin/scaffold providers`                                    | Lists every provider recorded in `scaffold-lock.json` and how many files each one contributed.                                                   |
+| `vendor/bin/scaffold diff <file>`                                  | Shows a line-by-line diff between the provider stub and the current on-disk file.                                                                |
 | `vendor/bin/scaffold reapply [file] [--force] [--provider=<name>]` | Re-copies stubs from `vendor/` to the project, updating lock hashes on success. Without `--force`, user-modified files are reported and skipped. |
-| `vendor/bin/scaffold eject <file> [--yes]` | Removes a file entry from `scaffold-lock.json` without deleting the file from disk. Without `--yes` only previews the change. |
+| `vendor/bin/scaffold eject <file> [--yes]`                         | Removes a file entry from `scaffold-lock.json` without deleting the file from disk. Without `--yes` only previews the change.                    |
 
 Typical post-install workflow:
 

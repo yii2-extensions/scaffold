@@ -123,11 +123,11 @@ vendor/bin/scaffold eject config/params.php --yes
 
 All commands follow standard Symfony Console conventions:
 
-| Code | Meaning                                                                                  |
-| ---- | ---------------------------------------------------------------------------------------- |
-| `0`  | Success (including preview / no-op runs).                                                |
+| Code | Meaning                                                                                                                      |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `0`  | Success (including preview / no-op runs).                                                                                    |
 | `1`  | Recoverable error (for example, untracked file passed to `diff` / `eject`, or filter in `reapply` matched no tracked files). |
-| `2`  | Input validation error raised by Symfony Console (for example, missing required argument). |
+| `2`  | Input validation error raised by Symfony Console (for example, missing required argument).                                   |
 
 Use the exit code in CI scripts to halt on failures (for example, `vendor/bin/scaffold status` always returns `0`
 regardless of `modified` / `missing` entries — inspect the text output yourself if you want CI to gate on drift).

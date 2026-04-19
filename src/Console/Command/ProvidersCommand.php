@@ -11,8 +11,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use yii\scaffold\Console\SymfonyOutputWriter;
 use yii\scaffold\Services\ProvidersService;
 
-use function getcwd;
-
 /**
  * Lists all scaffold providers recorded in `scaffold-lock.json` with their file counts.
  *
@@ -28,11 +26,15 @@ use function getcwd;
     name: 'providers',
     description: "Lists all scaffold providers recorded in 'scaffold-lock.json' with their file counts.",
 )]
-final class ProvidersCommand extends Command
+final class ProvidersCommand extends AbstractScaffoldCommand
 {
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $projectRoot = (string) getcwd();
+        $projectRoot = $this->resolveProjectRoot($output);
+
+        if ($projectRoot === null) {
+            return Command::FAILURE;
+        }
 
         return (new ProvidersService())->run($projectRoot, new SymfonyOutputWriter($output));
     }

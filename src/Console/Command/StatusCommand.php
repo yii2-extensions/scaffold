@@ -11,8 +11,6 @@ use Symfony\Component\Console\Output\OutputInterface;
 use yii\scaffold\Console\SymfonyOutputWriter;
 use yii\scaffold\Services\StatusService;
 
-use function getcwd;
-
 /**
  * Displays the status of all scaffold-tracked files relative to their recorded hashes.
  *
@@ -28,11 +26,15 @@ use function getcwd;
     name: 'status',
     description: 'Displays the status of all scaffold-tracked files relative to their recorded hashes.',
 )]
-final class StatusCommand extends Command
+final class StatusCommand extends AbstractScaffoldCommand
 {
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $projectRoot = (string) getcwd();
+        $projectRoot = $this->resolveProjectRoot($output);
+
+        if ($projectRoot === null) {
+            return Command::FAILURE;
+        }
 
         return (new StatusService())->run($projectRoot, new SymfonyOutputWriter($output));
     }

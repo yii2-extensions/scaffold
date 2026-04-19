@@ -95,7 +95,6 @@ final class AppendModeTest extends TestCase
         $this->makeSourceFile('content');
 
         $hasher = new Hasher();
-
         $result = (new AppendMode())->apply(
             $this->makeMapping(),
             "{$this->tempDir}/project",
@@ -276,6 +275,14 @@ final class AppendModeTest extends TestCase
         $this->tearDownTempDirectory();
     }
 
+    /**
+     * Helper method to create a FileMapping with default values for testing.
+     *
+     * @param string $destination Destination path for the file mapping, defaulting to 'output.txt'.
+     * @param string $source Source path for the file mapping, defaulting to 'stubs/source.txt'.
+     *
+     * @return FileMapping A FileMapping instance with the specified or default values.
+     */
     private function makeMapping(string $destination = 'output.txt', string $source = 'stubs/source.txt'): FileMapping
     {
         return new FileMapping(
@@ -287,11 +294,19 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    /**
+     * Creates a source file with the specified content and relative path within the provider directory.
+     *
+     * @param string $content Content to write to the source file.
+     * @param string $relative Relative path to the source file within the provider directory, defaulting to
+     * 'stubs/source.txt'.
+     */
     private function makeSourceFile(string $content = 'appended content', string $relative = 'stubs/source.txt'): void
     {
         $path = $this->tempDir . '/provider/' . $relative;
 
-        mkdir(dirname($path), 0777, recursive: true);
+        $this->ensureTestDirectory(dirname($path));
+
         file_put_contents($path, $content);
     }
 }

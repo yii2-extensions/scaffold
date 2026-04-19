@@ -36,7 +36,7 @@ final class EjectService
 
         $data = $lock->read();
 
-        if (($data['files'][$file] ?? null) === null) {
+        if (!isset($data['files'][$file])) {
             $out->writeStderr(
                 sprintf('[scaffold] "%s" is not tracked in scaffold-lock.json.', $file) . PHP_EOL,
             );
