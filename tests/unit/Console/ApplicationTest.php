@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace yii\scaffold\tests\unit\Console;
 
+use Composer\InstalledVersions;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use yii\scaffold\Console\Application;
@@ -76,9 +77,17 @@ final class ApplicationTest extends TestCase
 
     public function testResolveVersionReturnsComposerPrettyVersionWhenPackageIsInstalled(): void
     {
-        self::assertNotEmpty(
+        $prettyVersion = InstalledVersions::getPrettyVersion(Application::NAME);
+
+        self::assertIsString(
+            $prettyVersion,
+            "Pre-condition: Composer must report a 'pretty_version' for 'Application::NAME' in the test environment.",
+        );
+        self::assertSame(
+            $prettyVersion,
             Application::resolveVersion(Application::NAME),
-            "'Application::resolveVersion()' must return the Composer pretty_version when the package is installed.",
+            "'Application::resolveVersion()' must return the exact Composer 'pretty_version' for an installed "
+            . 'package, not the hard-coded fallback.',
         );
     }
 }

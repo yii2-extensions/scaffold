@@ -233,7 +233,24 @@ final class ReapplyServiceTest extends TestCase
 
     public function testPostWriteHashFailureSkipsLockUpdate(): void
     {
-        $this->seedTracked('config/params.php', "stub\n", "stub\n");
+        /*+
+         * Seed divergent stub vs current content with a known lock hash so that a successful run would update the hash
+         * to 'sha256(stub)'; the failure path must leave the original hash untouched.
+         */
+        $this->seedTracked(
+            'config/params.php',
+            stubContent: "new-stub\n",
+            currentContent: "user-edited\n",
+            lockHashOf: "user-edited\n",
+        );
+
+        $originalLockHash = 'sha256:' . hash('sha256', "user-edited\n");
+
+        self::assertSame(
+            $originalLockHash,
+            (new LockFile($this->tempDir))->read()['files']['config/params.php']['hash'] ?? null,
+            'Pre-condition: lock hash must reflect the seeded current-content hash before the reapply runs.',
+        );
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
@@ -255,7 +272,13 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Could not hash',
             $out->stderrBuffer,
-            'When hashing fails after writing, an error must be reported.',
+            "Post-write 'hash_file' failure must surface via the 'Could not hash' diagnostic on stderr.",
+        );
+        self::assertSame(
+            $originalLockHash,
+            (new LockFile($this->tempDir))->read()['files']['config/params.php']['hash'] ?? null,
+            'Post-condition: when the post-write hash throws, the lock entry must stay frozen at the pre-run hash '
+            . '(skip-the-lock-update branch exercised).',
         );
     }
 

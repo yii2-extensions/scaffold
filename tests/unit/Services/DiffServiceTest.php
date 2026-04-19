@@ -129,13 +129,19 @@ final class DiffServiceTest extends TestCase
         $lock->write($data);
 
         $out = new BufferedOutputWriter();
-        (new DiffService())->run(
+        $exitCode = (new DiffService())->run(
             $this->tempDir,
             "{$this->tempDir}/vendor",
             'config/params.php',
             $out,
         );
 
+        self::assertSame(
+            0,
+            $exitCode,
+            'A provider-path warning must be non-fatal — the diff command must fall back to the default provider '
+            . 'root and still return a success exit code.',
+        );
         self::assertStringContainsString(
             'resolves outside vendor dir',
             $out->stderrBuffer,

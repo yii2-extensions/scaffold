@@ -240,7 +240,10 @@ final class ApplierTest extends TestCase
     }
 
     /**
-     * Creates the provider's stub file and the project's current file with the specified content.
+     * Creates the provider's stub file with the specified content.
+     *
+     * Does not touch the project's current destination file; tests that need a pre-existing destination create it
+     * directly from the scenario under test.
      *
      * @param string $content Content to write to the provider's stub file.
      */
