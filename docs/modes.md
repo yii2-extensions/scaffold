@@ -9,7 +9,7 @@ when a file has been modified by the developer after scaffolding.
 | Mode       | File absent                | File present (unmodified)                                                                                                                             | File present (user-modified)                              |
 | ---------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                   | **Skips** — emits warning to stderr.                      |
-| `preserve` | Writes stub, records hash. | **Skips** never overwrites.                                                                                                                         | **Skips** — never overwrites.                             |
+| `preserve` | Writes stub, records hash. | **Skips**; never overwrites.                                                                                                                          | **Skips**; never overwrites.                              |
 | `append`   | Writes stub, records hash. | Appends stub content (`FILE_APPEND`), updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).          | Appends stub content, updates hash (full scaffold only).  |
 | `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock). | Prepends stub content, updates hash (full scaffold only). |
 
@@ -18,12 +18,12 @@ when a file has been modified by the developer after scaffolding.
 After writing a file the plugin computes `sha256:<hash_file('sha256', $path)>` and records it in `scaffold-lock.json`.
 On subsequent runs the plugin compares the current on-disk hash to the recorded hash:
 
-- **Hashes match** the file has not been changed since the last scaffold run. The plugin re-applies the stub
+- **Hashes match**; the file has not been changed since the last scaffold run. The plugin re-applies the stub
   (for `replace`) or skips (for `preserve`).
-- **Hashes differ** the developer has modified the file. For `replace`, the plugin skips the file and writes a warning
+- **Hashes differ**; the developer has modified the file. For `replace`, the plugin skips the file and writes a warning
   to stderr. For `preserve`, the file is always skipped regardless of hash.
 
-`append` and `prepend` do not compare hashes they always add content. On partial scaffold runs (`post-install-cmd`,
+`append` and `prepend` do not compare hashes; they always add content. On partial scaffold runs (`post-install-cmd`,
 `post-update-cmd`) these modes are skipped for files already recorded in the lockfile, preventing duplicate content on
 repeated `composer install` calls.
 

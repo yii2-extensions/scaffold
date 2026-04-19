@@ -30,6 +30,5 @@ enum FileMode: string
     /**
      * Overwrite the destination unless the user has modified it (hash mismatch = skip).
      */
-
     case Replace = 'replace';
 }

@@ -25,23 +25,42 @@ final class ReapplyServiceTest extends TestCase
 
     public function testAppendAndPrependModesCannotBeReapplied(): void
     {
-        $this->seedTracked('.env.dist', "A=1\n", "A=1\n", mode: 'append');
+        $modes = ['append', 'prepend'];
 
-        $out = new BufferedOutputWriter();
-        (new ReapplyService())->run(
-            $this->tempDir,
-            "{$this->tempDir}/vendor",
-            file: '.env.dist',
-            provider: '',
-            force: false,
-            out: $out,
-        );
+        foreach ($modes as $mode) {
+            $file = ".env.{$mode}.dist";
 
-        self::assertStringContainsString(
-            'cannot be safely reapplied',
-            $out->stdoutBuffer,
-            "When a file is in 'append' or 'prepend' mode, it cannot be safely reapplied.",
-        );
+            $this->seedTracked($file, "A=1\n", "A=1\n", mode: $mode);
+
+            $out = new BufferedOutputWriter();
+            (new ReapplyService())->run(
+                $this->tempDir,
+                "{$this->tempDir}/vendor",
+                file: $file,
+                provider: '',
+                force: false,
+                out: $out,
+            );
+
+            self::assertStringContainsString(
+                'cannot be safely reapplied',
+                $out->stdoutBuffer,
+                sprintf(
+                    "When a file is in '%s' mode, it cannot be safely reapplied (the message must be emitted for "
+                    . 'both append and prepend, not just one).',
+                    $mode,
+                ),
+            );
+            self::assertStringContainsString(
+                sprintf('mode "%s"', $mode),
+                $out->stdoutBuffer,
+                sprintf(
+                    "The diagnostic must name the actual mode ('%s') so users know which file-mapping entry "
+                    . 'triggered the skip.',
+                    $mode,
+                ),
+            );
+        }
     }
 
     public function testEmitsWarningWhenProviderPathEscapesVendor(): void
@@ -327,6 +346,11 @@ final class ReapplyServiceTest extends TestCase
         self::assertFileExists(
             "{$this->tempDir}/config/web.php",
             'Preserve mode must rewrite when the destination is missing, even without force.',
+        );
+        self::assertSame(
+            "stub\n",
+            (string) file_get_contents("{$this->tempDir}/config/web.php"),
+            'Preserve mode must restore the exact stub content (not an empty file) when the destination is missing.',
         );
     }
 

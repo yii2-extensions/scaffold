@@ -40,8 +40,6 @@ final class SymfonyOutputWriterTest extends TestCase
     {
         $console = new ConsoleOutput();
 
-        $errorOutput = $console->getErrorOutput();
-
         self::assertInstanceOf(
             BufferedOutput::class,
             $this->overrideErrorOutput($console),

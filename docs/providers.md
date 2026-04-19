@@ -2,7 +2,7 @@
 
 A scaffold provider is any Composer package that declares file mappings under `extra.scaffold` in its `composer.json`.
 
-Providers do not need a special package type any installed package can contribute scaffold files once it appears in
+Providers do not need a special package type; any installed package can contribute scaffold files once it appears in
 the root project's `allowed-packages` list.
 
 ## Inline manifest
@@ -98,8 +98,8 @@ yii2-extensions/app-base/
 
 The plugin validates every mapping before writing:
 
-- **Package allowlist** the provider must appear in `allowed-packages`. Unknown providers cause an error and no file is written.
-- **Path traversal rejection** both `source` and `destination` are validated with `realpath()`. Any path that escapes the provider root or the project root is rejected.
+- **Package allowlist**: the provider must appear in `allowed-packages`. Unknown providers cause an error and no file is written.
+- **Path traversal rejection**: both `source` and `destination` are validated with `realpath()`. Any path that escapes the provider root or the project root is rejected.
 
 ## Next steps
 

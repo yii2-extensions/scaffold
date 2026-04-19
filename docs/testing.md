@@ -106,7 +106,7 @@ single test dispatches multiple lifecycle events.
 ## Fixtures
 
 Static fixtures under `tests/fixtures/providers/` are read-only sample provider packages used by manifest-loader and
-security tests. Keep them minimal anything that needs a composer.json on disk belongs in a fixture; anything that can
+security tests. Keep them minimal: anything that needs a composer.json on disk belongs in a fixture; anything that can
 be built at runtime belongs in `FakeProjectBuilder`.
 
 ## Adding a new test
