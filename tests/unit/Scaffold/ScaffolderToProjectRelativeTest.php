@@ -21,6 +21,26 @@ use yii\scaffold\Scaffold\Scaffolder;
 #[Group('scaffold')]
 final class ScaffolderToProjectRelativeTest extends TestCase
 {
+    public function testCaseSensitivityMatchesHostSeparatorSemantics(): void
+    {
+        $actual = $this->call('/tmp/project/pkg', '/tmp/Project');
+
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::assertSame(
+                'pkg',
+                $actual,
+                'On Windows, mixed-case prefixes must match via case-insensitive comparison.',
+            );
+
+            return;
+        }
+
+        self::assertSame(
+            '/tmp/project/pkg',
+            $actual,
+            'On POSIX, mixed-case prefixes must not match (byte-exact comparison required).',
+        );
+    }
     public function testReturnsBasenameRelativeWhenPackagePathSitsInsideProjectRoot(): void
     {
         self::assertSame(
@@ -69,27 +89,6 @@ final class ScaffolderToProjectRelativeTest extends TestCase
             "A trailing separator on the project root must be stripped before the prefix check; without 'rtrim' the "
             . "doubled slash ('/tmp/project//') would miss the prefix and leak the absolute package path into the "
             . 'lock.',
-        );
-    }
-
-    public function testCaseSensitivityMatchesHostSeparatorSemantics(): void
-    {
-        $actual = $this->call('/tmp/project/pkg', '/tmp/Project');
-
-        if (DIRECTORY_SEPARATOR === '\\') {
-            self::assertSame(
-                'pkg',
-                $actual,
-                'On Windows, mixed-case prefixes must match via case-insensitive comparison.',
-            );
-
-            return;
-        }
-
-        self::assertSame(
-            '/tmp/project/pkg',
-            $actual,
-            'On POSIX, mixed-case prefixes must not match (byte-exact comparison required).',
         );
     }
 

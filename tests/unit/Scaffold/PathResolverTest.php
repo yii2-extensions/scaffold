@@ -195,6 +195,42 @@ final class PathResolverTest extends TestCase
         );
     }
 
+    public function testResolveProviderRootHonorsAbsoluteLockPathRegardlessOfNonEmptyProjectRoot(): void
+    {
+        $vendor = $this->tempDir . '/vendor';
+
+        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+
+        $absoluteLockPath = realpath($vendor . '/pkg/name');
+
+        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
+
+        $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $absoluteLockPath], $this->tempDir);
+
+        self::assertNull($result['warning'], 'Absolute lock path must stay absolute when projectRoot is non-empty.');
+    }
+
+    public function testResolveProviderRootHonorsAbsoluteLockPathVerbatimWhenProjectRootIsNonEmpty(): void
+    {
+        $vendor = $this->tempDir . '/vendor';
+
+        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+
+        $absoluteLockPath = realpath($vendor . '/pkg/name');
+
+        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
+
+        $result = PathResolver::resolveProviderRoot(
+            $vendor,
+            'pkg/name',
+            ['path' => $absoluteLockPath],
+            $this->tempDir . '/unrelated-project-root',
+        );
+
+        self::assertSame($absoluteLockPath, $result['root'], 'Absolute lock path inside vendor must be verbatim.');
+        self::assertNull($result['warning'], 'Absolute path inside vendor must not emit a warning.');
+    }
+
     public function testResolveProviderRootRejectsLockPathSharingSiblingPrefixWithVendorDir(): void
     {
         $vendor = "{$this->tempDir}/vendor";
@@ -258,45 +294,10 @@ final class PathResolverTest extends TestCase
         );
     }
 
-    public function testResolveProviderRootHonorsAbsoluteLockPathVerbatimWhenProjectRootIsNonEmpty(): void
-    {
-        $vendor = $this->tempDir . '/vendor';
-
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
-
-        $absoluteLockPath = realpath($vendor . '/pkg/name');
-
-        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
-
-        $result = PathResolver::resolveProviderRoot(
-            $vendor,
-            'pkg/name',
-            ['path' => $absoluteLockPath],
-            $this->tempDir . '/unrelated-project-root',
-        );
-
-        self::assertSame($absoluteLockPath, $result['root'], 'Absolute lock path inside vendor must be verbatim.');
-        self::assertNull($result['warning'], 'Absolute path inside vendor must not emit a warning.');
-    }
-
-    public function testResolveProviderRootHonorsAbsoluteLockPathRegardlessOfNonEmptyProjectRoot(): void
-    {
-        $vendor = $this->tempDir . '/vendor';
-
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
-
-        $absoluteLockPath = realpath($vendor . '/pkg/name');
-
-        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
-
-        $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $absoluteLockPath], $this->tempDir);
-
-        self::assertNull($result['warning'], 'Absolute lock path must stay absolute when projectRoot is non-empty.');
-    }
-
     public function testResolveProviderRootTrimsTrailingSeparatorFromProjectRootBeforeJoiningRelativeLockPath(): void
     {
-        $projectRoot = PathResolver::destination($this->tempDir, 'proj');
+        $tempDir = PathResolver::realpathOrFallback($this->tempDir);
+        $projectRoot = PathResolver::destination($tempDir, 'proj');
         $vendor = PathResolver::destination($projectRoot, 'vendor');
 
         mkdir($vendor, 0777, recursive: true);

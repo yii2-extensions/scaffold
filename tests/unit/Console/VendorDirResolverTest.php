@@ -27,6 +27,17 @@ final class VendorDirResolverTest extends TestCase
 
     private string|false $originalEnv = false;
 
+    public function testAbsoluteEnvVendorDirHasTrailingSeparatorStripped(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=/opt/shared-vendor/');
+
+        self::assertSame(
+            '/opt/shared-vendor',
+            VendorDirResolver::resolve($this->tempDir),
+            "Absolute 'COMPOSER_VENDOR_DIR' must have its trailing separator stripped.",
+        );
+    }
+
     public function testComposerJsonAbsoluteVendorDirIsHonored(): void
     {
         file_put_contents(
@@ -52,6 +63,15 @@ final class VendorDirResolverTest extends TestCase
             $this->tempDir . '/third-party',
             VendorDirResolver::resolve($this->tempDir),
             "Relative 'config.vendor-dir' must resolve against the project root.",
+        );
+    }
+
+    public function testDefaultVendorFallbackStripsTrailingSeparatorFromProjectRoot(): void
+    {
+        self::assertSame(
+            $this->tempDir . '/vendor',
+            VendorDirResolver::resolve($this->tempDir . '/'),
+            "Default vendor fallback must strip trailing '/' from 'projectRoot' to avoid '//vendor'.",
         );
     }
 
@@ -141,26 +161,6 @@ final class VendorDirResolverTest extends TestCase
             $this->tempDir . '/custom',
             VendorDirResolver::resolve($this->tempDir . '/'),
             'Trailing separators in project root and vendor-dir must not produce a double separator.',
-        );
-    }
-
-    public function testDefaultVendorFallbackStripsTrailingSeparatorFromProjectRoot(): void
-    {
-        self::assertSame(
-            $this->tempDir . '/vendor',
-            VendorDirResolver::resolve($this->tempDir . '/'),
-            "Default vendor fallback must strip trailing '/' from 'projectRoot' to avoid '//vendor'.",
-        );
-    }
-
-    public function testAbsoluteEnvVendorDirHasTrailingSeparatorStripped(): void
-    {
-        putenv('COMPOSER_VENDOR_DIR=/opt/shared-vendor/');
-
-        self::assertSame(
-            '/opt/shared-vendor',
-            VendorDirResolver::resolve($this->tempDir),
-            "Absolute 'COMPOSER_VENDOR_DIR' must have its trailing separator stripped.",
         );
     }
 

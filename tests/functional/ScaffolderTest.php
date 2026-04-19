@@ -190,23 +190,6 @@ final class ScaffolderTest extends TestCase
             ->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
     }
 
-    public function testEmptyFileMappingReturnsEarlyAndDoesNotWriteLockFile(): void
-    {
-        $builder = new FakeProjectBuilder($this->tempDir);
-
-        $provider = $this->makeProviderPackage('yii2-extensions/empty', ['scaffold' => ['file-mapping' => []]]);
-        $root = $this->makeRootPackage(['yii2-extensions/empty']);
-
-        $this
-            ->makeScaffolder(['yii2-extensions/empty'], $builder)
-            ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
-
-        self::assertFalse(
-            (new LockFile($builder->getProjectRoot()))->exists(),
-            "Empty 'file-mapping' must short-circuit before the lock is written.",
-        );
-    }
-
     public function testEmptyAllowedPackagesListEmitsSkipMessage(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -230,6 +213,23 @@ final class ScaffolderTest extends TestCase
             $io->getOutput(),
             'Empty allowed-packages list (as opposed to missing scaffold extra) must emit the configured-but-empty '
             . 'skip message.',
+        );
+    }
+
+    public function testEmptyFileMappingReturnsEarlyAndDoesNotWriteLockFile(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $provider = $this->makeProviderPackage('yii2-extensions/empty', ['scaffold' => ['file-mapping' => []]]);
+        $root = $this->makeRootPackage(['yii2-extensions/empty']);
+
+        $this
+            ->makeScaffolder(['yii2-extensions/empty'], $builder)
+            ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertFalse(
+            (new LockFile($builder->getProjectRoot()))->exists(),
+            "Empty 'file-mapping' must short-circuit before the lock is written.",
         );
     }
 
