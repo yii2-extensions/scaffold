@@ -65,7 +65,7 @@ final class DiffService
             }
         }
 
-        return implode(PHP_EOL, $output) . PHP_EOL;
+        return implode(PHP_EOL, $output);
     }
 
     /**
@@ -85,9 +85,7 @@ final class DiffService
         $entry = $data['files'][$file] ?? null;
 
         if ($entry === null) {
-            $out->writeStderr(
-                sprintf('[scaffold] "%s" is not tracked in scaffold-lock.json.', $file) . PHP_EOL,
-            );
+            $out->writeStderr(sprintf('[scaffold] "%s" is not tracked in scaffold-lock.json.', $file));
 
             return ExitCode::Error->value;
         }
@@ -102,7 +100,7 @@ final class DiffService
         $providerRoot = $resolved['root'];
 
         if ($resolved['warning'] !== null) {
-            $out->writeStderr($resolved['warning'] . PHP_EOL);
+            $out->writeStderr($resolved['warning']);
         }
 
         $validator = new PathValidator();
@@ -111,9 +109,7 @@ final class DiffService
             $validator->validateDestination($file, $projectRoot);
             $validator->validateSource($entry['source'], $providerRoot);
         } catch (RuntimeException $e) {
-            $out->writeStderr(
-                sprintf('[scaffold] Unsafe lock entry for "%s": %s', $file, $e->getMessage()) . PHP_EOL,
-            );
+            $out->writeStderr(sprintf('[scaffold] Unsafe lock entry for "%s": %s', $file, $e->getMessage()));
 
             return ExitCode::Error->value;
         }
@@ -124,9 +120,7 @@ final class DiffService
             $rawCurrent = file_get_contents($currentPath);
 
             if ($rawCurrent === false) {
-                $out->writeStderr(
-                    sprintf('[scaffold] Could not read current file "%s".', $currentPath) . PHP_EOL,
-                );
+                $out->writeStderr(sprintf('[scaffold] Could not read current file "%s".', $currentPath));
 
                 return ExitCode::Error->value;
             }
@@ -139,9 +133,7 @@ final class DiffService
         $stubPath = PathResolver::source($providerRoot, $entry['source']);
 
         if (!is_file($stubPath)) {
-            $out->writeStderr(
-                sprintf('[scaffold] Stub not found: "%s".', $stubPath) . PHP_EOL,
-            );
+            $out->writeStderr(sprintf('[scaffold] Stub not found: "%s".', $stubPath));
 
             return ExitCode::Error->value;
         }
@@ -151,7 +143,7 @@ final class DiffService
         $diff = $this->buildDiff($stubContent, $currentContent);
 
         if ($diff === '') {
-            $out->writeStdout('[scaffold] No differences found.' . PHP_EOL);
+            $out->writeStdout('[scaffold] No differences found.');
         } else {
             $out->writeStdout($diff);
         }

@@ -258,6 +258,59 @@ final class PathResolverTest extends TestCase
         );
     }
 
+    public function testResolveProviderRootHonorsAbsoluteLockPathVerbatimWhenProjectRootIsNonEmpty(): void
+    {
+        $vendor = $this->tempDir . '/vendor';
+
+        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+
+        $absoluteLockPath = realpath($vendor . '/pkg/name');
+
+        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
+
+        $result = PathResolver::resolveProviderRoot(
+            $vendor,
+            'pkg/name',
+            ['path' => $absoluteLockPath],
+            $this->tempDir . '/unrelated-project-root',
+        );
+
+        self::assertSame($absoluteLockPath, $result['root'], 'Absolute lock path inside vendor must be verbatim.');
+        self::assertNull($result['warning'], 'Absolute path inside vendor must not emit a warning.');
+    }
+
+    public function testResolveProviderRootHonorsAbsoluteLockPathRegardlessOfNonEmptyProjectRoot(): void
+    {
+        $vendor = $this->tempDir . '/vendor';
+
+        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+
+        $absoluteLockPath = realpath($vendor . '/pkg/name');
+
+        self::assertIsString($absoluteLockPath, 'Test setup failed to resolve the seeded provider root.');
+
+        $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $absoluteLockPath], $this->tempDir);
+
+        self::assertNull($result['warning'], 'Absolute lock path must stay absolute when projectRoot is non-empty.');
+    }
+
+    public function testResolveProviderRootTrimsTrailingSeparatorFromProjectRootBeforeJoiningRelativeLockPath(): void
+    {
+        $projectRoot = $this->tempDir . '/proj';
+        $vendor = $projectRoot . '/vendor';
+
+        mkdir($vendor, 0777, recursive: true);
+
+        $result = PathResolver::resolveProviderRoot(
+            $vendor,
+            'pkg/name',
+            ['path' => 'vendor/pkg/name-missing'],
+            $projectRoot . '/',
+        );
+
+        self::assertNull($result['warning'], "Trailing '/' in projectRoot must be rtrimmed before joining.");
+    }
+
     public function testResolveProviderRootUsesDefaultWhenLockEntryIsMissingPath(): void
     {
         $result = PathResolver::resolveProviderRoot($this->tempDir, 'pkg/name', null);
@@ -349,6 +402,43 @@ final class PathResolverTest extends TestCase
                 fileperms($destination) & 0777,
                 "Under a restrictive '0077' umask, 'syncPermissions()' must mask the source permissions and drop "
                 . 'group/other bits so security-restrictive setups are never silently widened.',
+            );
+        } finally {
+            umask($oldUmask);
+        }
+    }
+
+    public function testSyncPermissionsMasksSourceBitsWithPermsAnd0777RatherThanPermsOr0777(): void
+    {
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
+        }
+
+        $source = "{$this->tempDir}/mode-0640.sh";
+        $destination = "{$this->tempDir}/mode-0640-copy.sh";
+
+        file_put_contents($source, "#!/bin/sh\n");
+        file_put_contents($destination, "#!/bin/sh\n");
+
+        chmod($source, 0640);
+        chmod($destination, 0600);
+
+        /*
+         * A permissive '0000' umask isolates the `$perms & 0777` bitmask from the umask mask; any mutation that
+         * swaps `&` for `|` (widening 0640 to 0777 via bitwise OR) becomes observable without being masked out by
+         * the umask step that follows.
+         */
+        $oldUmask = umask(0000);
+
+        try {
+            PathResolver::syncPermissions($source, $destination);
+
+            self::assertSame(
+                0640,
+                fileperms($destination) & 0777,
+                "Under a permissive '0000' umask the destination must land on exactly the source permissions (0640); "
+                . "mutating '\$perms & 0777' to '\$perms | 0777' widens to 0777 and this assertion fails, pinning the "
+                . 'bitmask intent.',
             );
         } finally {
             umask($oldUmask);

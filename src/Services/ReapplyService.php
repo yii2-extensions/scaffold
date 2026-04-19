@@ -77,7 +77,7 @@ final class ReapplyService
             $providerRoot = $resolved['root'];
 
             if ($resolved['warning'] !== null) {
-                $out->writeStderr($resolved['warning'] . PHP_EOL);
+                $out->writeStderr($resolved['warning']);
             }
 
             try {
@@ -85,8 +85,7 @@ final class ReapplyService
                 $validator->validateSource($entry['source'], $providerRoot);
             } catch (RuntimeException $e) {
                 $out->writeStderr(
-                    sprintf('[scaffold] Unsafe lock entry for "%s": %s Skipping.', $destination, $e->getMessage())
-                    . PHP_EOL,
+                    sprintf('[scaffold] Unsafe lock entry for "%s": %s Skipping.', $destination, $e->getMessage()),
                 );
 
                 continue;
@@ -100,7 +99,7 @@ final class ReapplyService
                         '[scaffold] "%s" uses mode "%s" and cannot be safely reapplied; run composer install instead.',
                         $destination,
                         $mode,
-                    ) . PHP_EOL,
+                    ),
                 );
 
                 continue;
@@ -111,16 +110,14 @@ final class ReapplyService
 
             if ($mode === 'preserve' && !$force && is_file($destPath)) {
                 $out->writeStdout(
-                    sprintf('[scaffold] "%s" uses mode "preserve". Use --force to overwrite.', $destination) . PHP_EOL,
+                    sprintf('[scaffold] "%s" uses mode "preserve". Use --force to overwrite.', $destination),
                 );
 
                 continue;
             }
 
             if (!is_file($stubPath)) {
-                $out->writeStderr(
-                    sprintf('[scaffold] Stub not found: "%s". Skipping.', $stubPath) . PHP_EOL,
-                );
+                $out->writeStderr(sprintf('[scaffold] Stub not found: "%s". Skipping.', $stubPath));
 
                 continue;
             }
@@ -130,8 +127,7 @@ final class ReapplyService
                     $currentHash = $hasher->hash($destPath);
                 } catch (Throwable $e) {
                     $out->writeStderr(
-                        sprintf('[scaffold] Could not hash "%s": %s Skipping.', $destination, $e->getMessage())
-                        . PHP_EOL,
+                        sprintf('[scaffold] Could not hash "%s": %s Skipping.', $destination, $e->getMessage()),
                     );
 
                     continue;
@@ -142,7 +138,7 @@ final class ReapplyService
                         sprintf(
                             '[scaffold] "%s" is user-modified. Use --force to overwrite.',
                             $destination,
-                        ) . PHP_EOL,
+                        ),
                     );
 
                     continue;
@@ -152,9 +148,7 @@ final class ReapplyService
             $stubContent = file_get_contents($stubPath);
 
             if ($stubContent === false) {
-                $out->writeStderr(
-                    sprintf('[scaffold] Could not read stub "%s". Skipping.', $stubPath) . PHP_EOL,
-                );
+                $out->writeStderr(sprintf('[scaffold] Could not read stub "%s". Skipping.', $stubPath));
 
                 continue;
             }
@@ -162,17 +156,13 @@ final class ReapplyService
             try {
                 PathResolver::ensureDirectory($destPath);
             } catch (RuntimeException $e) {
-                $out->writeStderr(
-                    sprintf('[scaffold] %s Skipping.', $e->getMessage()) . PHP_EOL,
-                );
+                $out->writeStderr(sprintf('[scaffold] %s Skipping.', $e->getMessage()));
 
                 continue;
             }
 
             if (file_put_contents($destPath, $stubContent) === false) {
-                $out->writeStderr(
-                    sprintf('[scaffold] Could not write "%s". Skipping.', $destPath) . PHP_EOL,
-                );
+                $out->writeStderr(sprintf('[scaffold] Could not write "%s". Skipping.', $destPath));
 
                 continue;
             }
@@ -187,7 +177,7 @@ final class ReapplyService
                         '[scaffold] Could not hash written file "%s": %s Skipping lock update.',
                         $destination,
                         $e->getMessage(),
-                    ) . PHP_EOL,
+                    ),
                 );
 
                 continue;
@@ -202,11 +192,11 @@ final class ReapplyService
 
             $anyUpdated = true;
 
-            $out->writeStdout(sprintf('[scaffold] Reapplied "%s".', $destination) . PHP_EOL);
+            $out->writeStdout(sprintf('[scaffold] Reapplied "%s".', $destination));
         }
 
         if (($file !== '' || $provider !== '') && !$anyMatched) {
-            $out->writeStderr('[scaffold] No tracked files matched the given filter.' . PHP_EOL);
+            $out->writeStderr('[scaffold] No tracked files matched the given filter.');
 
             return ExitCode::Error->value;
         }

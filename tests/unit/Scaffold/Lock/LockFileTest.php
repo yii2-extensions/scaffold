@@ -323,6 +323,44 @@ final class LockFileTest extends TestCase
         $lock->write(['providers' => [], 'files' => []]);
     }
 
+    public function testWriteUnlinksOrphanTmpFileAfterPersistenceFailure(): void
+    {
+        $lock = new LockFile($this->tempDir);
+
+        $path = $lock->getPath();
+
+        $tmp = "{$path}.tmp";
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Lock',
+            'rename',
+            [
+                $tmp,
+                $path,
+                null,
+            ],
+            false,
+        );
+
+        $caught = null;
+
+        try {
+            $lock->write(['providers' => [], 'files' => []]);
+        } catch (RuntimeException $e) {
+            $caught = $e;
+        }
+
+        self::assertNotNull(
+            $caught,
+            'The forced rename failure must still surface as a RuntimeException so the caller can react.',
+        );
+        self::assertFileDoesNotExist(
+            $tmp,
+            "After 'rename' fails, the cleanup branch must 'unlink' the orphan '.tmp' sidecar so repeated write "
+            . 'attempts never see stale partial content; skipping the unlink leaks the sidecar to disk.',
+        );
+    }
+
     public function testWriteUsesUnescapedSlashes(): void
     {
         $lock = new LockFile($this->tempDir);

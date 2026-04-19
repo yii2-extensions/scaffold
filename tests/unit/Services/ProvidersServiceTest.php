@@ -90,6 +90,25 @@ final class ProvidersServiceTest extends TestCase
         );
     }
 
+    public function testRunEmptyProvidersMessageEndsWithSinglePhpEolSuffix(): void
+    {
+        (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
+
+        $out = new BufferedOutputWriter();
+        (new ProvidersService())->run($this->tempDir, $out);
+
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'No providers tracked' message must end with PHP_EOL so shells render it on its own line.",
+        );
+        self::assertStringStartsNotWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'No providers tracked' message must not be prefixed with PHP_EOL.",
+        );
+    }
+
     public function testRunPrintsEmptyMessageWhenNoProvidersTracked(): void
     {
         (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
@@ -106,6 +125,19 @@ final class ProvidersServiceTest extends TestCase
             'No providers tracked in scaffold-lock.json',
             $out->stdoutBuffer,
             'When no providers are tracked, the output must indicate the empty state.',
+        );
+        self::assertStringNotContainsString(
+            'Files',
+            $out->stdoutBuffer,
+            "When the providers map is empty, the service must 'return' immediately and must not fall through to "
+            . "render the 'Provider Files' header; removing the early return would leak the header row below the "
+            . 'empty-state diagnostic.',
+        );
+        self::assertStringNotContainsString(
+            str_repeat('-', 52),
+            $out->stdoutBuffer,
+            'When the providers map is empty, the service must return before rendering the 52-dash separator; '
+            . 'leaking it proves the early return branch was bypassed.',
         );
     }
 
@@ -147,6 +179,76 @@ final class ProvidersServiceTest extends TestCase
             'pkg/a',
             $out->stdoutBuffer,
             "Output must include the provider 'pkg/a'.",
+        );
+    }
+
+    public function testRunSeparatorRowIsExactly52DashesFollowedByPhpEol(): void
+    {
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'a.txt' => [
+                        'hash' => 'sha256:a',
+                        'provider' => 'pkg/a',
+                        'source' => 'stubs/a.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $out = new BufferedOutputWriter();
+        (new ProvidersService())->run($this->tempDir, $out);
+
+        self::assertStringContainsString(
+            str_repeat('-', 52) . PHP_EOL,
+            $out->stdoutBuffer,
+            'The horizontal separator below the header must be exactly 52 dashes followed by a single PHP_EOL, so the '
+            . 'visual column alignment stays stable across terminals and test fixtures.',
+        );
+        self::assertStringNotContainsString(
+            str_repeat('-', 53),
+            $out->stdoutBuffer,
+            'The separator must not contain 53 consecutive dashes; a wider separator would visually break alignment '
+            . 'against the 52-character header.',
+        );
+    }
+
+    public function testRunTableOutputEndsWithSinglePhpEolSuffix(): void
+    {
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'a.txt' => [
+                        'hash' => 'sha256:a',
+                        'provider' => 'pkg/a',
+                        'source' => 'stubs/a.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $out = new BufferedOutputWriter();
+        (new ProvidersService())->run($this->tempDir, $out);
+
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            'The rendered providers table must end with PHP_EOL so the final row is on its own terminal line.',
+        );
+        self::assertStringStartsWith(
+            'Provider',
+            $out->stdoutBuffer,
+            "The rendered providers table must start with the 'Provider' header (not a stray PHP_EOL).",
+        );
+        self::assertStringContainsString(
+            'pkg/a' . str_repeat(' ', 44 - strlen('pkg/a')) . ' 1' . PHP_EOL,
+            $out->stdoutBuffer,
+            'The provider row must be followed by exactly one PHP_EOL; the provider name must be left-padded to the '
+            . '44-character column width.',
         );
     }
 

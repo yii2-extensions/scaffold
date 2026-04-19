@@ -190,6 +190,23 @@ final class ScaffolderTest extends TestCase
             ->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
     }
 
+    public function testEmptyFileMappingReturnsEarlyAndDoesNotWriteLockFile(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $provider = $this->makeProviderPackage('yii2-extensions/empty', ['scaffold' => ['file-mapping' => []]]);
+        $root = $this->makeRootPackage(['yii2-extensions/empty']);
+
+        $this
+            ->makeScaffolder(['yii2-extensions/empty'], $builder)
+            ->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertFalse(
+            (new LockFile($builder->getProjectRoot()))->exists(),
+            "Empty 'file-mapping' must short-circuit before the lock is written.",
+        );
+    }
+
     public function testEmptyAllowedPackagesListEmitsSkipMessage(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -474,6 +491,117 @@ final class ScaffolderTest extends TestCase
         ))->scaffold($root, [], $builder->getProjectRoot(), $builder->getVendorDir(), true);
     }
 
+    public function testManifestLoadFailureOnEarlierProviderDoesNotHaltLaterProviders(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/good', 'stubs/app.php', 'good-content');
+
+        $bad = $this->makeProviderPackage(
+            'yii2-extensions/bad',
+            // `manifest: "../escape.json"` triggers a traversal RuntimeException inside the loader.
+            ['scaffold' => ['manifest' => '../escape.json']],
+        );
+        $good = $this->makeProviderPackage(
+            'yii2-extensions/good',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
+                    ],
+                ],
+            ],
+        );
+        // 'bad' is listed first so its manifest-load failure triggers the continue-branch before 'good' is processed.
+        $root = $this->makeRootPackage(['yii2-extensions/bad', 'yii2-extensions/good']);
+
+        $io = new BufferIO();
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(
+                new PackageAllowlist(['yii2-extensions/bad', 'yii2-extensions/good']),
+                new PathValidator(),
+                new Hasher(),
+                $io,
+            ),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        $scaffolder->scaffold(
+            $root,
+            [$bad, $good],
+            $builder->getProjectRoot(),
+            $builder->getVendorDir(),
+            true,
+        );
+
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/app.php',
+            "When an earlier provider's manifest fails to load, the foreach must 'continue' to the next provider; "
+            . "replacing 'continue' with 'break' would abort the run and skip 'app.php'.",
+        );
+        self::assertSame(
+            'good-content',
+            file_get_contents($builder->getProjectRoot() . '/app.php'),
+            "The later provider's stub content must be applied verbatim after the earlier provider's manifest-load "
+            . 'failure is logged and skipped.',
+        );
+    }
+
+    public function testMissingProviderPackageDoesNotHaltLaterProviders(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/good', 'stubs/app.php', 'good-content');
+
+        $good = $this->makeProviderPackage(
+            'yii2-extensions/good',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
+                    ],
+                ],
+            ],
+        );
+        // 'missing' is allowed but not installed so its branch triggers the skip-message continue path.
+        $root = $this->makeRootPackage(['yii2-extensions/missing', 'yii2-extensions/good']);
+
+        $io = new BufferIO();
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(
+                new PackageAllowlist(['yii2-extensions/missing', 'yii2-extensions/good']),
+                new PathValidator(),
+                new Hasher(),
+                $io,
+            ),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        // note: only 'good' is passed as installed; 'missing' is absent.
+        $scaffolder->scaffold($root, [$good], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertStringContainsString(
+            'Provider "yii2-extensions/missing" is not installed',
+            $io->getOutput(),
+            'The uninstalled allowed-package must emit the skip message before the loop continues.',
+        );
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/app.php',
+            "After the uninstalled-provider skip message, the loop must 'continue' to the next allowed-package; "
+            . "replacing 'continue' with 'break' would leave 'app.php' unwritten.",
+        );
+    }
+
     public function testMultipleFilesFromSameProvider(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
@@ -521,6 +649,57 @@ final class ScaffolderTest extends TestCase
         self::assertNotNull(
             $lockFile->getHashAtScaffold('b.php'),
             'Lock file should contain a hash entry for the second scaffolded file.',
+        );
+    }
+
+    public function testNonStringAllowedEntryIsSkippedWithoutHaltingLaterProviders(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        $builder->createStubFile('yii2-extensions/good', 'stubs/app.php', 'good-content');
+
+        $good = $this->makeProviderPackage(
+            'yii2-extensions/good',
+            [
+                'scaffold' => [
+                    'file-mapping' => [
+                        'app.php' => [
+                            'source' => 'stubs/app.php',
+                            'mode' => 'replace',
+                        ],
+                    ],
+                ],
+            ],
+        );
+
+        /*
+         * Craft an allowed-packages list whose first entry is a non-string integer (mixed-type payload) so it hits the
+         * '!is_string' continue-branch inside 'Scaffolder::scaffold'. A valid string entry follows and must still be
+         * processed.
+         */
+        $root = self::createStub(PackageInterface::class);
+        $root->method('getExtra')->willReturn(
+            [
+                'scaffold' => [
+                    'allowed-packages' => [42, 'yii2-extensions/good'],
+                ],
+            ],
+        );
+
+        $io = new BufferIO();
+        $scaffolder = new Scaffolder(
+            new ManifestLoader(new ManifestSchema()),
+            new Applier(new PackageAllowlist(['yii2-extensions/good']), new PathValidator(), new Hasher(), $io),
+            new LockFile($builder->getProjectRoot()),
+            $io,
+        );
+
+        $scaffolder->scaffold($root, [$good], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        self::assertFileExists(
+            $builder->getProjectRoot() . '/app.php',
+            "When the first allowed-packages entry is not a string, the loop must 'continue' to the next entry; "
+            . "replacing 'continue' with 'break' would halt the scan before 'yii2-extensions/good' is processed.",
         );
     }
 

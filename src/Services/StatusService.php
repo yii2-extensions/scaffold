@@ -94,7 +94,7 @@ final class StatusService
         $statuses = $this->getStatuses($projectRoot);
 
         if ($statuses === []) {
-            $out->writeStdout('[scaffold] No files tracked in scaffold-lock.json.' . PHP_EOL);
+            $out->writeStdout('[scaffold] No files tracked in scaffold-lock.json.');
 
             return ExitCode::Ok->value;
         }
@@ -106,19 +106,20 @@ final class StatusService
         $separator = str_repeat('-', $colFile + $colProvider + $colMode + $colStatus + 6);
 
         $out->writeStdout(
-            sprintf("%-{$colFile}s  %-{$colProvider}s  %-{$colMode}s  %s", 'File', 'Provider', 'Mode', 'Status')
-            . PHP_EOL,
+            sprintf("%-{$colFile}s  %-{$colProvider}s  %-{$colMode}s  %s", 'File', 'Provider', 'Mode', 'Status'),
         );
-        $out->writeStdout($separator . PHP_EOL);
+        $out->writeStdout($separator);
 
         foreach ($statuses as $destination => $info) {
-            $out->writeStdout(sprintf(
-                "%-{$colFile}s  %-{$colProvider}s  %-{$colMode}s  %s",
-                $destination,
-                $info['provider'],
-                $info['mode'],
-                $info['status'],
-            ) . PHP_EOL);
+            $out->writeStdout(
+                sprintf(
+                    "%-{$colFile}s  %-{$colProvider}s  %-{$colMode}s  %s",
+                    $destination,
+                    $info['provider'],
+                    $info['mode'],
+                    $info['status'],
+                ),
+            );
         }
 
         return ExitCode::Ok->value;

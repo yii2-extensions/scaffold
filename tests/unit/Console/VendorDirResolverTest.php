@@ -144,6 +144,27 @@ final class VendorDirResolverTest extends TestCase
         );
     }
 
+    public function testDefaultVendorFallbackStripsTrailingSeparatorFromProjectRoot(): void
+    {
+        self::assertSame(
+            $this->tempDir . '/vendor',
+            VendorDirResolver::resolve($this->tempDir . '/'),
+            "Default vendor fallback must strip trailing '/' from 'projectRoot' to avoid '//vendor'.",
+        );
+    }
+
+    public function testAbsoluteEnvVendorDirHasTrailingSeparatorStripped(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=/opt/shared-vendor/');
+
+        self::assertSame(
+            '/opt/shared-vendor',
+            VendorDirResolver::resolve($this->tempDir),
+            "Absolute 'COMPOSER_VENDOR_DIR' must have its trailing separator stripped.",
+        );
+    }
+
+
     public function testWindowsAbsoluteDrivePathIsHonoredVerbatim(): void
     {
         putenv('COMPOSER_VENDOR_DIR=C:\\opt\\vendor');

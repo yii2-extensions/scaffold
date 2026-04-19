@@ -23,6 +23,55 @@ final class StatusServiceTest extends TestCase
 {
     use TempDirectoryTrait;
 
+    public function testGetStatusesContinuesPastErrorEntryToReportSubsequentValidEntries(): void
+    {
+        $filePath = "{$this->tempDir}/valid.txt";
+
+        file_put_contents($filePath, 'stub content');
+
+        $hash = (new Hasher())->hash($filePath);
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    // first entry fails validation (path traversal) and must emit 'error' while the loop continues.
+                    '../escape.php' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/escape.php',
+                        'mode' => 'replace',
+                    ],
+                    // second entry must still be reported after the first hit the error-continue path.
+                    'valid.txt' => [
+                        'hash' => $hash,
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/valid.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $statuses = (new StatusService())->getStatuses($this->tempDir);
+
+        self::assertArrayHasKey(
+            '../escape.php',
+            $statuses,
+            "Invalid entries must still appear in the status map (with status 'error') so the CLI can surface them.",
+        );
+        self::assertArrayHasKey(
+            'valid.txt',
+            $statuses,
+            "When an earlier entry triggers the unsafe-destination branch, the foreach must continue, not 'break'; "
+            . 'the second valid entry must still be reported.',
+        );
+        self::assertSame(
+            'synced',
+            $statuses['valid.txt']['status'] ?? null,
+            "The second entry's status must be computed (here 'synced'), confirming the loop kept iterating.",
+        );
+    }
+
     public function testGetStatusesMarksEntryAsErrorWhenDestinationIsUnsafe(): void
     {
         (new LockFile($this->tempDir))->write(
@@ -80,6 +129,51 @@ final class StatusServiceTest extends TestCase
             'error',
             $statuses['unreadable.txt']['status'] ?? null,
             "When 'hash' throws because the file is unreadable, the destination must surface with status 'error'.",
+        );
+    }
+
+    public function testGetStatusesReturnsAllEntriesUnchangedWithoutSlicingToTheFirst(): void
+    {
+        $first = "{$this->tempDir}/first.txt";
+        $second = "{$this->tempDir}/second.txt";
+
+        file_put_contents($first, 'first content');
+        file_put_contents($second, 'second content');
+
+        $hasher = new Hasher();
+
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'first.txt' => [
+                        'hash' => $hasher->hash($first),
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/first.txt',
+                        'mode' => 'replace',
+                    ],
+                    'second.txt' => [
+                        'hash' => $hasher->hash($second),
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/second.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $statuses = (new StatusService())->getStatuses($this->tempDir);
+
+        self::assertCount(
+            2,
+            $statuses,
+            "The status map must contain every tracked entry verbatim; a silent 'array_slice' of the first element "
+            . 'would drop the second row and mislead the CLI.',
+        );
+        self::assertArrayHasKey(
+            'second.txt',
+            $statuses,
+            'The second entry must be present; keeping only the first would mask out subsequent rows.',
         );
     }
 
@@ -170,6 +264,102 @@ final class StatusServiceTest extends TestCase
         );
     }
 
+    public function testRunEmptyStatusMessageEndsWithSinglePhpEolSuffix(): void
+    {
+        (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
+
+        $out = new BufferedOutputWriter();
+        (new StatusService())->run($this->tempDir, $out);
+
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'No files tracked' empty-state message must end with PHP_EOL.",
+        );
+        self::assertStringStartsNotWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'No files tracked' empty-state message must not be prefixed with PHP_EOL.",
+        );
+    }
+
+    public function testRunHeaderEndsWithSinglePhpEolSuffix(): void
+    {
+        $filePath = "{$this->tempDir}/output.txt";
+
+        file_put_contents($filePath, 'content');
+
+        $hash = (new Hasher())->hash($filePath);
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'output.txt' => [
+                        'hash' => $hash,
+                        'provider' => 'pkg/name',
+                        'source' => 'stubs/output.txt',
+                        'mode' => 'replace',
+                    ],
+                ],
+            ],
+        );
+
+        $out = new BufferedOutputWriter();
+        (new StatusService())->run($this->tempDir, $out);
+
+        self::assertStringStartsWith(
+            'File',
+            $out->stdoutBuffer,
+            "The rendered status table must start with the 'File' header, not a stray leading PHP_EOL.",
+        );
+        self::assertStringEndsWith(
+            PHP_EOL,
+            $out->stdoutBuffer,
+            'The final row must be terminated by PHP_EOL so shells render it on its own line.',
+        );
+    }
+
+    public function testRunPinsColStatusToLiteralSixWhenObservedStatusIsShorter(): void
+    {
+        /*
+         * Seed an unsafe destination so 'getStatuses' returns status='error' (length 5), which is strictly shorter
+         * than the literal '6' used in 'max(6, ...)'. Combined with short destination, provider and mode fields this
+         * makes the separator width entirely dependent on the colStatus literal; decrementing it to '5' shrinks the
+         * separator by one dash, which the assertion below detects.
+         */
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    '../x' => [
+                        'hash' => 'sha256:abc',
+                        'provider' => 'p',
+                        'source' => 'stubs/x',
+                        'mode' => 'x',
+                    ],
+                ],
+            ],
+        );
+
+        $out = new BufferedOutputWriter();
+        (new StatusService())->run($this->tempDir, $out);
+
+        // colFile=max(4, len('../x')=4)=4, colProvider=max(8,1)=8, colMode=max(4,1)=4, colStatus=max(6, 5)=6
+        // separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
+        self::assertStringContainsString(
+            str_repeat('-', 28) . PHP_EOL,
+            $out->stdoutBuffer,
+            "The separator row must be exactly 28 dashes followed by PHP_EOL when status='error' (len=5) is dominated "
+            . "by the literal '6'; decrementing the literal to '5' drops the separator to 27 dashes.",
+        );
+        self::assertStringNotContainsString(
+            PHP_EOL . str_repeat('-', 27) . PHP_EOL,
+            $out->stdoutBuffer,
+            "The separator row must not collapse to 27 dashes; that width would indicate the 'max(6, ...)' literal "
+            . 'was decremented.',
+        );
+    }
+
     public function testRunPrintsEmptyMessageWhenNoFilesTracked(): void
     {
         (new LockFile($this->tempDir))->write(['providers' => [], 'files' => []]);
@@ -247,6 +437,53 @@ final class StatusServiceTest extends TestCase
             'synced',
             $out->stdoutBuffer,
             "Expected status 'synced' to be printed for tracked file 'output.txt'.",
+        );
+    }
+
+    public function testRunRendersSeparatorRowWithWidthExactlyMatchingColumnLiteralsPlusSixPaddingForShortData(): void
+    {
+        $filePath = "{$this->tempDir}/a";
+
+        file_put_contents($filePath, 'c');
+
+        $hash = (new Hasher())->hash($filePath);
+
+        /*
+         * Seed every field with a value shorter than the literal column widths (4/8/4/6 plus `6` padding) so the
+         * rendered separator row is driven solely by those literals; this is what pins down the mutations that
+         * increment/decrement any of them.
+         */
+        (new LockFile($this->tempDir))->write(
+            [
+                'providers' => [],
+                'files' => [
+                    'a' => [
+                        'hash' => $hash,
+                        'provider' => 'p',
+                        'source' => 'stubs/a',
+                        'mode' => 'x',
+                        // ^ artificial short mode; status is computed from disk state (synced/missing/modified/error).
+                    ],
+                ],
+            ],
+        );
+
+        $out = new BufferedOutputWriter();
+        (new StatusService())->run($this->tempDir, $out);
+
+        // colFile=max(4,1)=4, colProvider=max(8,1)=8, colMode=max(4,1)=4, colStatus=max(6,6 for 'synced')=6
+        // separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
+        self::assertStringContainsString(
+            str_repeat('-', 28) . PHP_EOL,
+            $out->stdoutBuffer,
+            "The separator row must be exactly '4 + 8 + 4 + 6 + 6 = 28' dashes followed by PHP_EOL when every data "
+            . 'field is shorter than its column literal; increments/decrements of any literal or the padding constant '
+            . 'shift the width and break the layout.',
+        );
+        self::assertStringNotContainsString(
+            str_repeat('-', 29),
+            $out->stdoutBuffer,
+            'The separator must not contain 29 consecutive dashes; a widened separator misaligns under the header.',
         );
     }
 
