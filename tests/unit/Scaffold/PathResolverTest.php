@@ -296,19 +296,22 @@ final class PathResolverTest extends TestCase
 
     public function testResolveProviderRootTrimsTrailingSeparatorFromProjectRootBeforeJoiningRelativeLockPath(): void
     {
-        $projectRoot = $this->tempDir . '/proj';
-        $vendor = $projectRoot . '/vendor';
+        $projectRoot = PathResolver::destination($this->tempDir, 'proj');
+        $vendor = PathResolver::destination($projectRoot, 'vendor');
 
         mkdir($vendor, 0777, recursive: true);
+
+        // relative path normalized through the same helper the production join uses, minus the leading separator.
+        $relativeInVendor = ltrim(PathResolver::source('', 'vendor/pkg/name-missing'), '/\\');
 
         $result = PathResolver::resolveProviderRoot(
             $vendor,
             'pkg/name',
-            ['path' => 'vendor/pkg/name-missing'],
-            $projectRoot . '/',
+            ['path' => $relativeInVendor],
+            PathResolver::destination($projectRoot, ''),
         );
 
-        self::assertNull($result['warning'], "Trailing '/' in projectRoot must be rtrimmed before joining.");
+        self::assertNull($result['warning'], 'Trailing separator in projectRoot must be rtrimmed before joining.');
     }
 
     public function testResolveProviderRootUsesDefaultWhenLockEntryIsMissingPath(): void

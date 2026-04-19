@@ -72,11 +72,23 @@ final class ScaffolderToProjectRelativeTest extends TestCase
         );
     }
 
-    public function testUsesCaseSensitiveMatchingOnPosixSoMixedCaseRootsAreTreatedAsOutsideProject(): void
+    public function testCaseSensitivityMatchesHostSeparatorSemantics(): void
     {
+        $actual = $this->call('/tmp/project/pkg', '/tmp/Project');
+
+        if (DIRECTORY_SEPARATOR === '\\') {
+            self::assertSame(
+                'pkg',
+                $actual,
+                'On Windows, mixed-case prefixes must match via case-insensitive comparison.',
+            );
+
+            return;
+        }
+
         self::assertSame(
             '/tmp/project/pkg',
-            $this->call('/tmp/project/pkg', '/tmp/Project'),
+            $actual,
             'On POSIX, mixed-case prefixes must not match (byte-exact comparison required).',
         );
     }

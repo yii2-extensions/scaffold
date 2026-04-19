@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
+use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\Services\ReapplyService;
 use yii\scaffold\tests\support\{BufferedOutputWriter, TempDirectoryTrait};
 
@@ -81,6 +82,11 @@ final class ReapplyServiceTest extends TestCase
             PHP_EOL,
             $out->stdoutBuffer,
             "The 'cannot be safely reapplied' notice must end with PHP_EOL so shells render it on its own line.",
+        );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'cannot be safely reapplied' notice must end with exactly one PHP_EOL.",
         );
         self::assertStringStartsNotWith(
             PHP_EOL,
@@ -159,6 +165,11 @@ final class ReapplyServiceTest extends TestCase
             $out->stderrBuffer,
             "The 'resolves outside vendor dir' warning must end with PHP_EOL.",
         );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stderrBuffer,
+            "The 'resolves outside vendor dir' warning must end with exactly one PHP_EOL.",
+        );
         self::assertStringStartsNotWith(
             PHP_EOL,
             $out->stderrBuffer,
@@ -204,11 +215,17 @@ final class ReapplyServiceTest extends TestCase
     public function testEnsureDirectoryFailureSkipContinuesIterationToNextReapplicableEntry(): void
     {
         /*
-         * Entry 1 lives under a deep nested destination where `mkdir` is mocked to fail. Entry 2 at the top level
-         * already exists so 'ensureDirectory' is a no-op and the entry is reapplied, proving the loop continues.
+         * Entry 1 lives under a deep nested destination whose parent directory is removed before the run so
+         * 'is_dir' naturally returns false and 'mkdir' (mocked to fail) is actually reached. Entry 2 at the top
+         * level is reapplied normally, proving the loop continues past the ensureDirectory skip.
          */
         $this->seedTracked('deep/config/params.php', "stub\n", "stub\n");
         $this->seedTracked('top.txt', "stub\n", "stub\n");
+
+        $deepDestination = PathResolver::destination($this->tempDir, 'deep/config/params.php');
+
+        unlink($deepDestination);
+        rmdir(dirname($deepDestination));
 
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold',
@@ -216,12 +233,6 @@ final class ReapplyServiceTest extends TestCase
             [],
             false,
             default: true,
-        );
-        MockerState::addCondition(
-            'yii\\scaffold\\Scaffold',
-            'is_dir',
-            ["{$this->tempDir}/deep/config"],
-            false,
         );
 
         $out = new BufferedOutputWriter();
@@ -242,8 +253,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "top.txt"',
             $out->stdoutBuffer,
-            "After the 'ensureDirectory' skip, the foreach must 'continue' to the next entry; replacing 'continue' "
-            . "with 'break' leaves 'top.txt' unreapplied.",
+            "After the 'ensureDirectory' skip, the foreach must continue to the next entry.",
         );
     }
 
@@ -356,7 +366,7 @@ final class ReapplyServiceTest extends TestCase
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'hash_file',
-            ['sha256', "{$this->tempDir}/first.txt", false, []],
+            ['sha256', PathResolver::destination($this->tempDir, 'first.txt'), false, []],
             false,
         );
 
@@ -454,6 +464,11 @@ final class ReapplyServiceTest extends TestCase
             PHP_EOL,
             $out->stderrBuffer,
             "The 'No tracked files matched' error must end with PHP_EOL.",
+        );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stderrBuffer,
+            "The 'No tracked files matched' error must end with exactly one PHP_EOL.",
         );
         self::assertStringStartsNotWith(
             PHP_EOL,
@@ -626,6 +641,11 @@ final class ReapplyServiceTest extends TestCase
             $out->stdoutBuffer,
             "The 'preserve' skip notice must end with PHP_EOL.",
         );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'preserve' skip notice must end with exactly one PHP_EOL.",
+        );
         self::assertStringStartsNotWith(
             PHP_EOL,
             $out->stdoutBuffer,
@@ -738,6 +758,11 @@ final class ReapplyServiceTest extends TestCase
             PHP_EOL,
             $out->stdoutBuffer,
             "The 'Reapplied' confirmation must end with PHP_EOL.",
+        );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'Reapplied' confirmation must end with exactly one PHP_EOL.",
         );
         self::assertStringStartsNotWith(
             PHP_EOL,
@@ -1001,6 +1026,11 @@ final class ReapplyServiceTest extends TestCase
             PHP_EOL,
             $out->stderrBuffer,
             "The 'Stub not found' error must end with PHP_EOL.",
+        );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stderrBuffer,
+            "The 'Stub not found' error must end with exactly one PHP_EOL.",
         );
         self::assertStringStartsNotWith(
             PHP_EOL,

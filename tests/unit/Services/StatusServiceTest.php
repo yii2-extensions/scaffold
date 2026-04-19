@@ -276,6 +276,11 @@ final class StatusServiceTest extends TestCase
             $out->stdoutBuffer,
             "The 'No files tracked' empty-state message must end with PHP_EOL.",
         );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'No files tracked' message must end with exactly one PHP_EOL.",
+        );
         self::assertStringStartsNotWith(
             PHP_EOL,
             $out->stdoutBuffer,
@@ -317,6 +322,11 @@ final class StatusServiceTest extends TestCase
             $out->stdoutBuffer,
             'The final row must be terminated by PHP_EOL so shells render it on its own line.',
         );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            'The final row must end with exactly one PHP_EOL.',
+        );
     }
 
     public function testRunPinsColStatusToLiteralSixWhenObservedStatusIsShorter(): void
@@ -347,16 +357,19 @@ final class StatusServiceTest extends TestCase
         // colFile=max(4, len('../x')=4)=4, colProvider=max(8,1)=8, colMode=max(4,1)=4, colStatus=max(6, 5)=6
         // separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
         self::assertStringContainsString(
-            str_repeat('-', 28) . PHP_EOL,
+            PHP_EOL . str_repeat('-', 28) . PHP_EOL,
             $out->stdoutBuffer,
-            "The separator row must be exactly 28 dashes followed by PHP_EOL when status='error' (len=5) is dominated "
-            . "by the literal '6'; decrementing the literal to '5' drops the separator to 27 dashes.",
+            "The separator row must be exactly 28 dashes on its own line when status='error' pins colStatus to 6.",
         );
         self::assertStringNotContainsString(
             PHP_EOL . str_repeat('-', 27) . PHP_EOL,
             $out->stdoutBuffer,
-            "The separator row must not collapse to 27 dashes; that width would indicate the 'max(6, ...)' literal "
-            . 'was decremented.',
+            'The separator must not collapse to 27 dashes.',
+        );
+        self::assertStringNotContainsString(
+            PHP_EOL . str_repeat('-', 29) . PHP_EOL,
+            $out->stdoutBuffer,
+            'The separator must not widen to 29 dashes.',
         );
     }
 
@@ -474,16 +487,14 @@ final class StatusServiceTest extends TestCase
         // colFile=max(4,1)=4, colProvider=max(8,1)=8, colMode=max(4,1)=4, colStatus=max(6,6 for 'synced')=6
         // separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
         self::assertStringContainsString(
-            str_repeat('-', 28) . PHP_EOL,
+            PHP_EOL . str_repeat('-', 28) . PHP_EOL,
             $out->stdoutBuffer,
-            "The separator row must be exactly '4 + 8 + 4 + 6 + 6 = 28' dashes followed by PHP_EOL when every data "
-            . 'field is shorter than its column literal; increments/decrements of any literal or the padding constant '
-            . 'shift the width and break the layout.',
+            'The separator row must be exactly 28 dashes on its own line when every column is short.',
         );
         self::assertStringNotContainsString(
             str_repeat('-', 29),
             $out->stdoutBuffer,
-            'The separator must not contain 29 consecutive dashes; a widened separator misaligns under the header.',
+            'The separator must not contain 29 consecutive dashes.',
         );
     }
 

@@ -107,11 +107,9 @@ final class DiffServiceTest extends TestCase
         $diff = (new DiffService())->buildDiff('a', "a\nb\nc\n");
 
         self::assertStringNotContainsString(
-            "+ b\n\n",
+            '+ b' . "\n" . PHP_EOL,
             $diff,
-            "Added lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join; leaving the "
-            . "newline in the line content doubles it at the join boundary (producing '+ b\\n\\n' between adjacent "
-            . 'added lines).',
+            "Added lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join on every platform.",
         );
         self::assertStringContainsString(
             '+ b' . PHP_EOL . '+ c',
@@ -126,10 +124,9 @@ final class DiffServiceTest extends TestCase
         $diff = (new DiffService())->buildDiff("a\nb\nc\n", 'a');
 
         self::assertStringNotContainsString(
-            "- b\n\n",
+            '- b' . "\n" . PHP_EOL,
             $diff,
-            "Removed lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join; leaving the "
-            . 'newline in doubles it between adjacent removed lines.',
+            "Removed lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join on every platform.",
         );
         self::assertStringContainsString(
             '- b' . PHP_EOL . '- c',
@@ -143,10 +140,9 @@ final class DiffServiceTest extends TestCase
         $diff = (new DiffService())->buildDiff("a\nb\n", "a\nb\nc\n");
 
         self::assertStringNotContainsString(
-            "  a\n\n",
+            '  a' . "\n" . PHP_EOL,
             $diff,
-            "Unchanged lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join; leaving the "
-            . 'newline in doubles it between adjacent unchanged lines.',
+            "Unchanged lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join on every platform.",
         );
         self::assertStringContainsString(
             '  a' . PHP_EOL . '  b',

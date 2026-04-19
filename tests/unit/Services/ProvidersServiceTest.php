@@ -102,6 +102,11 @@ final class ProvidersServiceTest extends TestCase
             $out->stdoutBuffer,
             "The 'No providers tracked' message must end with PHP_EOL so shells render it on its own line.",
         );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            "The 'No providers tracked' message must end with exactly one PHP_EOL.",
+        );
         self::assertStringStartsNotWith(
             PHP_EOL,
             $out->stdoutBuffer,
@@ -202,16 +207,14 @@ final class ProvidersServiceTest extends TestCase
         (new ProvidersService())->run($this->tempDir, $out);
 
         self::assertStringContainsString(
-            str_repeat('-', 52) . PHP_EOL,
+            PHP_EOL . str_repeat('-', 52) . PHP_EOL,
             $out->stdoutBuffer,
-            'The horizontal separator below the header must be exactly 52 dashes followed by a single PHP_EOL, so the '
-            . 'visual column alignment stays stable across terminals and test fixtures.',
+            'The horizontal separator row must be exactly 52 dashes on its own line.',
         );
         self::assertStringNotContainsString(
             str_repeat('-', 53),
             $out->stdoutBuffer,
-            'The separator must not contain 53 consecutive dashes; a wider separator would visually break alignment '
-            . 'against the 52-character header.',
+            'The separator must not contain 53 consecutive dashes.',
         );
     }
 
@@ -238,6 +241,11 @@ final class ProvidersServiceTest extends TestCase
             PHP_EOL,
             $out->stdoutBuffer,
             'The rendered providers table must end with PHP_EOL so the final row is on its own terminal line.',
+        );
+        self::assertStringEndsNotWith(
+            PHP_EOL . PHP_EOL,
+            $out->stdoutBuffer,
+            'The rendered providers table must end with exactly one PHP_EOL.',
         );
         self::assertStringStartsWith(
             'Provider',
