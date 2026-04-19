@@ -142,7 +142,7 @@ final class PathResolver
     {
         $relative = ltrim($source, '/\\');
 
-        // @codeCoverageIgnoreStart Windows-path adapter, POSIX-identity.
+        // @codeCoverageIgnoreStart
         $relative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
         // @codeCoverageIgnoreEnd
 

@@ -47,7 +47,7 @@ final class VendorDirResolver
             return self::absolutize($env, $projectRoot);
         }
 
-        // @codeCoverageIgnoreStart defensive rtrim, POSIX-equivalent.
+        // @codeCoverageIgnoreStart
         $trimmedRoot = rtrim($projectRoot, '/\\');
         // @codeCoverageIgnoreEnd
 
@@ -103,7 +103,7 @@ final class VendorDirResolver
             return rtrim($path, '/\\');
         }
 
-        // @codeCoverageIgnoreStart defensive ltrim, equivalent in the else branch.
+        // @codeCoverageIgnoreStart
         $strippedPath = ltrim($path, '/\\');
         // @codeCoverageIgnoreEnd
 

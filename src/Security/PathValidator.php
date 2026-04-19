@@ -188,7 +188,7 @@ final class PathValidator
      */
     private function normalizePath(string $base, string $relative): string
     {
-        // @codeCoverageIgnoreStart Windows-path adapter, POSIX-identity.
+        // @codeCoverageIgnoreStart
         $normalizedRelative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
         // @codeCoverageIgnoreEnd
 
