@@ -10,28 +10,28 @@
     <g>
         <rect class="box-bg" x="16" y="16" width="568" height="75" rx="6"/>
         <rect x="16" y="16" width="4" height="75" fill="#42b883"/>
-        <text class="title" x="32" y="44">Manifest-driven</text>
-        <text class="content" x="32" y="70">Inline + external JSON manifest &#8226; 4 file modes &#8226; SHA-256 hash per tracked file</text>
+        <text class="title" x="32" y="44">Agnostic Framework</text>
+        <text class="content" x="32" y="70">Console binary at vendor/bin/scaffold &#8226; 5 commands &#8226; Runs in any PHP project</text>
     </g>
 
     <g>
         <rect class="box-bg" x="16" y="107" width="568" height="75" rx="6"/>
         <rect x="16" y="107" width="4" height="75" fill="#42b883"/>
-        <text class="title" x="32" y="135">Multi-layer composition</text>
-        <text class="content" x="32" y="161">Base + server + frontend layers &#8226; Last-provider wins &#8226; Declarative ordering</text>
+        <text class="title" x="32" y="135">Manifest-driven</text>
+        <text class="content" x="32" y="161">Inline + external JSON manifest &#8226; 4 file modes &#8226; SHA-256 hash per tracked file</text>
     </g>
 
     <g>
         <rect class="box-bg" x="16" y="198" width="568" height="75" rx="6"/>
         <rect x="16" y="198" width="4" height="75" fill="#42b883"/>
-        <text class="title" x="32" y="226">User-aware</text>
-        <text class="content" x="32" y="252">Modified files detected and warned &#8226; Preserve mode &#8226; --force reapply</text>
+        <text class="title" x="32" y="226">Multi-layer composition</text>
+        <text class="content" x="32" y="252">Base + server + frontend layers &#8226; Last-provider wins &#8226; Declarative ordering</text>
     </g>
 
     <g>
         <rect class="box-bg" x="16" y="289" width="568" height="75" rx="6"/>
         <rect x="16" y="289" width="4" height="75" fill="#42b883"/>
-        <text class="title" x="32" y="317">Native Yii2</text>
-        <text class="content" x="32" y="343">Console commands &#8226; Module registration &#8226; scaffold-lock.json committed with project</text>
+        <text class="title" x="32" y="317">User-aware</text>
+        <text class="content" x="32" y="343">Modified files detected and warned &#8226; Preserve mode &#8226; --force reapply</text>
     </g>
 </svg>

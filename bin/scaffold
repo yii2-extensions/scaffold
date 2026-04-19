@@ -1,0 +1,35 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Standalone entry point for the `yii2-extensions/scaffold` Symfony Console application.
+ *
+ * Resolves its Composer autoloader whether invoked from the plugin's own `bin/scaffold` (development) or from a
+ * consumer's `vendor/bin/scaffold` (production). Any PHP project that requires `yii2-extensions/scaffold` can run
+ * this binary without needing a framework.
+ */
+
+use yii\scaffold\Console\Application;
+
+foreach (
+    [
+        __DIR__ . '/../vendor/autoload.php',
+        __DIR__ . '/../../../autoload.php',
+    ] as $autoloadPath
+) {
+    if (is_file($autoloadPath)) {
+        require $autoloadPath;
+
+        break;
+    }
+}
+
+if (class_exists(Application::class) === false) {
+    fwrite(STDERR, '[scaffold] Unable to locate Composer autoloader. Run "composer install" first.' . PHP_EOL);
+
+    exit(1);
+}
+
+exit((new Application())->run());

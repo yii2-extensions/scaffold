@@ -6,9 +6,8 @@ namespace yii\scaffold\Scaffold;
 
 use Composer\IO\IOInterface;
 use Composer\Package\PackageInterface;
-use RuntimeException;
 use Throwable;
-use yii\scaffold\Manifest\ManifestLoader;
+use yii\scaffold\Manifest\{FileMode, ManifestLoader};
 use yii\scaffold\Scaffold\Lock\LockFile;
 use yii\scaffold\Scaffold\Modes\{AppendMode, ApplyOutcome, ModeInterface, PrependMode, PreserveMode, ReplaceMode};
 
@@ -31,8 +30,8 @@ use function substr;
 final class Scaffolder
 {
     /**
-     * @var array<string, ModeInterface> Pre-instantiated mode implementations keyed by mode name for efficient
-     * resolution during scaffolding.
+     * @var array<string, ModeInterface> Pre-instantiated mode implementations keyed by the backing value of
+     * {@see FileMode} for efficient resolution during scaffolding.
      */
     private readonly array $modes;
 
@@ -43,10 +42,10 @@ final class Scaffolder
         private readonly IOInterface $io,
     ) {
         $this->modes = [
-            'replace' => new ReplaceMode(),
-            'preserve' => new PreserveMode(),
-            'append' => new AppendMode(),
-            'prepend' => new PrependMode(),
+            FileMode::Replace->value => new ReplaceMode(),
+            FileMode::Preserve->value => new PreserveMode(),
+            FileMode::Append->value => new AppendMode(),
+            FileMode::Prepend->value => new PrependMode(),
         ];
     }
 
@@ -153,7 +152,7 @@ final class Scaffolder
         foreach ($merged as $destination => $mapping) {
             if (
                 !$fullScaffold
-                && ($mapping->mode === 'append' || $mapping->mode === 'prepend')
+                && ($mapping->mode === FileMode::Append || $mapping->mode === FileMode::Prepend)
                 && isset($lockData['files'][$destination])
             ) {
                 continue;
@@ -170,7 +169,7 @@ final class Scaffolder
                         'hash' => $result->newHash,
                         'provider' => $mapping->providerName,
                         'source' => $mapping->source,
-                        'mode' => $mapping->mode,
+                        'mode' => $mapping->mode->value,
                     ];
                     $dirty = true;
                 } elseif ($result->newHash !== '' && !isset($lockData['files'][$destination])) {
@@ -178,7 +177,7 @@ final class Scaffolder
                         'hash' => $result->newHash,
                         'provider' => $mapping->providerName,
                         'source' => $mapping->source,
-                        'mode' => $mapping->mode,
+                        'mode' => $mapping->mode->value,
                     ];
                     $dirty = true;
                 }
@@ -233,17 +232,15 @@ final class Scaffolder
     }
 
     /**
-     * Resolves a mode string to its corresponding ModeInterface implementation.
+     * Resolves a {@see FileMode} to its corresponding {@see ModeInterface} implementation.
      *
-     * @param string $mode Mode name (for example, 'replace', 'preserve', 'append', 'prepend').
-     *
-     * @throws RuntimeException if the mode name is unknown.
+     * @param FileMode $mode Mode case to resolve.
      *
      * @return ModeInterface Corresponding mode implementation.
      */
-    private function resolveMode(string $mode): ModeInterface
+    private function resolveMode(FileMode $mode): ModeInterface
     {
-        return $this->modes[$mode] ?? throw new RuntimeException(sprintf('Unknown scaffold mode "%s".', $mode));
+        return $this->modes[$mode->value];
     }
 
     /**

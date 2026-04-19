@@ -7,7 +7,7 @@ namespace yii\scaffold\tests\unit\Manifest;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use yii\scaffold\Manifest\ManifestSchema;
+use yii\scaffold\Manifest\{FileMode, ManifestSchema};
 
 /**
  * Unit tests for {@see ManifestSchema} manifest structure validation.
@@ -198,9 +198,9 @@ final class ManifestSchemaTest extends TestCase
             "Expected 'source' to be 'stubs/nginx.conf' for 'nginx.conf' entry.",
         );
         self::assertSame(
-            'replace',
+            FileMode::Replace,
             $entry['mode'],
-            "Expected 'mode' to be 'replace' for 'nginx.conf' entry.",
+            "Expected 'mode' to be 'FileMode::Replace' for 'nginx.conf' entry.",
         );
     }
 

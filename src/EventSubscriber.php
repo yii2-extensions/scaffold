@@ -8,11 +8,9 @@ use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
 use Composer\Script\{Event, ScriptEvents};
 use Throwable;
-use yii\scaffold\Bridge\Yii2ComposerBridge;
 use yii\scaffold\Manifest\{ManifestLoader, ManifestSchema};
-use yii\scaffold\Scaffold\Applier;
+use yii\scaffold\Scaffold\{Applier, Scaffolder};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
-use yii\scaffold\Scaffold\Scaffolder;
 use yii\scaffold\Security\{PackageAllowlist, PathValidator};
 
 use function is_array;
@@ -198,7 +196,5 @@ final class EventSubscriber implements EventSubscriberInterface
         } catch (Throwable $e) {
             $io->writeError(sprintf('[scaffold] Scaffolding aborted: %s', $e->getMessage()));
         }
-
-        Yii2ComposerBridge::logNotice($io);
     }
 }

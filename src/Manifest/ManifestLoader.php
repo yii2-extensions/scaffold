@@ -8,6 +8,7 @@ use Composer\Package\PackageInterface;
 use RuntimeException;
 
 use function is_array;
+use function sprintf;
 
 /**
  * Loads scaffold file mappings from a Composer package manifest.
@@ -25,7 +26,7 @@ final class ManifestLoader
     /**
      * Loads all file mappings declared by a scaffold provider package.
      *
-     * @param PackageInterface $package The provider Composer package.
+     * @param PackageInterface $package Provider Composer package.
      * @param string $packagePath Absolute path to the provider root inside vendor.
      *
      * @return list<FileMapping> List of file mappings declared by the provider.
@@ -60,8 +61,8 @@ final class ManifestLoader
     /**
      * Builds file mappings from already validated manifest data.
      *
-     * @param array<string, array{source: string, mode: string}> $fileMapping Raw file mapping data from the manifest,
-     * already validated against the schema.
+     * @param array<string, array{source: string, mode: FileMode}> $fileMapping Validated file-mapping data, with `mode`
+     * already resolved by {@see ManifestSchema} to the corresponding {@see FileMode} case.
      *
      * @return list<FileMapping> List of file mappings built from the validated manifest data.
      */

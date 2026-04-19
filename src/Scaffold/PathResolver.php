@@ -18,6 +18,7 @@ use function rtrim;
 use function sprintf;
 use function str_replace;
 use function str_starts_with;
+use function umask;
 
 /**
  * Resolves absolute scaffold paths from base roots and relative segments.
@@ -146,11 +147,13 @@ final class PathResolver
 
     /**
      * Copies the source file's permission bits onto the destination, preserving the executable bit for CLI stubs
-     * such as `yii` or shell scripts.
+     * such as `yii` or shell scripts, while honoring the caller's `umask` so restrictive setups (for example, `0077`
+     * on shared hosts or CI) are not silently widened.
      *
      * On POSIX systems, PHP's `copy()` and `file_put_contents()` honor the current umask rather than the source's
      * permissions, which silently drops the executable bit. This helper brings the destination back in line with the
-     * source. Failures are swallowed because permission changes are best-effort on Windows and restricted mounts.
+     * source, masked by the current umask. Failures are swallowed because permission changes are best-effort on
+     * Windows and restricted mounts.
      *
      * @param string $source Absolute path to the source file.
      * @param string $destination Absolute path to the destination file.
@@ -163,6 +166,10 @@ final class PathResolver
             return;
         }
 
-        @chmod($destination, $perms & 0777);
+        $currentUmask = umask();
+
+        umask($currentUmask);
+
+        @chmod($destination, $perms & 0777 & ~$currentUmask);
     }
 }

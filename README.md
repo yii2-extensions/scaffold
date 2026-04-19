@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-    <strong>Declarative multi-layer file scaffolding for Yii2 projects</strong>
+    <strong>Declarative multi-layer file scaffolding for PHP projects<br>via Composer providers and a Console CLI</strong>
 </p>
 
 ## Features
@@ -81,13 +81,31 @@ Minimal `composer.json` for a project using one scaffold provider:
 }
 ```
 
-Register the console module in `config/console.php` to enable `yii scaffold/*` commands:
+## Console commands
 
-```php
-'modules' => [
-    'scaffold' => \yii\scaffold\Module::class,
-],
+After `composer install`, the plugin ships a standalone Symfony Console CLI at `vendor/bin/scaffold`
+that works in any PHP project (Yii2, Yii3, Laravel, Symfony, plain PHP).
+
+| Command                                                            | What it does                                                                                                                                     |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `vendor/bin/scaffold status`                                       | Prints a table comparing every tracked file's on-disk hash to the one recorded in `scaffold-lock.json` (`synced` / `modified` / `missing`).      |
+| `vendor/bin/scaffold providers`                                    | Lists every provider recorded in `scaffold-lock.json` and how many files each one contributed.                                                   |
+| `vendor/bin/scaffold diff <file>`                                  | Shows a line-by-line diff between the provider stub and the current on-disk file.                                                                |
+| `vendor/bin/scaffold reapply [file] [--force] [--provider=<name>]` | Re-copies stubs from `vendor/` to the project, updating lock hashes on success. Without `--force`, user-modified files are reported and skipped. |
+| `vendor/bin/scaffold eject <file> [--yes]`                         | Removes a file entry from `scaffold-lock.json` without deleting the file from disk. Without `--yes` only previews the change.                    |
+
+Typical post-install workflow:
+
+```bash
+vendor/bin/scaffold status                                      # what changed
+vendor/bin/scaffold diff config/params.php                      # review one file
+vendor/bin/scaffold reapply config/params.php --force           # accept stub version
+
+# or
+vendor/bin/scaffold eject config/params.php --yes               # keep yours, stop tracking
 ```
+
+See [`docs/console.md`](docs/console.md) for the full reference.
 
 ## Documentation
 
@@ -101,7 +119,6 @@ Register the console module in `config/console.php` to enable `yii scaffold/*` c
 ## Package information
 
 [![PHP](https://img.shields.io/badge/%3E%3D8.3-777BB4.svg?style=for-the-badge&logo=php&logoColor=white)](https://www.php.net/releases/8.3/en.php)
-[![Yii 22.0.x](https://img.shields.io/badge/22.0.x-0073AA.svg?style=for-the-badge&logo=yii&logoColor=white)](https://github.com/yiisoft/yii2/tree/22.0)
 [![Latest Stable Version](https://img.shields.io/packagist/v/yii2-extensions/scaffold.svg?style=for-the-badge&logo=packagist&logoColor=white&label=Stable)](https://packagist.org/packages/yii2-extensions/scaffold)
 [![Total Downloads](https://img.shields.io/packagist/dt/yii2-extensions/scaffold.svg?style=for-the-badge&logo=composer&logoColor=white&label=Downloads)](https://packagist.org/packages/yii2-extensions/scaffold)
 

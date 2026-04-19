@@ -7,7 +7,7 @@ namespace yii\scaffold\tests\unit\Scaffold\Modes;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Xepozz\InternalMocker\MockerState;
-use yii\scaffold\Manifest\FileMapping;
+use yii\scaffold\Manifest\{FileMapping, FileMode};
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\Modes\{ApplyOutcome, PreserveMode};
 use yii\scaffold\tests\support\TempDirectoryTrait;
@@ -83,6 +83,7 @@ final class PreserveModeTest extends TestCase
         $this->makeSourceFile();
 
         $hasher = new Hasher();
+
         $expected = $hasher->hash($projectDir . '/output.txt');
 
         $result = (new PreserveMode())->apply(
@@ -191,22 +192,37 @@ final class PreserveModeTest extends TestCase
         $this->tearDownTempDirectory();
     }
 
+    /**
+     * Helper method to create a FileMapping for testing.
+     *
+     * @param string $destination Destination path relative to the project directory.
+     * @param string $source Source path relative to the provider directory.
+     *
+     * @return FileMapping Created file mapping instance.
+     */
     private function makeMapping(string $destination = 'output.txt', string $source = 'stubs/source.txt'): FileMapping
     {
         return new FileMapping(
             destination: $destination,
             source: $source,
-            mode: 'preserve',
+            mode: FileMode::Preserve,
             providerName: 'test/provider',
             providerPath: "{$this->tempDir}/provider",
         );
     }
 
+    /**
+     * Helper method to create a source file with specified content and relative path.
+     *
+     * @param string $content Content to write to the source file.
+     * @param string $relative Relative path within the provider directory for the source file.
+     */
     private function makeSourceFile(string $content = 'stub content', string $relative = 'stubs/source.txt'): void
     {
         $path = "{$this->tempDir}/provider/{$relative}";
 
-        mkdir(dirname($path), 0777, recursive: true);
+        $this->ensureTestDirectory(dirname($path));
+
         file_put_contents($path, $content);
     }
 }

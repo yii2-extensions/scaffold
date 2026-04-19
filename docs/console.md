@@ -1,28 +1,19 @@
 # Console commands
 
-The `yii scaffold/*` commands give developers visibility into and control over the scaffold state without running a full
-`composer install`.
+The scaffold plugin ships a standalone [Symfony Console](https://symfony.com/doc/current/components/console.html) CLI
+at `vendor/bin/scaffold`. It works in any PHP project (Yii2, Yii3, Laravel, Symfony, plain PHP) with no framework
+bootstrap required; the binary starts directly from Composer's autoloader.
 
-## Module registration
+Run `vendor/bin/scaffold list` to discover every available command; each entry below also responds to
+`--help` for detailed option documentation.
 
-Add the module to `config/console.php` before using any command:
+## vendor/bin/scaffold status
 
-```php
-return [
-    // ...
-    'modules' => [
-        'scaffold' => \yii\scaffold\Module::class,
-    ],
-];
-```
-
-## yii scaffold/status
-
-Reads `scaffold-lock.json` and compares the recorded hash of every tracked file to its current on-disk hash. Outputs a
-status table.
+Reads `scaffold-lock.json` and compares the recorded hash of every tracked file to its current on-disk hash.
+Outputs a status table.
 
 ```bash
-yii scaffold/status
+vendor/bin/scaffold status
 ```
 
 Example output:
@@ -42,12 +33,12 @@ docker/nginx/nginx.conf                  yii2-extensions/app-nginx      replace 
 | `modified` | The file has been changed since the last scaffold run.         |
 | `missing`  | The file was written by scaffold but no longer exists on disk. |
 
-## yii scaffold/diff `<file>`
+## vendor/bin/scaffold diff `<file>`
 
 Shows a line-by-line diff between the provider stub and the current on-disk file.
 
 ```bash
-yii scaffold/diff config/params.php
+vendor/bin/scaffold diff config/params.php
 ```
 
 Lines present only in the stub are prefixed with `-`, lines present only in the current file with `+`, and unchanged
@@ -59,48 +50,48 @@ lines with two spaces.
 + return ['adminEmail' => 'admin@example.com'];
 ```
 
-## yii scaffold/reapply `[file]` `[--force]` `[--provider=]`
+## vendor/bin/scaffold reapply `[file]` `[--force]` `[--provider=<name>]`
 
 Re-copies stubs from `vendor/` to the project, updating `scaffold-lock.json` hashes on success.
 
 ```bash
 # reapply a single file
-yii scaffold/reapply config/params.php
+vendor/bin/scaffold reapply config/params.php
 
 # reapply all files from one provider
-yii scaffold/reapply --provider=yii2-extensions/app-base
+vendor/bin/scaffold reapply --provider=yii2-extensions/app-base
 
 # reapply all tracked files
-yii scaffold/reapply
+vendor/bin/scaffold reapply
 
 # overwrite even user-modified files
-yii scaffold/reapply config/params.php --force
+vendor/bin/scaffold reapply config/params.php --force
 ```
 
 Without `--force`, files whose on-disk hash differs from the lock hash are reported and skipped.
 With `--force`, user-modified files are overwritten and the lock hash is updated.
 
-## yii scaffold/eject `<file>` `[--yes]`
+## vendor/bin/scaffold eject `<file>` `[--yes]`
 
 Removes a file entry from `scaffold-lock.json` without deleting the file from disk.
 After ejection the file is no longer managed by scaffold.
 
 ```bash
 # preview what would happen
-yii scaffold/eject config/params.php
+vendor/bin/scaffold eject config/params.php
 
 # perform the ejection
-yii scaffold/eject config/params.php --yes
+vendor/bin/scaffold eject config/params.php --yes
 ```
 
 Without `--yes`, the command only describes what would happen and exits without modifying the lock.
 
-## yii scaffold/providers
+## vendor/bin/scaffold providers
 
 Lists all providers recorded in `scaffold-lock.json` with their file counts.
 
 ```bash
-yii scaffold/providers
+vendor/bin/scaffold providers
 ```
 
 Example output:
@@ -116,14 +107,27 @@ yii2-extensions/app-nginx                    2
 
 ```bash
 # 1. Check what changed after composer update
-yii scaffold/status
+vendor/bin/scaffold status
 
 # 2. Review a modified file
-yii scaffold/diff config/params.php
+vendor/bin/scaffold diff config/params.php
 
 # 3a. Accept the stub version (overwrite)
-yii scaffold/reapply config/params.php --force
+vendor/bin/scaffold reapply config/params.php --force
 
 # 3b. Keep your version and stop tracking it
-yii scaffold/eject config/params.php --yes
+vendor/bin/scaffold eject config/params.php --yes
 ```
+
+## Exit codes
+
+All commands follow standard Symfony Console conventions:
+
+| Code | Meaning                                                                                                                      |
+| ---- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `0`  | Success (including preview / no-op runs).                                                                                    |
+| `1`  | Recoverable error (for example, untracked file passed to `diff` / `eject`, or filter in `reapply` matched no tracked files). |
+| `2`  | Input validation error raised by Symfony Console (for example, missing required argument).                                   |
+
+Use the exit code in CI scripts to halt on failures (for example, `vendor/bin/scaffold status` always returns `0`
+regardless of `modified` / `missing` entries; inspect the text output yourself if you want CI to gate on drift).

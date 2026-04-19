@@ -4,7 +4,9 @@
 
 - [PHP](https://www.php.net/downloads) `8.3` or higher.
 - [Composer](https://getcomposer.org/download/) `2.9` or higher.
-- [Yii2](https://github.com/yiisoft/yii2) `22.x`.
+
+The plugin is framework-agnostic. It works in Yii2, Yii3, Laravel, Symfony, Slim, Mezzio, or plain
+PHP projects as long as they use Composer.
 
 ## Installation
 
@@ -61,18 +63,20 @@ git add scaffold-lock.json
 git commit -m "chore: add scaffold-lock.json"
 ```
 
-## Register the console module (optional)
+## Invoke the console CLI
 
-To enable `yii scaffold/*` console commands, register the module in `config/console.php`:
+After `composer install`, the Symfony Console CLI is available at `vendor/bin/scaffold`:
 
-```php
-return [
-    // ...
-    'modules' => [
-        'scaffold' => \yii\scaffold\Module::class,
-    ],
-];
+```bash
+vendor/bin/scaffold list                      # discover available commands
+vendor/bin/scaffold status                    # what changed since last scaffold?
+vendor/bin/scaffold providers                 # list providers + file counts
+vendor/bin/scaffold diff config/params.php    # review changes on a single file
+vendor/bin/scaffold reapply --force           # replay stubs, overwriting user edits
+vendor/bin/scaffold eject config/params.php --yes   # detach a file from the lock
 ```
+
+No framework bootstrap is required; the binary starts directly from Composer's autoloader.
 
 ## Next steps
 

@@ -10,7 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Xepozz\InternalMocker\MockerState;
-use yii\scaffold\Manifest\{FileMapping, ManifestLoader, ManifestSchema};
+use yii\scaffold\Manifest\{FileMapping, FileMode, ManifestLoader, ManifestSchema};
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
@@ -104,9 +104,9 @@ final class ManifestLoaderTest extends TestCase
             "Expected source to be 'stubs/resources/js/app.js'",
         );
         self::assertSame(
-            'preserve',
+            FileMode::Preserve,
             $first->mode,
-            "Expected mode to be 'preserve'",
+            "Expected mode to be 'FileMode::Preserve'.",
         );
         self::assertSame(
             'yii2-extensions/inertia-vue-scaffold',
@@ -423,9 +423,9 @@ final class ManifestLoaderTest extends TestCase
             "Expected source to be 'stubs/params.php'",
         );
         self::assertSame(
-            'preserve',
+            FileMode::Preserve,
             $first->mode,
-            "Expected mode to be 'preserve'",
+            "Expected mode to be 'FileMode::Preserve'.",
         );
         self::assertSame(
             'yii2-extensions/inertia-vue-scaffold',
