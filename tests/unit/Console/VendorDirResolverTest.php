@@ -38,6 +38,17 @@ final class VendorDirResolverTest extends TestCase
         );
     }
 
+    public function testAbsolutePosixPathEndingInDriveRootSubstringIsNotMisclassifiedAsDriveRoot(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=/foo/C:/');
+
+        self::assertSame(
+            '/foo/C:',
+            VendorDirResolver::resolve($this->tempDir),
+            "An absolute POSIX path ending in 'X:/' must not be preserved by the drive-root short-circuit.",
+        );
+    }
+
     public function testComposerJsonAbsoluteVendorDirIsHonored(): void
     {
         file_put_contents(
@@ -72,6 +83,17 @@ final class VendorDirResolverTest extends TestCase
             $this->tempDir . '/vendor',
             VendorDirResolver::resolve($this->tempDir . '/'),
             "Default vendor fallback must strip trailing '/' from 'projectRoot' to avoid '//vendor'.",
+        );
+    }
+
+    public function testDriveLetterInMiddleOfRelativePathDoesNotTriggerAbsoluteBranch(): void
+    {
+        putenv('COMPOSER_VENDOR_DIR=prefix/C:/suffix');
+
+        self::assertSame(
+            $this->tempDir . '/prefix/C:/suffix',
+            VendorDirResolver::resolve($this->tempDir),
+            "A drive-letter substring mid-path ('C:/') must not trigger the absolute branch.",
         );
     }
 

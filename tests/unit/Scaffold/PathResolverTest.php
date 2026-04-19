@@ -171,6 +171,54 @@ final class PathResolverTest extends TestCase
         );
     }
 
+    public function testResolveProviderRootDetectsUncLikePathAsAbsoluteViaBackslashPrefix(): void
+    {
+        /*
+         * recordedPath starts with `\` (UNC-style). Default isAbsolute is true via the second 'str_starts_with' in
+         * the OR chain; mutating the '||' between the first two operands to '&&' with the third operand folds the
+         * detection into '(starts_with('\\') && preg_match drive-letter)', which is false for pure UNC paths — the
+         * path is then misclassified as relative and joined under 'projectRoot', landing outside vendor.
+         */
+        $vendor = PathResolver::realpathOrFallback($this->tempDir);
+
+        $result = PathResolver::resolveProviderRoot(
+            $vendor,
+            'pkg/name',
+            ['path' => '\\\\server\\share'],
+            $vendor,
+        );
+
+        self::assertNotNull(
+            $result['warning'],
+            "A UNC-like recordedPath starting with '\\' must stay absolute and land outside vendor, emitting a "
+            . "warning; the '||' disjunction on the 'str_starts_with' operands is what keeps it classified correctly.",
+        );
+    }
+
+    public function testResolveProviderRootDoesNotClassifyRelativePathContainingDriveLetterInMiddleAsAbsolute(): void
+    {
+        /*
+         * recordedPath 'foo/C:/bar' is relative but carries a drive-letter substring; only the regex '^' anchor
+         * keeps it classified as relative. Default: joined under projectRoot and stays inside vendor → no warning.
+         * Without '^' the mutant flips isAbsolute to true, '$expanded' becomes 'foo/C:/bar' verbatim (relative), the
+         * realpath fallback leaves it with no vendor prefix, and containment fails → warning.
+         */
+        $vendor = PathResolver::realpathOrFallback($this->tempDir);
+
+        $result = PathResolver::resolveProviderRoot(
+            $vendor,
+            'pkg/name',
+            ['path' => 'foo/C:/bar'],
+            $vendor,
+        );
+
+        self::assertNull(
+            $result['warning'],
+            "A relative recordedPath with a drive-letter substring must stay classified as relative; the regex '^' "
+            . 'anchor keeps it joined under projectRoot so it lands inside vendor without warning.',
+        );
+    }
+
     public function testResolveProviderRootFallsBackToDefaultWhenLockPathEscapesVendor(): void
     {
         $vendor = $this->tempDir;

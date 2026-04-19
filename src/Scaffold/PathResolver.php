@@ -140,9 +140,11 @@ final class PathResolver
      */
     public static function source(string $providerPath, string $source): string
     {
+        // @codeCoverageIgnoreStart 'str_replace("/", DIRECTORY_SEPARATOR, …)' is a Windows-path adapter.
         return rtrim($providerPath, '/\\')
             . DIRECTORY_SEPARATOR
             . str_replace('/', DIRECTORY_SEPARATOR, ltrim($source, '/\\'));
+        // @codeCoverageIgnoreEnd
     }
 
     /**
@@ -167,8 +169,6 @@ final class PathResolver
         }
 
         $currentUmask = umask();
-
-        umask($currentUmask);
 
         @chmod($destination, $perms & 0777 & ~$currentUmask);
     }

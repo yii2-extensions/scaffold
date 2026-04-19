@@ -6,6 +6,7 @@ namespace yii\scaffold\tests\unit\Security;
 
 use PHPUnit\Framework\Attributes\{Group, RequiresOperatingSystemFamily};
 use PHPUnit\Framework\TestCase;
+use ReflectionMethod;
 use RuntimeException;
 use yii\scaffold\Security\PathValidator;
 use yii\scaffold\tests\support\TempDirectoryTrait;
@@ -216,6 +217,25 @@ final class PathValidatorTest extends TestCase
         $this->expectException(RuntimeException::class);
 
         (new PathValidator())->validateSource('stubs/params.php', '/nonexistent/provider/' . uniqid());
+    }
+
+    public function testNormalizePathStripsTrailingSeparatorFromCombinedResult(): void
+    {
+        /*
+         * Pins the outer 'rtrim($combined, DIRECTORY_SEPARATOR)' at line 194: with a relative that ends in a
+         * separator, 'normalizePath' must trim it so downstream 'dirname' iterations and string comparisons work on
+         * a canonical absolute path. Exercised via reflection because 'normalizePath' is private.
+         */
+        $method = new ReflectionMethod(PathValidator::class, 'normalizePath');
+
+        /** @var string $result */
+        $result = $method->invoke(new PathValidator(), '/root', 'subdir/');
+
+        self::assertSame(
+            '/root' . DIRECTORY_SEPARATOR . 'subdir',
+            $result,
+            'Trailing separator on the relative segment must be stripped from the combined path.',
+        );
     }
 
     public function testSourceAcceptsEmptyRelativePath(): void

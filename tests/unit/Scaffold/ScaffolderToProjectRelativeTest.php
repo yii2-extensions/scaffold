@@ -41,6 +41,32 @@ final class ScaffolderToProjectRelativeTest extends TestCase
             'On POSIX, mixed-case prefixes must not match (byte-exact comparison required).',
         );
     }
+
+    public function testNormalizesBackslashSeparatorsInAbsolutePathBeforePrefixMatch(): void
+    {
+        /*
+         * Pins the 'str_replace('\\', '/', $absolutePath)' normalization at line 263. Same idea as the projectRoot
+         * test, but on the package-path side.
+         */
+        self::assertSame(
+            'pkg',
+            $this->call('/tmp/project/subdir\\pkg', '/tmp/project/subdir'),
+            'absolutePath containing a backslash must be normalized to forward-slashes before the prefix check.',
+        );
+    }
+    public function testNormalizesBackslashSeparatorsInProjectRootBeforePrefixMatch(): void
+    {
+        /*
+         * Pins the 'str_replace('\\', '/', $projectRoot)' normalization at line 262. With a backslash in projectRoot,
+         * default normalizes both sides to forward-slashes → prefix match → returns relative 'pkg'. Without that
+         * str_replace the mutant keeps '\' in the needle, prefix-match fails, and the full absolute path is returned.
+         */
+        self::assertSame(
+            'pkg',
+            $this->call('/tmp/project/subdir/pkg', '/tmp/project\\subdir'),
+            'projectRoot containing a backslash must be normalized to forward-slashes before the prefix check.',
+        );
+    }
     public function testReturnsBasenameRelativeWhenPackagePathSitsInsideProjectRoot(): void
     {
         self::assertSame(
