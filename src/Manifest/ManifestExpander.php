@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace yii\scaffold\Manifest;
 
 use FilesystemIterator;
+use RecursiveCallbackFilterIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use RuntimeException;
@@ -12,8 +13,10 @@ use SplFileInfo;
 
 use function is_dir;
 use function is_file;
+use function rtrim;
 use function sort;
 use function sprintf;
+use function str_ends_with;
 use function str_replace;
 use function strlen;
 use function substr;
@@ -61,7 +64,6 @@ final class ManifestExpander
                     continue;
                 }
 
-                // Dedup tag only; value is immaterial since 'isset' is the only reader.
                 // @codeCoverageIgnoreStart
                 $seen[$relative] = true;
                 // @codeCoverageIgnoreEnd
@@ -77,7 +79,7 @@ final class ManifestExpander
             }
 
             if (is_dir($absolute)) {
-                $prefix = self::normalise($entry);
+                $prefix = rtrim(self::normalise($entry), '/');
                 $prefix = $prefix === '.' ? '' : $prefix;
 
                 foreach ($this->walk($absolute, $prefix, $manifest['exclude']) as $relative) {
@@ -86,9 +88,9 @@ final class ManifestExpander
                     }
 
                     // @codeCoverageIgnoreStart
-                    // Dedup tag only; value is immaterial since 'isset' is the only reader.
                     $seen[$relative] = true;
                     // @codeCoverageIgnoreEnd
+
                     $mappings[] = $this->buildMapping(
                         $relative,
                         $this->resolveMode($relative, $manifest['modes']),
@@ -106,6 +108,37 @@ final class ManifestExpander
         }
 
         return $mappings;
+    }
+
+    /**
+     * Recursive filter callback deciding whether an iterator entry should be visited.
+     *
+     * Files pass through unconditionally so they can be exclude-filtered at file level; directories are tested against
+     * the default and user dir-prune patterns so that excluded subtrees (for example `vendor/**`) are never descended.
+     *
+     * @param SplFileInfo $current Filesystem entry offered by the inner iterator.
+     * @param string $absolutePrefix Rtrim'd absolute path of the walk root on disk.
+     * @param string $relativePrefix Relative directory prefix to prepend when deriving the walk-relative path.
+     * @param list<string> $userExcludes User-declared exclude patterns from the manifest.
+     *
+     * @return bool `true` when the iterator should accept the entry (and descend, for dirs), `false` to prune it.
+     */
+    private function acceptIteratorEntry(
+        SplFileInfo $current,
+        string $absolutePrefix,
+        string $relativePrefix,
+        array $userExcludes,
+    ): bool {
+        // @codeCoverageIgnoreStart interceptor does not swap this file for filter callbacks.
+        if ($current->isDir() === false) {
+            return true;
+        }
+        // @codeCoverageIgnoreEnd
+
+        return self::canDescend(
+            self::relativise($current, $absolutePrefix, $relativePrefix),
+            $userExcludes,
+        );
     }
 
     /**
@@ -131,6 +164,32 @@ final class ManifestExpander
             providerName: $providerName,
             providerPath: $providerPath,
         );
+    }
+
+    /**
+     * Determines whether the iterator may descend into `$relativeDir` based on both default and user exclude patterns.
+     *
+     * The directory may be pruned whenever a pattern of the form `$relativeDir/**` exists in either layer, because
+     * every possible descendant would then match an exclude and be dropped at file level anyway.
+     *
+     * @param string $relativeDir Directory path relative to the walk root, using forward slashes.
+     * @param list<string> $userExcludes User-declared exclude patterns from the manifest.
+     *
+     * @return bool `true` when the iterator should descend, `false` when the subtree may be skipped entirely.
+     */
+    private static function canDescend(string $relativeDir, array $userExcludes): bool
+    {
+        if (DefaultExcludes::matchesDirectory($relativeDir)) {
+            return false;
+        }
+
+        foreach ($userExcludes as $pattern) {
+            if (str_ends_with($pattern, '/**') && substr($pattern, 0, -3) === $relativeDir) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -164,10 +223,30 @@ final class ManifestExpander
      */
     private static function normalise(string $path): string
     {
-        // Windows-path adapter, POSIX-identity.
         // @codeCoverageIgnoreStart
         return str_replace('\\', '/', $path);
         // @codeCoverageIgnoreEnd
+    }
+
+    /**
+     * Derives the walk-relative path for a filesystem entry, using forward slashes.
+     *
+     * Called both by the recursive filter (to decide whether to prune a directory) and by the main loop (to emit file
+     * destinations), so it produces the exact same string for a given entry in either context.
+     *
+     * @param SplFileInfo $entry Filesystem entry returned by the iterator.
+     * @param string $absolutePrefix Rtrim'd absolute path of the walk root on disk.
+     * @param string $relativePrefix Relative directory prefix to prepend, or an empty string when walking from root.
+     *
+     * @return string Path relative to the walk root, using forward slashes.
+     */
+    private static function relativise(SplFileInfo $entry, string $absolutePrefix, string $relativePrefix): string
+    {
+        $absolute = self::normalise($entry->getPathname());
+
+        $tail = substr($absolute, strlen($absolutePrefix) + 1);
+
+        return $relativePrefix === '' ? $tail : "{$relativePrefix}/{$tail}";
     }
 
     /**
@@ -203,22 +282,24 @@ final class ManifestExpander
      */
     private function walk(string $absoluteDir, string $relativePrefix, array $userExcludes): array
     {
-        $iterator = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($absoluteDir, FilesystemIterator::SKIP_DOTS),
-        );
-
         $results = [];
-        $absolutePrefix = self::normalise($absoluteDir);
+        $absolutePrefix = rtrim(self::normalise($absoluteDir), '/');
+
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveCallbackFilterIterator(
+                new RecursiveDirectoryIterator($absoluteDir, FilesystemIterator::SKIP_DOTS),
+                fn(SplFileInfo $current): bool => $this->acceptIteratorEntry(
+                    $current,
+                    $absolutePrefix,
+                    $relativePrefix,
+                    $userExcludes,
+                ),
+            ),
+        );
 
         /** @var SplFileInfo $entry */
         foreach ($iterator as $entry) {
-            if ($entry->isDir()) {
-                continue;
-            }
-
-            $absolute = self::normalise($entry->getPathname());
-            $tail = substr($absolute, strlen($absolutePrefix) + 1);
-            $relative = $relativePrefix === '' ? $tail : "{$relativePrefix}/{$tail}";
+            $relative = self::relativise($entry, $absolutePrefix, $relativePrefix);
 
             if (DefaultExcludes::matches($relative) || self::matchesAny($relative, $userExcludes)) {
                 continue;
@@ -226,9 +307,6 @@ final class ManifestExpander
 
             $results[] = $relative;
         }
-
-        // Defensive sort for filesystems that do not return entries alphabetically; on Linux the iterator is already
-        // ordered so removing the call is observationally equivalent on the POSIX CI matrix.
 
         // @codeCoverageIgnoreStart
         sort($results);

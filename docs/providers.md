@@ -27,12 +27,21 @@ Declare under `extra.scaffold` in the provider's `composer.json`:
     "type": "yii2-scaffold",
     "extra": {
         "scaffold": {
-            "copy": ["src", "config", "migrations", "public", "resources", "yii"],
+            "copy": [
+                "src",
+                "config",
+                "migrations",
+                "public",
+                "resources",
+                "yii",
+                ".env.dist",
+                ".gitignore"
+            ],
             "modes": {
-                "config/*.php":           "preserve",
+                "config/*.php": "preserve",
                 "public/assets/.gitkeep": "preserve",
-                ".env.dist":              "preserve",
-                ".gitignore":             "append"
+                ".env.dist": "preserve",
+                ".gitignore": "append"
             }
         }
     }
@@ -59,12 +68,20 @@ For larger providers, point to a `scaffold.json` file next to `composer.json`:
 
 ```json
 {
-    "copy":    ["src", "config", "migrations", "public", "resources", "yii"],
+    "copy": [
+        "src",
+        "config",
+        "migrations",
+        "public",
+        "resources",
+        "yii",
+        ".env.dist"
+    ],
     "exclude": ["config/test-local.php"],
-    "modes":   {
-        "config/*.php":           "preserve",
+    "modes": {
+        "config/*.php": "preserve",
         "public/assets/.gitkeep": "preserve",
-        ".env.dist":              "preserve"
+        ".env.dist": "preserve"
     }
 }
 ```
@@ -99,7 +116,7 @@ See [File Modes](modes.md) for a detailed description of each mode and the hash-
 The following patterns are hardcoded and always skipped when walking a directory listed in `copy`, so providers never
 accidentally ship their own development metadata:
 
-```
+```text
 composer.json, composer.lock, vendor/**
 .git/**, .github/**, .gitattributes, .gitignore
 tests/**, phpunit.xml, phpunit.xml.dist, .phpunit.cache/**, phpunit.cache/**

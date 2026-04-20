@@ -166,11 +166,7 @@ final class ManifestSchema
         $resolved = [];
 
         foreach ($raw['modes'] as $pattern => $modeValue) {
-            if (!is_string($pattern) || $pattern === '') {
-                throw new RuntimeException(
-                    sprintf('Manifest "modes" key must be a non-empty string, got "%s".', (string) $pattern),
-                );
-            }
+            $this->assertSafeRelativePath($pattern, 'modes');
 
             if (!is_string($modeValue)) {
                 throw new RuntimeException(

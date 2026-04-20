@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace yii\scaffold\Manifest;
 
+use function str_ends_with;
+use function substr;
+
 /**
  * Built-in exclusion patterns applied when {@see ManifestExpander} walks a directory listed in `scaffold.copy`.
  *
@@ -20,7 +23,7 @@ final class DefaultExcludes
     /**
      * @var list<string> Glob patterns excluded by default from directory walks.
      */
-    public const PATTERNS = [
+    public const array PATTERNS = [
         // Composer metadata.
         'composer.json',
         'composer.lock',
@@ -74,6 +77,25 @@ final class DefaultExcludes
     {
         foreach (self::PATTERNS as $pattern) {
             if (Glob::matches($pattern, $relativePath)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns `true` when `$relativeDir` can be pruned from the walk because a pattern of the form `$relativeDir/**`
+     * would exclude every possible descendant.
+     *
+     * @param string $relativeDir Directory path relative to the walk root, normalised to forward slashes.
+     *
+     * @return bool `true` when descent into the directory is safe to skip entirely, `false` otherwise.
+     */
+    public static function matchesDirectory(string $relativeDir): bool
+    {
+        foreach (self::PATTERNS as $pattern) {
+            if (str_ends_with($pattern, '/**') && substr($pattern, 0, -3) === $relativeDir) {
                 return true;
             }
         }

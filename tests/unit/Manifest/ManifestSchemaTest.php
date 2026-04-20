@@ -168,6 +168,30 @@ final class ManifestSchemaTest extends TestCase
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => 'invalid']);
     }
 
+    public function testValidateThrowsWhenModesKeyContainsTraversal(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('traversal');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['../escape' => 'preserve']]);
+    }
+
+    public function testValidateThrowsWhenModesKeyIsAbsoluteUnixPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['/etc/passwd' => 'preserve']]);
+    }
+
+    public function testValidateThrowsWhenModesKeyIsAbsoluteWindowsPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['C:\\Windows' => 'preserve']]);
+    }
+
     public function testValidateThrowsWhenModesKeyIsEmptyString(): void
     {
         $this->expectException(RuntimeException::class);

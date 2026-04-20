@@ -77,6 +77,45 @@ final class DefaultExcludesTest extends TestCase
         ];
     }
 
+    /**
+     * @return list<array{0: string}>
+     */
+    public static function nonPrunableDirectoryProvider(): array
+    {
+        return [
+            ['src'],
+            ['config'],
+            ['migrations'],
+            ['public'],
+            ['rbac'],
+            ['resources'],
+            ['vendor/bin'],
+            ['.git/hooks'],
+            ['tests/unit'],
+            ['docs/nested'],
+            [''],
+        ];
+    }
+
+    /**
+     * @return list<array{0: string}>
+     */
+    public static function prunableDirectoryProvider(): array
+    {
+        return [
+            ['vendor'],
+            ['.git'],
+            ['.github'],
+            ['tests'],
+            ['.phpunit.cache'],
+            ['phpunit.cache'],
+            ['phpstan.cache'],
+            ['.infection'],
+            ['docs'],
+            ['runtime'],
+        ];
+    }
+
     #[\PHPUnit\Framework\Attributes\DataProvider('excludedPathProvider')]
     public function testExcludedPathMatchesDefaultExcludes(string $path): void
     {
@@ -95,11 +134,31 @@ final class DefaultExcludesTest extends TestCase
         );
     }
 
+    #[\PHPUnit\Framework\Attributes\DataProvider('nonPrunableDirectoryProvider')]
+    public function testNonPrunableDirectoryIsNotMatchedByMatchesDirectory(string $relativeDir): void
+    {
+        self::assertFalse(
+            DefaultExcludes::matchesDirectory($relativeDir),
+            "'{$relativeDir}' must not be pruned: no default pattern of the form '{$relativeDir}/**' excludes every "
+            . 'possible descendant.',
+        );
+    }
+
     public function testPatternsArrayIsNotEmpty(): void
     {
         self::assertNotEmpty(
             DefaultExcludes::PATTERNS,
             'DefaultExcludes::PATTERNS must declare at least one default-exclude pattern.',
+        );
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('prunableDirectoryProvider')]
+    public function testPrunableDirectoryIsMatchedByMatchesDirectory(string $relativeDir): void
+    {
+        self::assertTrue(
+            DefaultExcludes::matchesDirectory($relativeDir),
+            "'{$relativeDir}' must be prunable: a default pattern of the form '{$relativeDir}/**' excludes every "
+            . 'possible descendant, so descent can be safely skipped.',
         );
     }
 }
