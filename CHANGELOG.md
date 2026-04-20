@@ -18,3 +18,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - feat: port console commands to Symfony Console and ship `vendor/bin/scaffold` as a standalone CLI usable from Yii2, Yii3, Laravel, Symfony, or plain PHP projects.
 - test: kill remaining path-normalization mutants and keep Infection MSI at `100%`.
 - feat!: replace `file-mapping` with `copy` / `exclude` / `modes` in `scaffold.json`; providers declare directories to copy and glob-based mode overrides instead of enumerating every file.
+- test: shorten test assertion messages and inline comments; extract inline data providers to `tests/providers/` using `#[DataProviderExternal]`.

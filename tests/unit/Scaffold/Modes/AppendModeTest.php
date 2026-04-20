@@ -113,10 +113,7 @@ final class AppendModeTest extends TestCase
     {
         $this->makeSourceFile('x');
 
-        /**
-         * `default: true` makes the mocker unconditionally fail every `file_get_contents` in the Modes namespace no
-         * strict argument matching, so the test is immune to future changes in how the mode assembles paths.
-         */
+        // 'default: true' fails every 'file_get_contents' in the Modes namespace, independent of how paths are assembled.
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Modes',
             'file_get_contents',

@@ -47,8 +47,7 @@ final class ReapplyServiceTest extends TestCase
                 'cannot be safely reapplied',
                 $out->stdoutBuffer,
                 sprintf(
-                    "When a file is in '%s' mode, it cannot be safely reapplied (the message must be emitted for "
-                    . 'both append and prepend, not just one).',
+                    "When a file is in '%s' mode, it cannot be safely reapplied (message must emit for append and prepend).",
                     $mode,
                 ),
             );
@@ -56,8 +55,7 @@ final class ReapplyServiceTest extends TestCase
                 sprintf('mode "%s"', $mode),
                 $out->stdoutBuffer,
                 sprintf(
-                    "The diagnostic must name the actual mode ('%s') so users know which file-mapping entry "
-                    . 'triggered the skip.',
+                    "The diagnostic must name the actual mode ('%s') so users know which file-mapping entry skipped.",
                     $mode,
                 ),
             );
@@ -97,11 +95,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testAppendPrependModeSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Seed an append entry first (cannot be reapplied) followed by a replace entry (reapplicable). The first
-         * triggers the 'cannot be safely reapplied' continue-branch; the second must still be reapplied to verify the
-         * loop continues rather than breaks.
-         */
+        // Append entry first (skipped) then replace entry: the skip must 'continue' so the replace entry is reapplied.
         $this->seedTracked('.env.dist', "A=1\n", "A=1\n", mode: 'append');
         $this->seedTracked('config/params.php', "stub\n", "stub\n", mode: 'replace');
 
@@ -123,8 +117,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "config/params.php"',
             $out->stdoutBuffer,
-            "After the append skip, the foreach must 'continue' to the next entry; replacing 'continue' with 'break' "
-            . "would leave 'config/params.php' unprocessed.",
+            "After the append skip, the foreach must 'continue' to the next entry, not 'break'.",
         );
     }
 
@@ -214,11 +207,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testEnsureDirectoryFailureSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Entry 1 lives under a deep nested destination whose parent directory is removed before the run so
-         * 'is_dir' naturally returns false and 'mkdir' (mocked to fail) is actually reached. Entry 2 at the top
-         * level is reapplied normally, proving the loop continues past the ensureDirectory skip.
-         */
+        // Entry 1 is deep-nested with its parent removed so the mocked 'mkdir' is reached; entry 2 must still be reapplied.
         $this->seedTracked('deep/config/params.php', "stub\n", "stub\n");
         $this->seedTracked('top.txt', "stub\n", "stub\n");
 
@@ -354,11 +343,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testHashFailureSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Seed two entries with existing destinations; mock 'hash_file' to fail only for the first destination's
-         * path so the 'Could not hash "first..."' continue-branch fires. The second entry's hash succeeds and the
-         * file (unchanged) gets reapplied, proving the loop kept iterating after the first skip.
-         */
+        // Mock 'hash_file' to fail only on 'first.txt' so the continue-branch fires; 'second.txt' must still be reapplied.
         $this->seedTracked('first.txt', "stub\n", "stub\n");
         $this->seedTracked('second.txt', "stub\n", "stub\n");
 
@@ -388,8 +373,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "second.txt"',
             $out->stdoutBuffer,
-            "After the 'Could not hash' skip, the foreach must 'continue' so 'second.txt' is still reapplied; "
-            . "replacing 'continue' with 'break' aborts the scan prematurely.",
+            "After the 'Could not hash' skip, the foreach must 'continue' so 'second.txt' is still reapplied.",
         );
     }
 
@@ -441,8 +425,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "second.txt"',
             $out->stdoutBuffer,
-            "After 'Stub not found' the foreach must 'continue' to the next entry; replacing 'continue' with 'break' "
-            . "stops iteration before 'second.txt' can be reapplied.",
+            "After 'Stub not found' the foreach must 'continue' so 'second.txt' can still be reapplied.",
         );
     }
 
@@ -479,11 +462,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testPostWriteHashFailureSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Mock 'hash_file' to fail for both entries. Each reapply writes the stub but then fails on the
-         * post-write hash; each iteration emits its own 'Could not hash written file' diagnostic naming the
-         * specific destination. That proves the loop kept iterating after the first post-write hash failure.
-         */
+        // 'hash_file' fails for both entries so each reapply emits its own diagnostic, proving the loop keeps iterating.
         $this->seedTracked('first.txt', "new-stub\n", "user-edited\n", lockHashOf: "user-edited\n");
         $this->seedTracked('second.txt', "new-stub\n", "user-edited\n", lockHashOf: "user-edited\n");
 
@@ -513,17 +492,13 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'second.txt',
             $out->stderrBuffer,
-            "After the first post-write hash failure, the foreach must 'continue' so the second entry is processed "
-            . "and emits its own diagnostic naming 'second.txt'; replacing 'continue' with 'break' would silence it.",
+            "After the first post-write hash failure, the foreach must 'continue' so 'second.txt' emits its own diagnostic.",
         );
     }
 
     public function testPostWriteHashFailureSkipsLockUpdate(): void
     {
-        /*+
-         * Seed divergent stub vs current content with a known lock hash so that a successful run would update the hash
-         * to 'sha256(stub)'; the failure path must leave the original hash untouched.
-         */
+        // Divergent stub vs current content so the success path would update the hash; the failure path must leave it.
         $this->seedTracked(
             'config/params.php',
             stubContent: "new-stub\n",
@@ -564,8 +539,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertSame(
             $originalLockHash,
             (new LockFile($this->tempDir))->read()['files']['config/params.php']['hash'] ?? null,
-            'Post-condition: when the post-write hash throws, the lock entry must stay frozen at the pre-run hash '
-            . '(skip-the-lock-update branch exercised).',
+            'When the post-write hash throws, the lock entry must stay frozen at the pre-run hash.',
         );
     }
 
@@ -655,10 +629,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testPreserveSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Entry 1: preserve-mode file already on disk triggers the 'use --force to overwrite' skip-continue.
-         * Entry 2: replace-mode file that must still be reapplied.
-         */
+        // Entry 1 (preserve) triggers the skip-continue; entry 2 (replace) must still be reapplied.
         $this->seedTracked('config/web.php', "stub\n", "current\n", mode: 'preserve', lockHashOf: "stub\n");
         $this->seedTracked('config/params.php', "stub\n", "stub\n", mode: 'replace');
 
@@ -680,8 +651,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "config/params.php"',
             $out->stdoutBuffer,
-            "After the preserve skip, the foreach must 'continue' so the next replace-mode entry is reapplied; "
-            . "replacing 'continue' with 'break' aborts the scan prematurely.",
+            "After the preserve skip, the foreach must 'continue' so the next replace-mode entry is reapplied.",
         );
     }
 
@@ -714,11 +684,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testProviderFilterSkipOnFirstEntryContinuesIterationToNextMatchingEntry(): void
     {
-        /*
-         * Seed non-matching entry first so the provider-filter guard triggers 'continue'; the second entry matches
-         * and must still be processed. Replacing 'continue' with 'break' would abort the loop before the matching
-         * entry is reached.
-         */
+        // Non-matching entry first so the provider-filter guard 'continues'; the matching entry must still be processed.
         $this->seedTracked('non-match.txt', "x\n", "x\n", provider: 'pkg/other');
         $this->seedTracked('match.txt', "y\n", "y\n", provider: 'pkg/target');
 
@@ -735,8 +701,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "match.txt"',
             $out->stdoutBuffer,
-            "After the provider-filter guard rejects a non-matching entry, the foreach must 'continue' to the next "
-            . "entry; replacing 'continue' with 'break' would stop iteration and fail to process 'match.txt'.",
+            "After the provider-filter guard rejects an entry, the foreach must 'continue' so 'match.txt' is processed.",
         );
     }
 
@@ -803,9 +768,7 @@ final class ReapplyServiceTest extends TestCase
             self::assertSame(
                 0755,
                 fileperms($destination) & 0777,
-                "After 'ReapplyService' rewrites the stub content, it must invoke 'syncPermissions' so the destination "
-                . "inherits the source executable bit (0755 here); without 'syncPermissions' the file would keep the "
-                . "umask-derived 0644 that 'file_put_contents' produces, breaking re-scaffolded CLI stubs like 'yii'.",
+                "After 'ReapplyService' rewrites the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {
             umask($oldUmask);
@@ -852,10 +815,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testRejectsLockEntryWithUnsafeSourceEvenWhenDestinationIsSafe(): void
     {
-        /*
-         * Seed two lock entries where destination is safe but source carries path traversal; removing the
-         * 'validateSource' call in the try block would let the unsafe source through.
-         */
+        // Safe destination + unsafe source isolates the 'validateSource' guard inside the try block.
         $providerRoot = "{$this->tempDir}/vendor/pkg/name";
 
         $this->ensureTestDirectory($providerRoot);
@@ -892,9 +852,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Unsafe lock entry',
             $out->stderrBuffer,
-            "'validateSource' must catch the traversal source and emit the 'Unsafe lock entry' diagnostic; removing "
-            . "the 'validateSource' call would let the unsafe source through since 'validateDestination' has nothing "
-            . 'to reject for a safe destination.',
+            "'validateSource' must catch the traversal source and emit the 'Unsafe lock entry' diagnostic.",
         );
     }
 
@@ -915,9 +873,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertSame(
             1,
             $exitCode,
-            'When both filters are set and nothing matches, the service must emit an error exit code; the guard is '
-            . "'(file !== '' || provider !== '') && !anyMatched' and must short-circuit correctly even when both "
-            . 'filters are non-empty.',
+            'When both filters are set and nothing matches, the service must emit an error exit code.',
         );
         self::assertStringContainsString(
             'No tracked files matched',
@@ -969,14 +925,12 @@ final class ReapplyServiceTest extends TestCase
         self::assertSame(
             0,
             $exitCode,
-            "When no filter is supplied, running against an empty lock must be a silent no-op; the 'no match' error is "
-            . "gated by 'file !== '' || provider !== ''' and must not fire when both filters are empty.",
+            "When no filter is supplied, running against an empty lock must be a silent no-op (no 'no match' error).",
         );
         self::assertStringNotContainsString(
             'No tracked files matched',
             $out->stderrBuffer,
-            'Without any filter, the no-match diagnostic must stay silent; emitting it would confuse users who ran '
-            . "'reapply' on a fresh project.",
+            "Without any filter, the no-match diagnostic must stay silent for users running 'reapply' on a fresh project.",
         );
     }
 
@@ -1069,11 +1023,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testStubReadFailureSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Seed two entries; mock 'file_get_contents' to fail so both attempts return `false`. The first triggers
-         * the 'Could not read stub' continue-branch; the second would also fail, but the test asserts that the
-         * second diagnostic IS emitted, proving the loop kept iterating after the first skip.
-         */
+        // Two entries with 'file_get_contents' mocked to fail; both must emit their own diagnostic, proving loop iteration.
         $this->seedTracked('first.txt', "stub\n", "stub\n");
         $this->seedTracked('second.txt', "stub\n", "stub\n");
 
@@ -1103,18 +1053,13 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'second.txt',
             $out->stderrBuffer,
-            "After the first stub-read failure, the foreach must 'continue' so the second entry is processed and "
-            . "emits its own diagnostic naming 'second.txt'; replacing 'continue' with 'break' would silence it.",
+            "After the first stub-read failure, the foreach must 'continue' so 'second.txt' emits its own diagnostic.",
         );
     }
 
     public function testSuccessfulReapplyUpdatesLockHashAndPreservesProvidersKey(): void
     {
-        /*
-         * Seed divergent stub vs current content with a lock hash pinned to the current content so a successful
-         * force-reapply must flip the lock hash to 'sha256(stub)' and the write call must also carry the 'providers'
-         * key untouched.
-         */
+        // Divergent stub vs current content so a force-reapply must flip the lock hash to 'sha256(stub)'.
         $this->seedTracked(
             'config/params.php',
             stubContent: "new-stub\n",
@@ -1151,14 +1096,12 @@ final class ReapplyServiceTest extends TestCase
         self::assertSame(
             $expectedHash,
             $data['files']['config/params.php']['hash'],
-            'After a successful reapply the lock hash must reflect the newly written stub contents; the write '
-            . 'branch must run (not be negated) and must carry the new hash.',
+            'After a successful reapply the lock hash must reflect the newly written stub contents.',
         );
         self::assertArrayHasKey(
             'pkg/name',
             $data['providers'],
-            "The 'providers' key must survive the lock rewrite; dropping it on write would lose top-level provider "
-            . 'metadata that downstream commands rely on for path resolution.',
+            "The 'providers' key must survive the lock rewrite; top-level provider metadata is required downstream.",
         );
 
         $providerEntry = $data['providers']['pkg/name'] ?? null;
@@ -1176,11 +1119,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testUnsafeLockEntrySkipContinuesIterationToNextFile(): void
     {
-        /*
-         * Seed two entries: the first has an unsafe destination ('../escape.php') that triggers the validator's
-         * skip-and-continue branch; the second must still be reapplied, proving the loop 'continues' rather than
-         * 'breaks'.
-         */
+        // First entry has an unsafe destination that triggers skip-continue; the second must still be reapplied.
         $unsafeDestination = '../escape.php';
         $validDestination = 'config/params.php';
 
@@ -1237,17 +1176,13 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "config/params.php"',
             $out->stdoutBuffer,
-            'After the unsafe entry triggers the skip branch, the foreach must keep iterating so the second (valid) '
-            . "entry is still reapplied; replacing 'continue' with 'break' would stop the loop and fail this check.",
+            'After the unsafe entry triggers the skip branch, the foreach must keep iterating to reapply the valid entry.',
         );
     }
 
     public function testUserModifiedSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Entry 1: non-force, user-modified file triggers the 'is user-modified' skip-continue.
-         * Entry 2: replace-mode in sync file that must still be reapplied.
-         */
+        // Entry 1 (user-modified) triggers skip-continue; entry 2 (in-sync replace) must still be reapplied.
         $this->seedTracked('config/params.php', "stub\n", "user-edited\n", lockHashOf: "stub\n");
         $this->seedTracked('config/web.php', "stub\n", "stub\n");
 
@@ -1269,8 +1204,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'Reapplied "config/web.php"',
             $out->stdoutBuffer,
-            "After 'is user-modified' the foreach must 'continue' so the next in-sync entry is reapplied; replacing "
-            . "'continue' with 'break' aborts the scan prematurely.",
+            "After 'is user-modified' the foreach must 'continue' so the next in-sync entry is reapplied.",
         );
     }
 
@@ -1304,10 +1238,7 @@ final class ReapplyServiceTest extends TestCase
 
     public function testWriteFailureSkipContinuesIterationToNextReapplicableEntry(): void
     {
-        /*
-         * Mock 'file_put_contents' to fail for both entries. Each iteration must emit its own 'Could not write'
-         * diagnostic naming the specific path; that proves the loop kept iterating after the first write failure.
-         */
+        // Mock 'file_put_contents' to fail for both entries; each must emit its own diagnostic, proving loop iteration.
         $this->seedTracked('first.txt', "stub\n", "stub\n");
         $this->seedTracked('second.txt', "stub\n", "stub\n");
 
@@ -1337,8 +1268,7 @@ final class ReapplyServiceTest extends TestCase
         self::assertStringContainsString(
             'second.txt',
             $out->stderrBuffer,
-            "After the first write failure, the foreach must 'continue' so the second entry is processed; replacing "
-            . "'continue' with 'break' would silence the second diagnostic.",
+            "After the first write failure, the foreach must 'continue' so the second entry still emits a diagnostic.",
         );
     }
 

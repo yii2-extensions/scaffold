@@ -62,8 +62,7 @@ final class StatusServiceTest extends TestCase
         self::assertArrayHasKey(
             'valid.txt',
             $statuses,
-            "When an earlier entry triggers the unsafe-destination branch, the foreach must continue, not 'break'; "
-            . 'the second valid entry must still be reported.',
+            "An earlier unsafe-destination entry must not 'break' the foreach; the next valid entry must still report.",
         );
         self::assertSame(
             'synced',
@@ -167,8 +166,7 @@ final class StatusServiceTest extends TestCase
         self::assertCount(
             2,
             $statuses,
-            "The status map must contain every tracked entry verbatim; a silent 'array_slice' of the first element "
-            . 'would drop the second row and mislead the CLI.',
+            'The status map must contain every tracked entry; dropping rows would mislead the CLI.',
         );
         self::assertArrayHasKey(
             'second.txt',
@@ -331,12 +329,7 @@ final class StatusServiceTest extends TestCase
 
     public function testRunPinsColStatusToLiteralSixWhenObservedStatusIsShorter(): void
     {
-        /*
-         * Seed an unsafe destination so 'getStatuses' returns status='error' (length 5), which is strictly shorter
-         * than the literal '6' used in 'max(6, ...)'. Combined with short destination, provider and mode fields this
-         * makes the separator width entirely dependent on the colStatus literal; decrementing it to '5' shrinks the
-         * separator by one dash, which the assertion below detects.
-         */
+        // 'getStatuses' returns status='error' (length 5); separator width therefore depends on the 'max(6,...)' literal.
         (new LockFile($this->tempDir))->write(
             [
                 'providers' => [],
@@ -461,11 +454,7 @@ final class StatusServiceTest extends TestCase
 
         $hash = (new Hasher())->hash($filePath);
 
-        /*
-         * Seed every field with a value shorter than the literal column widths (4/8/4/6 plus `6` padding) so the
-         * rendered separator row is driven solely by those literals; this is what pins down the mutations that
-         * increment/decrement any of them.
-         */
+        // All fields shorter than the column literals (4/8/4/6) so the separator width depends solely on those literals.
         (new LockFile($this->tempDir))->write(
             [
                 'providers' => [],

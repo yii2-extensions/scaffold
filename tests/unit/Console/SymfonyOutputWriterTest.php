@@ -31,8 +31,7 @@ final class SymfonyOutputWriterTest extends TestCase
         self::assertSame(
             'plain <output> fallback' . PHP_EOL,
             $output->fetch(),
-            "When the wrapped 'OutputInterface' is not a 'ConsoleOutputInterface', stderr writes must fall back to "
-            . "the primary output (still preserving raw bytes) and append a single trailing newline via 'writeln'.",
+            "Without 'ConsoleOutputInterface', stderr writes must fall back to the primary output with a trailing newline.",
         );
     }
 
@@ -54,8 +53,7 @@ final class SymfonyOutputWriterTest extends TestCase
         self::assertSame(
             'error <bold>line</bold>' . PHP_EOL,
             $swapped->fetch(),
-            "A 'ConsoleOutputInterface' instance must route 'writeStderr' through 'getErrorOutput()' and preserve "
-            . 'any angle-bracket tokens verbatim while still appending a single trailing newline.',
+            "'writeStderr' must route through 'getErrorOutput()' and preserve angle-bracket tokens verbatim.",
         );
     }
     public function testWriteStdoutEmitsAngleBracketTokensVerbatimWithoutFormatterInterpretation(): void
@@ -67,9 +65,7 @@ final class SymfonyOutputWriterTest extends TestCase
         self::assertSame(
             '<?php echo $user; ?>' . PHP_EOL,
             $output->fetch(),
-            'Angle-bracket tokens inside a stdout write must survive verbatim instead of being interpreted as '
-            . "Symfony formatter tags (a plain 'write()' call would throw 'InvalidArgumentException' or strip the "
-            . 'tokens).',
+            'Angle-bracket tokens inside a stdout write must survive verbatim without Symfony formatter interpretation.',
         );
     }
 
@@ -82,8 +78,7 @@ final class SymfonyOutputWriterTest extends TestCase
         self::assertSame(
             '<info>hello</info>' . PHP_EOL,
             $output->fetch(),
-            'Symfony-style tags in service output must be written literally (no ANSI codes applied) even when the '
-            . "underlying 'OutputInterface' has decoration enabled.",
+            'Symfony-style tags must be written literally (no ANSI codes) even when decoration is enabled.',
         );
     }
 

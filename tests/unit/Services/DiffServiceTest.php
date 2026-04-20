@@ -30,14 +30,12 @@ final class DiffServiceTest extends TestCase
         self::assertStringStartsNotWith(
             PHP_EOL,
             $diff,
-            "The concatenated diff must not begin with PHP_EOL; 'implode(PHP_EOL, ...)' inserts separators between "
-            . 'lines only, not at the beginning.',
+            "The concatenated diff must not begin with PHP_EOL; 'implode' inserts separators between lines only.",
         );
         self::assertStringEndsNotWith(
             PHP_EOL,
             $diff,
-            'The concatenated diff must not end with PHP_EOL; the trailing newline is appended by the OutputWriter '
-            . "when the diff is written via 'writeStdout', not by 'buildDiff' itself.",
+            "The concatenated diff must not end with PHP_EOL; the trailing newline is appended by 'writeStdout'.",
         );
     }
 
@@ -99,11 +97,7 @@ final class DiffServiceTest extends TestCase
 
     public function testBuildDiffTrimsAddedLinesOfTrailingNewlinesBeforeJoin(): void
     {
-        /*
-         * Use inputs that produce multiple added lines so mutating the 'rtrim' on added lines produces an observable
-         * doubled-newline at the 'implode' join boundary. A single added line would hide the mutation behind the absent
-         * trailing separator.
-         */
+        // Multiple added lines are required so an 'rtrim' mutation shows as a doubled newline at the 'implode' boundary.
         $diff = (new DiffService())->buildDiff('a', "a\nb\nc\n");
 
         self::assertStringNotContainsString(
@@ -114,8 +108,7 @@ final class DiffServiceTest extends TestCase
         self::assertStringContainsString(
             '+ b' . PHP_EOL . '+ c',
             $diff,
-            "Two consecutive added lines must be separated by exactly one PHP_EOL after the 'rtrim'; any additional "
-            . 'newline indicates the inner rtrim was bypassed.',
+            "Two consecutive added lines must be separated by exactly one PHP_EOL after the 'rtrim'.",
         );
     }
 
@@ -126,7 +119,7 @@ final class DiffServiceTest extends TestCase
         self::assertStringNotContainsString(
             '- b' . "\n" . PHP_EOL,
             $diff,
-            "Removed lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join on every platform.",
+            "Removed lines must be rtrimmed of trailing '\\n' before the 'implode' join on every platform.",
         );
         self::assertStringContainsString(
             '- b' . PHP_EOL . '- c',
@@ -142,7 +135,7 @@ final class DiffServiceTest extends TestCase
         self::assertStringNotContainsString(
             '  a' . "\n" . PHP_EOL,
             $diff,
-            "Unchanged lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join on every platform.",
+            "Unchanged lines must be rtrimmed of trailing '\\n' before the 'implode' join on every platform.",
         );
         self::assertStringContainsString(
             '  a' . PHP_EOL . '  b',
@@ -211,8 +204,7 @@ final class DiffServiceTest extends TestCase
         self::assertSame(
             0,
             $exitCode,
-            'A provider-path warning must be non-fatal — the diff command must fall back to the default provider '
-            . 'root and still return a success exit code.',
+            'A provider-path warning must be non-fatal: the command falls back to the default root and still succeeds.',
         );
         self::assertStringContainsString(
             'resolves outside vendor dir',
@@ -270,8 +262,7 @@ final class DiffServiceTest extends TestCase
         self::assertStringStartsNotWith(
             PHP_EOL,
             $out->stdoutBuffer,
-            "The 'No differences found' message must not be prefixed with PHP_EOL; the newline belongs after the "
-            . 'message.',
+            "The 'No differences found' message must not be prefixed with PHP_EOL; the newline belongs after it.",
         );
     }
 
@@ -508,12 +499,7 @@ final class DiffServiceTest extends TestCase
 
     public function testRunReturnsUnsafeDestinationErrorEvenWhenProviderRootAndSourceAreSafe(): void
     {
-        /*
-         * Seed a fully valid provider tree (providerRoot + stubs exist, source is relative and traversal-free) so
-         * 'validateSource' passes unconditionally. This isolates the 'validateDestination' call: removing it would let
-         * the unsafe '../escape.php' lock entry slip past without producing the 'Unsafe lock entry' diagnostic, so the
-         * assertion below pins its presence in the trust boundary.
-         */
+        // Valid provider tree so 'validateSource' passes unconditionally; isolates the 'validateDestination' guard.
         $providerRoot = "{$this->tempDir}/vendor/pkg/name";
 
         $this->ensureTestDirectory("{$providerRoot}/stubs");
@@ -555,19 +541,13 @@ final class DiffServiceTest extends TestCase
         self::assertStringContainsString(
             'Unsafe lock entry',
             $out->stderrBuffer,
-            "'validateDestination' must catch the traversal destination and emit the 'Unsafe lock entry' diagnostic; "
-            . 'removing the call to validateDestination would let the unsafe path through since validateSource has '
-            . 'nothing to reject for a safe source.',
+            "'validateDestination' must catch the traversal destination and emit the 'Unsafe lock entry' diagnostic.",
         );
     }
 
     public function testRunReturnsUnsafeSourceErrorEvenWhenDestinationIsSafe(): void
     {
-        /*
-         * Seed a fully valid provider tree with a safe destination but an unsafe source '../escape.php' so
-         * 'validateDestination' passes unconditionally. Removing the 'validateSource' call would let the unsafe source
-         * slip past without emitting the 'Unsafe lock entry' diagnostic.
-         */
+        // Safe destination + unsafe source so 'validateDestination' passes; isolates the 'validateSource' guard.
         $providerRoot = "{$this->tempDir}/vendor/pkg/name";
 
         $this->ensureTestDirectory($providerRoot);
@@ -610,9 +590,7 @@ final class DiffServiceTest extends TestCase
         self::assertStringContainsString(
             'Unsafe lock entry',
             $out->stderrBuffer,
-            "'validateSource' must catch the traversal source and emit the 'Unsafe lock entry' diagnostic; removing "
-            . 'the call to validateSource would let the unsafe source through since validateDestination has nothing '
-            . 'to reject for a safe destination.',
+            "'validateSource' must catch the traversal source and emit the 'Unsafe lock entry' diagnostic.",
         );
     }
 

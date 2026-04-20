@@ -52,8 +52,7 @@ final class ScaffolderTest extends TestCase
         self::assertStringContainsString(
             'Provider "yii2-extensions/missing" is not installed',
             $io->getOutput(),
-            'Allowed providers that Composer did not install must emit a clear skip message so typos in '
-            . "'allowed-packages' are noticed.",
+            "Allowed providers not installed by Composer must emit a skip message so 'allowed-packages' typos are noticed.",
         );
     }
 
@@ -131,11 +130,7 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        /**
-         * An allowlist of `['safe/provider']` authorizes only that provider; when the actual provider is
-         * `yii2-extensions/test`, the Applier will throw with "Package not allowed" inside apply(). That throw must be
-         * caught by the Scaffolder loop and reported via writeError.
-         */
+        // Allowlist names a different provider so 'apply()' throws "Package not allowed"; the loop must catch and log it.
         $builder->createStubFile('yii2-extensions/test', 'app.php', 'content');
 
         $provider = $this->makeProviderPackage(
@@ -163,8 +158,7 @@ final class ScaffolderTest extends TestCase
         self::assertStringContainsString(
             'Error applying "app.php"',
             $io->getOutput(),
-            'Applier exceptions must be caught per-destination, reported via writeError, and must not abort the rest '
-            . 'of the scaffold loop.',
+            'Applier exceptions must be caught per-destination and reported via writeError without aborting the loop.',
         );
     }
 
@@ -201,8 +195,7 @@ final class ScaffolderTest extends TestCase
         self::assertStringContainsString(
             'No allowed-packages configured',
             $io->getOutput(),
-            'Empty allowed-packages list (as opposed to missing scaffold extra) must emit the configured-but-empty '
-            . 'skip message.',
+            'Empty allowed-packages list must emit the configured-but-empty skip message.',
         );
     }
 
@@ -288,8 +281,7 @@ final class ScaffolderTest extends TestCase
         self::assertSame(
             ['version' => '2.0.0', 'path' => $expectedPath],
             $providerEntry,
-            'Provider entry must record both version and path (path stays absolute when vendor lives outside the '
-            . 'project root, as in this fixture); separators are normalized to forward slashes.',
+            'Provider entry must record both version and path (absolute when vendor is outside the project root).',
         );
     }
 
@@ -297,10 +289,6 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        /**
-         * Simulate the realistic layout where vendor is nested under the project root; the scaffolder must record a
-         * relative path so the committed lock stays stable across machines.
-         */
         $providerRootInsideProject = $builder->getProjectRoot() . '/vendor/yii2-extensions/test';
 
         mkdir($providerRootInsideProject, 0777, recursive: true);
@@ -331,8 +319,7 @@ final class ScaffolderTest extends TestCase
         self::assertSame(
             ['version' => '2.0.0', 'path' => 'vendor/yii2-extensions/test'],
             $lockData['providers']['yii2-extensions/test'] ?? null,
-            'When the provider install path lies inside the project root, the lock must store a project-relative path '
-            . 'so the committed scaffold-lock.json stays stable across developer machines.',
+            'When the provider install path is inside the project root, the lock must store a project-relative path.',
         );
     }
 
@@ -502,14 +489,12 @@ final class ScaffolderTest extends TestCase
 
         self::assertFileExists(
             $builder->getProjectRoot() . '/app.php',
-            "When an earlier provider's manifest fails to load, the foreach must 'continue' to the next provider; "
-            . "replacing 'continue' with 'break' would abort the run and skip 'app.php'.",
+            "When an earlier provider's manifest fails to load, the foreach must 'continue' so 'app.php' is still written.",
         );
         self::assertSame(
             'good-content',
             file_get_contents($builder->getProjectRoot() . '/app.php'),
-            "The later provider's stub content must be applied verbatim after the earlier provider's manifest-load "
-            . 'failure is logged and skipped.',
+            "The later provider's stub must be applied after the earlier provider's manifest-load failure is logged.",
         );
     }
 
@@ -553,8 +538,7 @@ final class ScaffolderTest extends TestCase
         );
         self::assertFileExists(
             $builder->getProjectRoot() . '/app.php',
-            "After the uninstalled-provider skip message, the loop must 'continue' to the next allowed-package; "
-            . "replacing 'continue' with 'break' would leave 'app.php' unwritten.",
+            "After the uninstalled-provider skip, the loop must 'continue' so 'app.php' is still written.",
         );
     }
 
@@ -617,11 +601,7 @@ final class ScaffolderTest extends TestCase
             ],
         );
 
-        /*
-         * Craft an allowed-packages list whose first entry is a non-string integer (mixed-type payload) so it hits the
-         * '!is_string' continue-branch inside 'Scaffolder::scaffold'. A valid string entry follows and must still be
-         * processed.
-         */
+        // First entry is a non-string int so '!is_string' triggers 'continue'; the string entry after must still run.
         $root = self::createStub(PackageInterface::class);
         $root->method('getExtra')->willReturn(
             [
@@ -643,8 +623,7 @@ final class ScaffolderTest extends TestCase
 
         self::assertFileExists(
             $builder->getProjectRoot() . '/app.php',
-            "When the first allowed-packages entry is not a string, the loop must 'continue' to the next entry; "
-            . "replacing 'continue' with 'break' would halt the scan before 'yii2-extensions/good' is processed.",
+            "When the first allowed-packages entry is not a string, the loop must 'continue' so 'yii2-extensions/good' runs.",
         );
     }
 
@@ -673,10 +652,7 @@ final class ScaffolderTest extends TestCase
             'Byte-exact comparison must reject a prefix that only differs in casing.',
         );
 
-        /**
-         * case-insensitive branch is the Windows path; it must match regardless of casing. Covers the otherwise
-         * Linux-unreachable stripos branch used for NTFS compatibility.
-         */
+        // Case-insensitive branch covers the NTFS/Windows path otherwise unreachable on Linux.
         self::assertTrue(
             (bool) $method->invoke(null, '/project/vendor/foo', '/Project/', true),
             'Case-insensitive comparison must accept a prefix that only differs in casing.',
@@ -925,10 +901,7 @@ final class ScaffolderTest extends TestCase
 
         $userHash = (new Hasher())->hash($builder->getProjectRoot() . '/config.php');
 
-        /**
-         * pre-populate the lock with an outdated provider path but a correct file entry. The upcoming scaffold run must
-         * only set `$dirty = true` through the provider-path branch (L141) the preserve branch leaves `$dirty` alone.
-         */
+        // Pre-populate the lock with an outdated provider path; only the provider-path branch must mark '$dirty = true'.
         (new LockFile($builder->getProjectRoot()))->write(
             [
                 'providers' => [
@@ -968,8 +941,7 @@ final class ScaffolderTest extends TestCase
         self::assertSame(
             ['version' => '2.0.0', 'path' => $expectedPath],
             $providerEntry,
-            'Provider-entry updates alone must mark the lock dirty so the fresh {version, path} is persisted to disk; '
-            . 'path separators are normalized to forward slashes for cross-platform stability.',
+            'Provider-entry updates alone must mark the lock dirty so the fresh {version, path} is persisted to disk.',
         );
     }
 

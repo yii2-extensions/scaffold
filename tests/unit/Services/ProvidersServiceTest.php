@@ -85,8 +85,7 @@ final class ProvidersServiceTest extends TestCase
         self::assertSame(
             ['pkg/with-files' => 1, 'pkg/zero-files' => 0],
             (new ProvidersService())->getProviders($this->tempDir),
-            "Providers recorded in the lock's top-level metadata must appear with a count of '0' when they have "
-            . 'no tracked files.',
+            "Providers recorded in the lock's top-level metadata must appear with count '0' when they have no files.",
         );
     }
 
@@ -134,15 +133,12 @@ final class ProvidersServiceTest extends TestCase
         self::assertStringNotContainsString(
             'Files',
             $out->stdoutBuffer,
-            "When the providers map is empty, the service must 'return' immediately and must not fall through to "
-            . "render the 'Provider Files' header; removing the early return would leak the header row below the "
-            . 'empty-state diagnostic.',
+            "When the providers map is empty, the service must 'return' before rendering the 'Provider Files' header.",
         );
         self::assertStringNotContainsString(
             str_repeat('-', 52),
             $out->stdoutBuffer,
-            'When the providers map is empty, the service must return before rendering the 52-dash separator; '
-            . 'leaking it proves the early return branch was bypassed.',
+            'When the providers map is empty, the service must return before rendering the 52-dash separator.',
         );
     }
 
@@ -255,8 +251,7 @@ final class ProvidersServiceTest extends TestCase
         self::assertStringContainsString(
             'pkg/a' . str_repeat(' ', 44 - strlen('pkg/a')) . ' 1' . PHP_EOL,
             $out->stdoutBuffer,
-            'The provider row must be followed by exactly one PHP_EOL; the provider name must be left-padded to the '
-            . '44-character column width.',
+            'The provider row must end with one PHP_EOL; the provider name must be left-padded to 44 chars.',
         );
     }
 

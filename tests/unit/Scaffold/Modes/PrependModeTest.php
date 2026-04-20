@@ -151,13 +151,7 @@ final class PrependModeTest extends TestCase
 
         file_put_contents($sourcePath, 'source');
 
-        /**
-         * `PrependMode::apply()` calls `file_get_contents` twice — once for the source, once for the destination. This
-         * test must exercise ONLY the destination branch, so we cannot use `default: true` here (it would trip the
-         * source branch first). A callable-as-result with `default: true` also does not work because the mocker stores
-         * defaults verbatim and returns them without invocation. Strict argument matching on the destination path is
-         * the only mechanism left for this narrow case.
-         */
+        // 'PrependMode' reads source AND destination; strict arg-matching is required so only the destination branch fails.
         $destBasename = 'output.txt';
 
         MockerState::addCondition(

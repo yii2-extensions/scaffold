@@ -30,9 +30,7 @@ final class ManifestLoaderTest extends TestCase
 
     public function testLoadAcceptsExternalManifestPathContainingColonInNonLeadingPosition(): void
     {
-        // Guards the '^' anchor in the drive-letter regex '/^[A-Za-z]:/' inside 'readExternal': without the anchor,
-        // ordinary relative paths that contain a letter-colon anywhere (stream wrappers, namespace separators, etc.)
-        // would be wrongly rejected as absolute Windows paths.
+        // Pins the '^' anchor in '/^[A-Za-z]:/': non-leading colons (stream wrappers, namespaces) must not be rejected.
         $manifest = ['copy' => ['src']];
 
         $this->seedFile('src/Foo.php');
@@ -50,8 +48,7 @@ final class ManifestLoaderTest extends TestCase
         self::assertCount(
             1,
             $result,
-            "A manifest path whose non-leading segment contains '[A-Za-z]:' must load normally; the drive-letter "
-            . "check must only fire when the WHOLE path starts with '[A-Za-z]:'.",
+            "A manifest path whose non-leading segment contains '[A-Za-z]:' must load; the drive-letter check fires only on leading.",
         );
     }
 
@@ -108,8 +105,6 @@ final class ManifestLoaderTest extends TestCase
 
     public function testLoadExternalManifestPreservesEveryDeclaredKey(): void
     {
-        // Seed two copy roots AND multiple exclude / mode entries so any silent truncation of the decoded manifest
-        // (for example, keeping only the first array element) would drop assertions that depend on the full structure.
         $this->seedFile('src/Foo.php');
         $this->seedFile('config/params.php');
         $this->seedFile('config/web.php');
@@ -206,10 +201,7 @@ final class ManifestLoaderTest extends TestCase
 
     public function testLoadThrowsWhenExternalManifestCannotBeRead(): void
     {
-        // Forcing 'file_get_contents' to 'false' isolates the narrow error path where 'is_file()' succeeds but reading
-        // the file fails (for example, a race in which the file is unlinked between the existence check and the read,
-        // or a filesystem quota hit mid-read). The mocker intercepts the call in the 'yii\\scaffold\\Manifest'
-        // namespace so the production code returns the expected I/O failure without touching real filesystem state.
+        // Forces 'file_get_contents' to 'false' to cover the race where 'is_file()' succeeds but reading then fails.
         $manifestPath = "{$this->tempDir}/scaffold.json";
 
         file_put_contents($manifestPath, '{}');
