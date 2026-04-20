@@ -19,6 +19,21 @@ use yii\scaffold\Manifest\{FileMode, ManifestSchema};
 #[Group('manifest')]
 final class ManifestSchemaTest extends TestCase
 {
+    public function testValidateAcceptsCopyEntryContainingColonInNonLeadingPosition(): void
+    {
+        // The '^' anchor in the drive-letter regex '/^[A-Za-z]:/' is load-bearing: without it, any letter followed by
+        // a colon anywhere in the string would trigger the absolute-path rejection, blocking legitimate relative
+        // paths that happen to include ':' (namespace separators, resource fork addresses, stream wrappers, etc.).
+        $result = (new ManifestSchema())->validate(['copy' => ['some/module:file.php']]);
+
+        self::assertSame(
+            ['some/module:file.php'],
+            $result['copy'],
+            'A colon that is not the second character of the path must be treated as a literal filename byte; the '
+            . "drive-letter check must only fire when the path STARTS with '[A-Za-z]:'.",
+        );
+    }
+
     public function testValidateAcceptsFullManifest(): void
     {
         $result = (new ManifestSchema())->validate(

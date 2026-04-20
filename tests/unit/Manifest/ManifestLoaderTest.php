@@ -28,6 +28,33 @@ final class ManifestLoaderTest extends TestCase
 {
     use TempDirectoryTrait;
 
+    public function testLoadAcceptsExternalManifestPathContainingColonInNonLeadingPosition(): void
+    {
+        // Guards the '^' anchor in the drive-letter regex '/^[A-Za-z]:/' inside 'readExternal': without the anchor,
+        // ordinary relative paths that contain a letter-colon anywhere (stream wrappers, namespace separators, etc.)
+        // would be wrongly rejected as absolute Windows paths.
+        $manifest = ['copy' => ['src']];
+
+        $this->seedFile('src/Foo.php');
+        $this->ensureTestDirectory("{$this->tempDir}/subdir");
+
+        file_put_contents("{$this->tempDir}/subdir/a:b.json", (string) json_encode($manifest));
+
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'subdir/a:b.json']]);
+        $package->method('getName')->willReturn('pkg/example');
+
+        $result = $this->loader()->load($package, $this->tempDir);
+
+        self::assertCount(
+            1,
+            $result,
+            "A manifest path whose non-leading segment contains '[A-Za-z]:' must load normally; the drive-letter "
+            . "check must only fire when the WHOLE path starts with '[A-Za-z]:'.",
+        );
+    }
+
     public function testLoadExpandsInlineManifest(): void
     {
         $this->seedFile('src/Foo.php');
