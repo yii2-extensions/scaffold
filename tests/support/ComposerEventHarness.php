@@ -37,8 +37,8 @@ trait ComposerEventHarness
      *
      * @param Composer $composer Live Composer instance whose local repository receives the package.
      * @param string $name Composer package name (for example, `demo/scaffold`).
-     * @param array<string, mixed> $scaffoldManifest Raw `extra.scaffold` array, typically a `{file-mapping: ...}` entry
-     * or an external `{manifest: "scaffold.json"}` pointer.
+     * @param array<string, mixed> $scaffoldManifest Raw `extra.scaffold` array, typically a `{copy: [...]}` inline
+     * manifest or an external `{manifest: "scaffold.json"}` pointer.
      * @param string $version Pretty version string persisted into `scaffold-lock.json`.
      *
      * @return PackageInterface Package that was added to the local repository.
@@ -50,9 +50,9 @@ trait ComposerEventHarness
         string $version = '1.0.0',
     ): PackageInterface {
         $package = new CompletePackage($name, "{$version}.0", $version);
+
         $package->setType('yii2-scaffold');
         $package->setExtra(['scaffold' => $scaffoldManifest]);
-
         $composer->getRepositoryManager()->getLocalRepository()->addPackage($package);
 
         return $package;
@@ -136,7 +136,9 @@ trait ComposerEventHarness
     protected function resetInstallScaffoldRanFlag(): void
     {
         $reflection = new ReflectionClass(EventSubscriber::class);
+
         $property = $reflection->getProperty('installScaffoldRan');
+
         $property->setValue(null, false);
     }
 }

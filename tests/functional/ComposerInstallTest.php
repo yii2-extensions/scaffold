@@ -30,12 +30,12 @@ final class ComposerInstallTest extends TestCase
 
         $builder->createStubFile(
             'demo/scaffold',
-            'stubs/config/params.php',
+            'config/params.php',
             "<?php return ['adminEmail' => 'a@b.c'];\n",
         );
         $builder->createStubFile(
             'demo/scaffold',
-            'stubs/.gitignore',
+            '.gitignore',
             "/runtime/\n",
         );
         $builder->createComposerJson(
@@ -55,15 +55,10 @@ final class ComposerInstallTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    'config/params.php' => [
-                        'source' => 'stubs/config/params.php',
-                        'mode' => 'preserve',
-                    ],
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
+                'copy' => ['config/params.php', '.gitignore'],
+                'modes' => [
+                    'config/params.php' => 'preserve',
+                    '.gitignore' => 'append',
                 ],
             ],
         );
@@ -105,7 +100,7 @@ final class ComposerInstallTest extends TestCase
 
         $builder->createStubFile(
             'demo/scaffold',
-            'stubs/config/params.php',
+            'config/params.php',
             "<?php return [];\n",
         );
         $builder->createComposerJson(
@@ -128,9 +123,8 @@ final class ComposerInstallTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    'config/params.php' => ['source' => 'stubs/config/params.php', 'mode' => 'preserve'],
-                ],
+                'copy' => ['config/params.php'],
+                'modes' => ['config/params.php' => 'preserve'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -184,7 +178,7 @@ final class ComposerInstallTest extends TestCase
 
         $builder->createStubFile(
             'demo/scaffold',
-            'stubs/config/params.php',
+            'config/params.php',
             "<?php return [];\n",
         );
         $builder->createComposerJson(
@@ -208,9 +202,8 @@ final class ComposerInstallTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    'config/params.php' => ['source' => 'stubs/config/params.php', 'mode' => 'preserve'],
-                ],
+                'copy' => ['config/params.php'],
+                'modes' => ['config/params.php' => 'preserve'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -229,7 +222,7 @@ final class ComposerInstallTest extends TestCase
 
         $builder->createStubFile(
             'demo/scaffold',
-            'stubs/.env.dist',
+            '.env.dist',
             "APP_ENV=dev\n",
         );
         $builder->createComposerJson(
@@ -253,12 +246,7 @@ final class ComposerInstallTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.env.dist' => [
-                        'source' => 'stubs/.env.dist',
-                        'mode' => 'replace',
-                    ],
-                ],
+                'copy' => ['.env.dist'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -307,7 +295,7 @@ final class ComposerInstallTest extends TestCase
 
         $builder->createStubFile(
             'demo/scaffold',
-            'stubs/config/params.php',
+            'config/params.php',
             "<?php return [];\n",
         );
         $builder->createComposerJson(
@@ -331,12 +319,8 @@ final class ComposerInstallTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    'config/params.php' => [
-                        'source' => 'stubs/config/params.php',
-                        'mode' => 'preserve',
-                    ],
-                ],
+                'copy' => ['config/params.php'],
+                'modes' => ['config/params.php' => 'preserve'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -381,7 +365,7 @@ final class ComposerInstallTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.env.dist', "APP_ENV=dev\n");
+        $builder->createStubFile('demo/scaffold', '.env.dist', "APP_ENV=dev\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -403,12 +387,7 @@ final class ComposerInstallTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.env.dist' => [
-                        'source' => 'stubs/.env.dist',
-                        'mode' => 'replace',
-                    ],
-                ],
+                'copy' => ['.env.dist'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();

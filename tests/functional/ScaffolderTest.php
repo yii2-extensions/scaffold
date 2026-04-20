@@ -9,7 +9,7 @@ use Composer\Package\PackageInterface;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
-use yii\scaffold\Manifest\{ManifestLoader, ManifestSchema};
+use yii\scaffold\Manifest\{ManifestExpander, ManifestLoader, ManifestSchema};
 use yii\scaffold\Scaffold\{Applier, Scaffolder};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\Security\{PackageAllowlist, PathValidator};
@@ -36,7 +36,7 @@ final class ScaffolderTest extends TestCase
 
         $io = new BufferIO();
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(
                 new PackageAllowlist(['yii2-extensions/missing']),
                 new PathValidator(),
@@ -61,19 +61,15 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/.gitignore', '*.log');
+        $builder->createStubFile('yii2-extensions/test', '.gitignore', '*.log');
         $builder->createProjectFile('.gitignore', 'vendor/');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        '.gitignore' => [
-                            'source' => 'stubs/.gitignore',
-                            'mode' => 'append',
-                        ],
-                    ],
+                    'copy' => ['.gitignore'],
+                    'modes' => ['.gitignore' => 'append'],
                 ],
             ],
         );
@@ -101,16 +97,15 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/.gitignore', '*.log');
+        $builder->createStubFile('yii2-extensions/test', '.gitignore', '*.log');
         $builder->createProjectFile('.gitignore', 'vendor/');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        '.gitignore' => ['source' => 'stubs/.gitignore', 'mode' => 'append'],
-                    ],
+                    'copy' => ['.gitignore'],
+                    'modes' => ['.gitignore' => 'append'],
                 ],
             ],
         );
@@ -141,18 +136,13 @@ final class ScaffolderTest extends TestCase
          * `yii2-extensions/test`, the Applier will throw with "Package not allowed" inside apply(). That throw must be
          * caught by the Scaffolder loop and reported via writeError.
          */
-        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'content');
+        $builder->createStubFile('yii2-extensions/test', 'app.php', 'content');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -162,7 +152,7 @@ final class ScaffolderTest extends TestCase
 
         // allowlist only admits a DIFFERENT provider, so assertAllowed throws RuntimeException during apply().
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(new PackageAllowlist(['safe/other']), new PathValidator(), new Hasher(), $io),
             new LockFile($builder->getProjectRoot()),
             $io,
@@ -200,7 +190,7 @@ final class ScaffolderTest extends TestCase
 
         $io = new BufferIO();
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(new PackageAllowlist([]), new PathValidator(), new Hasher(), $io),
             new LockFile($builder->getProjectRoot()),
             $io,
@@ -216,11 +206,12 @@ final class ScaffolderTest extends TestCase
         );
     }
 
-    public function testEmptyFileMappingReturnsEarlyAndDoesNotWriteLockFile(): void
+    public function testEmptyManifestReturnsEarlyAndDoesNotWriteLockFile(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $provider = $this->makeProviderPackage('yii2-extensions/empty', ['scaffold' => ['file-mapping' => []]]);
+        // provider has no scaffold extra at all; loader returns an empty mapping list and the lock stays untouched.
+        $provider = $this->makeProviderPackage('yii2-extensions/empty', []);
         $root = $this->makeRootPackage(['yii2-extensions/empty']);
 
         $this
@@ -229,7 +220,7 @@ final class ScaffolderTest extends TestCase
 
         self::assertFalse(
             (new LockFile($builder->getProjectRoot()))->exists(),
-            "Empty 'file-mapping' must short-circuit before the lock is written.",
+            'An empty manifest must short-circuit before the lock is written.',
         );
     }
 
@@ -248,7 +239,7 @@ final class ScaffolderTest extends TestCase
 
         $io = new BufferIO();
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(new PackageAllowlist(['yii2-extensions/bad']), new PathValidator(), new Hasher(), $io),
             new LockFile($builder->getProjectRoot()),
             $io,
@@ -267,18 +258,13 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'a');
+        $builder->createStubFile('yii2-extensions/test', 'app.php', 'a');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -317,19 +303,14 @@ final class ScaffolderTest extends TestCase
          */
         $providerRootInsideProject = $builder->getProjectRoot() . '/vendor/yii2-extensions/test';
 
-        mkdir($providerRootInsideProject . '/stubs', 0777, recursive: true);
-        file_put_contents($providerRootInsideProject . '/stubs/app.php', 'a');
+        mkdir($providerRootInsideProject, 0777, recursive: true);
+        file_put_contents($providerRootInsideProject . '/app.php', 'a');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -359,19 +340,14 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/base', 'stubs/app.php', 'base content');
-        $builder->createStubFile('yii2-extensions/override', 'stubs/app.php', 'override content');
+        $builder->createStubFile('yii2-extensions/base', 'app.php', 'base content');
+        $builder->createStubFile('yii2-extensions/override', 'app.php', 'override content');
 
         $base = $this->makeProviderPackage(
             'yii2-extensions/base',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -379,12 +355,7 @@ final class ScaffolderTest extends TestCase
             'yii2-extensions/override',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -429,18 +400,13 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/app-base-scaffold', 'stubs/nginx.conf', 'server {}');
+        $builder->createStubFile('yii2-extensions/app-base-scaffold', 'nginx.conf', 'server {}');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/app-base-scaffold',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'nginx.conf' => [
-                            'source' => 'stubs/nginx.conf',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['nginx.conf'],
                 ],
             ],
         );
@@ -484,7 +450,7 @@ final class ScaffolderTest extends TestCase
             ->with(self::stringContains('No extra.scaffold configuration'));
 
         (new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(new PackageAllowlist([]), new PathValidator(), new Hasher(), new NullIO()),
             new LockFile($builder->getProjectRoot()),
             $io,
@@ -495,7 +461,7 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/good', 'stubs/app.php', 'good-content');
+        $builder->createStubFile('yii2-extensions/good', 'app.php', 'good-content');
 
         $bad = $this->makeProviderPackage(
             'yii2-extensions/bad',
@@ -506,12 +472,7 @@ final class ScaffolderTest extends TestCase
             'yii2-extensions/good',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -520,7 +481,7 @@ final class ScaffolderTest extends TestCase
 
         $bufferIo = new BufferIO();
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(
                 new PackageAllowlist(['yii2-extensions/bad', 'yii2-extensions/good']),
                 new PathValidator(),
@@ -556,18 +517,13 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/good', 'stubs/app.php', 'good-content');
+        $builder->createStubFile('yii2-extensions/good', 'app.php', 'good-content');
 
         $good = $this->makeProviderPackage(
             'yii2-extensions/good',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -576,7 +532,7 @@ final class ScaffolderTest extends TestCase
 
         $bufferIo = new BufferIO();
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(
                 new PackageAllowlist(['yii2-extensions/missing', 'yii2-extensions/good']),
                 new PathValidator(),
@@ -606,22 +562,16 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/a.php', 'a');
-        $builder->createStubFile('yii2-extensions/test', 'stubs/b.php', 'b');
+        $builder->createStubFile('yii2-extensions/test', 'a.php', 'a');
+        $builder->createStubFile('yii2-extensions/test', 'b.php', 'b');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'a.php' => [
-                            'source' => 'stubs/a.php',
-                            'mode' => 'replace',
-                        ],
-                        'b.php' => [
-                            'source' => 'stubs/b.php',
-                            'mode' => 'replace',
-                        ],
+                    'copy' => [
+                        'a.php',
+                        'b.php',
                     ],
                 ],
             ],
@@ -656,18 +606,13 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/good', 'stubs/app.php', 'good-content');
+        $builder->createStubFile('yii2-extensions/good', 'app.php', 'good-content');
 
         $good = $this->makeProviderPackage(
             'yii2-extensions/good',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -688,7 +633,7 @@ final class ScaffolderTest extends TestCase
 
         $bufferIo = new BufferIO();
         $scaffolder = new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(new PackageAllowlist(['yii2-extensions/good']), new PathValidator(), new Hasher(), $bufferIo),
             new LockFile($builder->getProjectRoot()),
             $bufferIo,
@@ -746,19 +691,15 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/prepend.txt', 'header');
+        $builder->createStubFile('yii2-extensions/test', 'prepend.txt', 'header');
         $builder->createProjectFile('prepend.txt', 'existing');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'prepend.txt' => [
-                            'source' => 'stubs/prepend.txt',
-                            'mode' => 'prepend',
-                        ],
-                    ],
+                    'copy' => ['prepend.txt'],
+                    'modes' => ['prepend.txt' => 'prepend'],
                 ],
             ],
         );
@@ -785,19 +726,15 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/config.php', 'stub');
+        $builder->createStubFile('yii2-extensions/test', 'config.php', 'stub');
         $builder->createProjectFile('config.php', 'user-content');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'config.php' => [
-                            'source' => 'stubs/config.php',
-                            'mode' => 'preserve',
-                        ],
-                    ],
+                    'copy' => ['config.php'],
+                    'modes' => ['config.php' => 'preserve'],
                 ],
             ],
         );
@@ -825,19 +762,15 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/config/params.php', 'stub content');
+        $builder->createStubFile('yii2-extensions/test', 'config/params.php', 'stub content');
         $builder->createProjectFile('config/params.php', 'user content');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'config/params.php' => [
-                            'source' => 'stubs/config/params.php',
-                            'mode' => 'preserve',
-                        ],
-                    ],
+                    'copy' => ['config/params.php'],
+                    'modes' => ['config/params.php' => 'preserve'],
                 ],
             ],
         );
@@ -872,19 +805,15 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/config.php', 'stub');
+        $builder->createStubFile('yii2-extensions/test', 'config.php', 'stub');
         $builder->createProjectFile('config.php', 'user-content');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'config.php' => [
-                            'source' => 'stubs/config.php',
-                            'mode' => 'preserve',
-                        ],
-                    ],
+                    'copy' => ['config.php'],
+                    'modes' => ['config.php' => 'preserve'],
                 ],
             ],
         );
@@ -923,18 +852,13 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/app-base-scaffold', 'stubs/config/params.php', '<?php return [];');
+        $builder->createStubFile('yii2-extensions/app-base-scaffold', 'config/params.php', '<?php return [];');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/app-base-scaffold',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'config/params.php' => [
-                            'source' => 'stubs/config/params.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['config/params.php'],
                 ],
             ],
         );
@@ -957,18 +881,13 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'v1');
+        $builder->createStubFile('yii2-extensions/test', 'app.php', 'v1');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'app.php' => [
-                            'source' => 'stubs/app.php',
-                            'mode' => 'replace',
-                        ],
-                    ],
+                    'copy' => ['app.php'],
                 ],
             ],
         );
@@ -980,7 +899,7 @@ final class ScaffolderTest extends TestCase
         $firstHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('app.php');
 
         // change the stub so the second run writes different content.
-        $builder->createStubFile('yii2-extensions/test', 'stubs/app.php', 'v2');
+        $builder->createStubFile('yii2-extensions/test', 'app.php', 'v2');
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
 
         $secondHash = (new LockFile($builder->getProjectRoot()))->getHashAtScaffold('app.php');
@@ -1001,7 +920,7 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/config.php', 'stub');
+        $builder->createStubFile('yii2-extensions/test', 'config.php', 'stub');
         $builder->createProjectFile('config.php', 'user-content');
 
         $userHash = (new Hasher())->hash($builder->getProjectRoot() . '/config.php');
@@ -1019,7 +938,7 @@ final class ScaffolderTest extends TestCase
                     'config.php' => [
                         'hash' => $userHash,
                         'provider' => 'yii2-extensions/test',
-                        'source' => 'stubs/config.php',
+                        'source' => 'config.php',
                         'mode' => 'preserve',
                     ],
                 ],
@@ -1030,12 +949,8 @@ final class ScaffolderTest extends TestCase
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'config.php' => [
-                            'source' => 'stubs/config.php',
-                            'mode' => 'preserve',
-                        ],
-                    ],
+                    'copy' => ['config.php'],
+                    'modes' => ['config.php' => 'preserve'],
                 ],
             ],
         );
@@ -1062,24 +977,19 @@ final class ScaffolderTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('yii2-extensions/test', 'stubs/append.txt', 'appended');
-        $builder->createStubFile('yii2-extensions/test', 'stubs/fresh.txt', 'fresh content');
+        $builder->createStubFile('yii2-extensions/test', 'append.txt', 'appended');
+        $builder->createStubFile('yii2-extensions/test', 'fresh.txt', 'fresh content');
         $builder->createProjectFile('append.txt', 'existing');
 
         $provider = $this->makeProviderPackage(
             'yii2-extensions/test',
             [
                 'scaffold' => [
-                    'file-mapping' => [
-                        'append.txt' => [
-                            'source' => 'stubs/append.txt',
-                            'mode' => 'append',
-                        ],
-                        'fresh.txt' => [
-                            'source' => 'stubs/fresh.txt',
-                            'mode' => 'replace',
-                        ],
+                    'copy' => [
+                        'append.txt',
+                        'fresh.txt',
                     ],
+                    'modes' => ['append.txt' => 'append'],
                 ],
             ],
         );
@@ -1149,7 +1059,7 @@ final class ScaffolderTest extends TestCase
     private function makeScaffolder(array $allowedPackages, FakeProjectBuilder $builder): Scaffolder
     {
         return new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(
                 new PackageAllowlist($allowedPackages),
                 new PathValidator(),

@@ -10,7 +10,7 @@ use RuntimeException;
 use yii\scaffold\Manifest\{FileMode, ManifestSchema};
 
 /**
- * Unit tests for {@see ManifestSchema} manifest structure validation.
+ * Unit tests for {@see ManifestSchema} validation of the `copy` / `exclude` / `modes` shape.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -19,251 +19,224 @@ use yii\scaffold\Manifest\{FileMode, ManifestSchema};
 #[Group('manifest')]
 final class ManifestSchemaTest extends TestCase
 {
-    public function testAllFourModesInOneMappingPass(): void
+    public function testValidateAcceptsCopyEntryContainingColonInNonLeadingPosition(): void
     {
-        $this->expectNotToPerformAssertions();
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'a.php' => [
-                        'source' => 'stubs/a.php',
-                        'mode' => 'replace',
-                    ],
-                    'b.php' => [
-                        'source' => 'stubs/b.php',
-                        'mode' => 'preserve',
-                    ],
-                    'c.txt' => [
-                        'source' => 'stubs/c.txt',
-                        'mode' => 'append',
-                    ],
-                    'd.txt' => [
-                        'source' => 'stubs/d.txt',
-                        'mode' => 'prepend',
-                    ],
-                ],
-            ],
-        );
-    }
-
-    public function testDestinationKeyWithIntegerThrows(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('file-mapping key must be a non-empty string');
-
-        (new ManifestSchema())->validate(
-            [
-                // an integer key bypasses PHP's string-key conversion and triggers the is_string check.
-                'file-mapping' => [
-                    [
-                        'source' => 'stubs/x.php',
-                        'mode' => 'replace',
-                    ],
-                ],
-            ],
-        );
-    }
-
-    public function testEmptyFileMappingReturnsEmptyArray(): void
-    {
-        $result = (new ManifestSchema())->validate(['file-mapping' => []]);
+        // The '^' anchor in the drive-letter regex '/^[A-Za-z]:/' is load-bearing: without it, any letter followed by
+        // a colon anywhere in the string would trigger the absolute-path rejection, blocking legitimate relative
+        // paths that happen to include ':' (namespace separators, resource fork addresses, stream wrappers, etc.).
+        $result = (new ManifestSchema())->validate(['copy' => ['some/module:file.php']]);
 
         self::assertSame(
-            [],
-            $result,
-            "Expected empty array for 'file-mapping' when no entries are provided.",
+            ['some/module:file.php'],
+            $result['copy'],
+            'A colon that is not the second character of the path must be treated as a literal filename byte; the '
+            . "drive-letter check must only fire when the path STARTS with '[A-Za-z]:'.",
         );
     }
 
-    public function testEntryEmptySourceThrows(): void
+    public function testValidateAcceptsFullManifest(): void
     {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"source"');
-
-        (new ManifestSchema())->validate(
+        $result = (new ManifestSchema())->validate(
             [
-                'file-mapping' => [
-                    'config/params.php' => [
-                        'source' => '',
-                        'mode' => 'preserve',
-                    ],
+                'copy' => ['src', 'config'],
+                'exclude' => ['config/test-local.php'],
+                'modes' => ['config/*.php' => 'preserve'],
+            ],
+        );
+
+        self::assertSame(['src', 'config'], $result['copy']);
+        self::assertSame(['config/test-local.php'], $result['exclude']);
+        self::assertSame([FileMode::Preserve], array_values($result['modes']));
+        self::assertSame(['config/*.php'], array_keys($result['modes']));
+    }
+
+    public function testValidatePreservesAllExcludeEntries(): void
+    {
+        $result = (new ManifestSchema())->validate(
+            [
+                'copy' => ['src'],
+                'exclude' => ['first.php', 'second.php', 'third.php'],
+            ],
+        );
+
+        self::assertSame(
+            ['first.php', 'second.php', 'third.php'],
+            $result['exclude'],
+            "Every 'exclude[]' entry must round-trip through the validator; dropping entries would hide patterns that "
+            . 'the expander must apply.',
+        );
+    }
+
+    public function testValidateResolvesAllFourModesCorrectly(): void
+    {
+        $result = (new ManifestSchema())->validate(
+            [
+                'copy' => ['src'],
+                'modes' => [
+                    'replace.php' => 'replace',
+                    'preserve.php' => 'preserve',
+                    'append.txt' => 'append',
+                    'prepend.txt' => 'prepend',
                 ],
             ],
         );
+
+        self::assertSame(
+            [
+                'replace.php' => FileMode::Replace,
+                'preserve.php' => FileMode::Preserve,
+                'append.txt' => FileMode::Append,
+                'prepend.txt' => FileMode::Prepend,
+            ],
+            $result['modes'],
+            'All four FileMode cases must resolve correctly from their string values.',
+        );
     }
 
-    public function testEntryInvalidModeThrows(): void
+    public function testValidateReturnsTypedStructureForMinimalManifest(): void
+    {
+        $result = (new ManifestSchema())->validate(['copy' => ['src']]);
+
+        self::assertSame(
+            ['copy' => ['src'], 'exclude' => [], 'modes' => []],
+            $result,
+            "Minimal manifest with only 'copy' must default 'exclude' to empty list and 'modes' to empty map.",
+        );
+    }
+
+    public function testValidateThrowsWhenCopyEntryContainsTraversal(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('traversal');
+
+        (new ManifestSchema())->validate(['copy' => ['../escape']]);
+    }
+
+    public function testValidateThrowsWhenCopyEntryIsAbsoluteUnixPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['/etc']]);
+    }
+
+    public function testValidateThrowsWhenCopyEntryIsAbsoluteWindowsBackslashPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['\\Windows\\System32']]);
+    }
+
+    public function testValidateThrowsWhenCopyEntryIsAbsoluteWindowsPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['C:\\Windows']]);
+    }
+
+    public function testValidateThrowsWhenCopyEntryIsEmptyString(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('non-empty');
+
+        (new ManifestSchema())->validate(['copy' => ['']]);
+    }
+
+    public function testValidateThrowsWhenCopyIsEmptyArray(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('at least one path');
+
+        (new ManifestSchema())->validate(['copy' => []]);
+    }
+
+    public function testValidateThrowsWhenCopyIsNotArray(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('"copy"');
+
+        (new ManifestSchema())->validate(['copy' => 'src']);
+    }
+
+    public function testValidateThrowsWhenCopyKeyIsMissing(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('"copy"');
+
+        (new ManifestSchema())->validate([]);
+    }
+
+    public function testValidateThrowsWhenExcludeEntryContainsTraversal(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('traversal');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'exclude' => ['../bad']]);
+    }
+
+    public function testValidateThrowsWhenExcludeIsNotArray(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('"exclude"');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'exclude' => 'not-an-array']);
+    }
+
+    public function testValidateThrowsWhenModesIsNotObject(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('"modes"');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => 'invalid']);
+    }
+
+    public function testValidateThrowsWhenModesKeyContainsTraversal(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('traversal');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['../escape' => 'preserve']]);
+    }
+
+    public function testValidateThrowsWhenModesKeyIsAbsoluteUnixPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['/etc/passwd' => 'preserve']]);
+    }
+
+    public function testValidateThrowsWhenModesKeyIsAbsoluteWindowsPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['C:\\Windows' => 'preserve']]);
+    }
+
+    public function testValidateThrowsWhenModesKeyIsEmptyString(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('non-empty');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['' => 'preserve']]);
+    }
+
+    public function testValidateThrowsWhenModesValueIsNotString(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('must be a string');
+
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['config/*.php' => 123]]);
+    }
+
+    public function testValidateThrowsWhenModesValueIsUnknownMode(): void
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('"unknown-mode"');
 
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'config/params.php' => [
-                        'source' => 'stubs/params.php',
-                        'mode' => 'unknown-mode',
-                    ],
-                ],
-            ],
-        );
-    }
-
-    public function testEntryIsNotArrayThrows(): void
-    {
-        $this->expectException(RuntimeException::class);
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'config/params.php' => 'not-an-object',
-                ],
-            ],
-        );
-    }
-
-    public function testEntryMissingModeKeyThrows(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"mode"');
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'config/params.php' => ['source' => 'stubs/params.php'],
-                ],
-            ],
-        );
-    }
-
-    public function testEntryMissingSourceKeyThrows(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"source"');
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'config/params.php' => ['mode' => 'preserve'],
-                ],
-            ],
-        );
-    }
-
-    public function testFileMappingIsNotArrayThrows(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"file-mapping"');
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => 'not-an-array',
-            ],
-        );
-    }
-
-    public function testMissingFileMappingKeyThrows(): void
-    {
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"file-mapping"');
-
-        (new ManifestSchema())->validate(
-            [],
-        );
-    }
-
-    public function testValidateReturnsTypedFileMappingArray(): void
-    {
-        $result = (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'nginx.conf' => [
-                        'source' => 'stubs/nginx.conf',
-                        'mode' => 'replace',
-                    ],
-                ],
-            ],
-        );
-
-        $entry = $result['nginx.conf'] ?? null;
-
-        if ($entry === null) {
-            self::fail('Expected "nginx.conf" key in validated result.');
-        }
-
-        self::assertSame(
-            'stubs/nginx.conf',
-            $entry['source'],
-            "Expected 'source' to be 'stubs/nginx.conf' for 'nginx.conf' entry.",
-        );
-        self::assertSame(
-            FileMode::Replace,
-            $entry['mode'],
-            "Expected 'mode' to be 'FileMode::Replace' for 'nginx.conf' entry.",
-        );
-    }
-
-    public function testValidMappingWithAppendModePasses(): void
-    {
-        $this->expectNotToPerformAssertions();
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
-                ],
-            ],
-        );
-    }
-
-    public function testValidMappingWithPrependModePasses(): void
-    {
-        $this->expectNotToPerformAssertions();
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    '.env.dist' => [
-                        'source' => 'stubs/.env.dist',
-                        'mode' => 'prepend',
-                    ],
-                ],
-            ],
-        );
-    }
-
-    public function testValidMappingWithPreserveModePasses(): void
-    {
-        $this->expectNotToPerformAssertions();
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'config/params.php' => [
-                        'source' => 'stubs/params.php',
-                        'mode' => 'preserve',
-                    ],
-                ],
-            ],
-        );
-    }
-    public function testValidMappingWithReplaceModePasses(): void
-    {
-        $this->expectNotToPerformAssertions();
-
-        (new ManifestSchema())->validate(
-            [
-                'file-mapping' => [
-                    'config/web.php' => [
-                        'source' => 'stubs/web.php',
-                        'mode' => 'replace',
-                    ],
-                ],
-            ],
-        );
+        (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['config/*.php' => 'unknown-mode']]);
     }
 }
