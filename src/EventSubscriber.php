@@ -8,7 +8,7 @@ use Composer\EventDispatcher\EventSubscriberInterface;
 use Composer\IO\IOInterface;
 use Composer\Script\{Event, ScriptEvents};
 use Throwable;
-use yii\scaffold\Manifest\{ManifestLoader, ManifestSchema};
+use yii\scaffold\Manifest\{ManifestExpander, ManifestLoader, ManifestSchema};
 use yii\scaffold\Scaffold\{Applier, Scaffolder};
 use yii\scaffold\Scaffold\Lock\{Hasher, LockFile};
 use yii\scaffold\Security\{PackageAllowlist, PathValidator};
@@ -99,7 +99,7 @@ final class EventSubscriber implements EventSubscriberInterface
     private function buildScaffolder(array $allowedPackages, string $projectRoot, IOInterface $io): Scaffolder
     {
         return new Scaffolder(
-            new ManifestLoader(new ManifestSchema()),
+            new ManifestLoader(new ManifestSchema(), new ManifestExpander()),
             new Applier(new PackageAllowlist($allowedPackages), new PathValidator(), new Hasher(), $io),
             new LockFile($projectRoot),
             $io,

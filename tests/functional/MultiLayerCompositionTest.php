@@ -119,14 +119,7 @@ final class MultiLayerCompositionTest extends TestCase
 
     private function addMockProvidersSharingDestination(Composer $composer): void
     {
-        $manifest = [
-            'file-mapping' => [
-                'config/web.php' => [
-                    'source' => 'stubs/config/web.php',
-                    'mode' => 'replace',
-                ],
-            ],
-        ];
+        $manifest = ['copy' => ['config/web.php']];
 
         $this->addMockProvider($composer, 'demo/provider-a', $manifest);
         $this->addMockProvider($composer, 'demo/provider-b', $manifest);
@@ -136,8 +129,8 @@ final class MultiLayerCompositionTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/provider-a', 'stubs/config/web.php', 'provider-a content');
-        $builder->createStubFile('demo/provider-b', 'stubs/config/web.php', 'provider-b content');
+        $builder->createStubFile('demo/provider-a', 'config/web.php', 'provider-a content');
+        $builder->createStubFile('demo/provider-b', 'config/web.php', 'provider-b content');
 
         return $builder;
     }

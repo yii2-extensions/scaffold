@@ -9,12 +9,14 @@ use JsonException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use Xepozz\InternalMocker\MockerState;
-use yii\scaffold\Manifest\{FileMapping, FileMode, ManifestLoader, ManifestSchema};
+use yii\scaffold\Manifest\{FileMode, ManifestExpander, ManifestLoader, ManifestSchema};
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
+use function file_put_contents;
+use function json_encode;
+
 /**
- * Unit tests for {@see ManifestLoader} inline and external manifest loading.
+ * Unit tests for {@see ManifestLoader} inline and external manifest loading with the `copy`/`exclude`/`modes` schema.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -25,8 +27,11 @@ final class ManifestLoaderTest extends TestCase
 {
     use TempDirectoryTrait;
 
-    public function testAllFileMappingsAreInstancesOfFileMapping(): void
+    public function testLoadExpandsInlineManifest(): void
     {
+        $this->seedFile('src/Foo.php');
+        $this->seedFile('config/params.php');
+
         $package = self::createStub(PackageInterface::class);
 
         $package
@@ -34,465 +39,248 @@ final class ManifestLoaderTest extends TestCase
             ->willReturn(
                 [
                     'scaffold' => [
-                        'file-mapping' => [
-                            'a.php' => [
-                                'source' => 'stubs/a.php',
-                                'mode' => 'replace',
-                            ],
-                            'b.php' => [
-                                'source' => 'stubs/b.php',
-                                'mode' => 'preserve',
-                            ],
-                        ],
+                        'copy' => ['src', 'config'],
+                        'modes' => ['config/*.php' => 'preserve'],
                     ],
                 ],
             );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/test');
+        $package->method('getName')->willReturn('pkg/example');
 
-        $result = (new ManifestLoader(new ManifestSchema()))->load($package, '/vendor/yii2-extensions/test');
+        $result = $this->loader()->load($package, $this->tempDir);
+
+        self::assertCount(
+            2,
+            $result,
+            'Inline manifest must produce one FileMapping per expanded file.',
+        );
+
+        $modes = [];
 
         foreach ($result as $mapping) {
-            self::assertInstanceOf(
-                FileMapping::class,
-                $mapping,
-                'Expected all items in result to be instances of FileMapping',
+            $modes[$mapping->destination] = $mapping->mode;
+
+            self::assertSame(
+                'pkg/example',
+                $mapping->providerName,
+                'Every FileMapping must be attributed to the provider name.',
             );
         }
+
+        self::assertSame(
+            FileMode::Preserve,
+            $modes['config/params.php'] ?? null,
+            "'config/*.php' glob must resolve to FileMode::Preserve.",
+        );
+        self::assertSame(
+            FileMode::Replace,
+            $modes['src/Foo.php'] ?? null,
+            'Files with no matching mode must default to FileMode::Replace.',
+        );
     }
 
-    public function testExternalManifestLoadsFileMappings(): void
+    public function testLoadExternalManifestPreservesEveryDeclaredKey(): void
     {
-        $providerPath = dirname(__DIR__, 2) . '/fixtures/providers/valid-external';
+        // Seed two copy roots AND multiple exclude / mode entries so any silent truncation of the decoded manifest
+        // (for example, keeping only the first array element) would drop assertions that depend on the full structure.
+        $this->seedFile('src/Foo.php');
+        $this->seedFile('config/params.php');
+        $this->seedFile('config/web.php');
+
+        $manifest = [
+            'copy' => ['src', 'config'],
+            'exclude' => ['config/secrets.php'],
+            'modes' => ['config/*.php' => 'preserve'],
+        ];
+
+        file_put_contents("{$this->tempDir}/scaffold.json", (string) json_encode($manifest));
 
         $package = self::createStub(PackageInterface::class);
 
         $package
             ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => 'scaffold.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/inertia-vue-scaffold');
+            ->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
+        $package->method('getName')->willReturn('pkg/example');
 
-        $result = (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
+        $result = $this->loader()->load($package, $this->tempDir);
 
-        self::assertCount(
-            2,
-            $result,
-            "Expected exactly '2' FileMappings in result.",
-        );
+        $destinations = [];
 
-        $first = array_shift($result);
-
-        if ($first === null) {
-            self::fail('Expected at least one FileMapping in result.');
+        foreach ($result as $mapping) {
+            $destinations[$mapping->destination] = $mapping->mode;
         }
 
-        self::assertSame(
-            'resources/js/app.js',
-            $first->destination,
-            "Expected destination to be 'resources/js/app.js'",
+        self::assertArrayHasKey(
+            'src/Foo.php',
+            $destinations,
+            "The 'src' copy root must survive decoding; losing the second copy entry would hide this destination.",
         );
-        self::assertSame(
-            'stubs/resources/js/app.js',
-            $first->source,
-            "Expected source to be 'stubs/resources/js/app.js'",
+        self::assertArrayHasKey(
+            'config/params.php',
+            $destinations,
+            "The 'config' copy root must survive decoding; it is declared as the second entry of 'copy[]'.",
         );
         self::assertSame(
             FileMode::Preserve,
-            $first->mode,
-            "Expected mode to be 'FileMode::Preserve'.",
-        );
-        self::assertSame(
-            'yii2-extensions/inertia-vue-scaffold',
-            $first->providerName,
-            "Expected providerName to be 'yii2-extensions/inertia-vue-scaffold'",
-        );
-        self::assertSame(
-            $providerPath,
-            $first->providerPath,
-            "Expected providerPath to be '{$providerPath}'",
+            $destinations['config/params.php'] ?? null,
+            "The 'modes{}' key must survive decoding so the glob applies the expected mode.",
         );
     }
 
-    public function testExternalManifestWhenFileGetContentsFailsThrows(): void
+    public function testLoadReadsExternalManifestRelativeToProviderRoot(): void
     {
-        $manifestPath = "{$this->tempDir}/scaffold.json";
+        $this->seedFile('src/Foo.php');
 
-        file_put_contents($manifestPath, '{}');
+        $manifest = ['copy' => ['src']];
 
-        /**
-         * `default: true` forces the mocker to return `false` for every `file_get_contents` in the Manifest namespace,
-         * independent of how the host platform normalizes the path (Windows backslashes vs. POSIX forward slashes).
-         */
-        MockerState::addCondition(
-            'yii\\scaffold\\Manifest',
-            'file_get_contents',
-            [],
-            false,
-            default: true,
+        file_put_contents("{$this->tempDir}/scaffold.json", (string) json_encode($manifest));
+
+        $package = self::createStub(PackageInterface::class);
+
+        $package
+            ->method('getExtra')
+            ->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
+        $package->method('getName')->willReturn('pkg/example');
+
+        $result = $this->loader()->load($package, $this->tempDir);
+
+        self::assertCount(
+            1,
+            $result,
+            'External manifest must produce mappings identical to an equivalent inline declaration.',
         );
+    }
+
+    public function testLoadReturnsEmptyWhenExtraDoesNotDeclareScaffold(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn([]);
+
+        self::assertSame(
+            [],
+            $this->loader()->load($package, $this->tempDir),
+            'Absence of the "scaffold" key must produce no mappings.',
+        );
+    }
+
+    public function testLoadReturnsEmptyWhenScaffoldIsNotArray(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => 'invalid']);
+
+        self::assertSame(
+            [],
+            $this->loader()->load($package, $this->tempDir),
+            'Non-array "scaffold" value must produce no mappings.',
+        );
+    }
+
+    public function testLoadThrowsWhenExternalManifestDecodesToNonObject(): void
+    {
+        file_put_contents("{$this->tempDir}/scaffold.json", '"just-a-string"');
 
         $package = self::createStub(PackageInterface::class);
 
         $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
-        $package->method('getName')->willReturn('yii2-extensions/bad');
+        $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('could not read manifest file');
+        $this->expectExceptionMessage('decode to an object');
 
-        (new ManifestLoader(new ManifestSchema()))->load($package, $this->tempDir);
+        $this->loader()->load($package, $this->tempDir);
     }
 
-    public function testExternalManifestWithBackslashAbsolutePathThrows(): void
+    public function testLoadThrowsWhenExternalManifestFileIsMissing(): void
     {
         $package = self::createStub(PackageInterface::class);
 
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => '\\absolute\\path.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/test');
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'missing.json']]);
+        $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('must be a relative path inside the provider root');
+        $this->expectExceptionMessage('manifest file not found');
 
-        (new ManifestLoader(new ManifestSchema()))->load($package, '/some/path');
+        $this->loader()->load($package, $this->tempDir);
     }
 
-    public function testExternalManifestWithDriveLetterAbsolutePathThrows(): void
+    public function testLoadThrowsWhenExternalManifestJsonIsInvalid(): void
+    {
+        file_put_contents("{$this->tempDir}/scaffold.json", '{ not valid json ');
+
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
+        $package->method('getName')->willReturn('pkg/bad');
+
+        $this->expectException(JsonException::class);
+
+        $this->loader()->load($package, $this->tempDir);
+    }
+
+    public function testLoadThrowsWhenExternalManifestPathContainsTraversal(): void
     {
         $package = self::createStub(PackageInterface::class);
 
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => 'C:/absolute/path.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/test');
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => '../escape.json']]);
+        $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('must be a relative path inside the provider root');
+        $this->expectExceptionMessage('relative path');
 
-        (new ManifestLoader(new ManifestSchema()))->load($package, '/some/path');
+        $this->loader()->load($package, $this->tempDir);
     }
 
-    public function testExternalManifestWithEmptyPathThrows(): void
+    public function testLoadThrowsWhenExternalManifestPathIsAbsolute(): void
     {
         $package = self::createStub(PackageInterface::class);
 
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => ''],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/test');
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => '/etc/malicious.json']]);
+        $package->method('getName')->willReturn('pkg/bad');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        $this->loader()->load($package, $this->tempDir);
+    }
+
+    public function testLoadThrowsWhenExternalManifestPathIsEmptyString(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => '']]);
+        $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('non-empty string');
 
-        (new ManifestLoader(new ManifestSchema()))->load($package, '/some/path');
+        $this->loader()->load($package, $this->tempDir);
     }
 
-    public function testExternalManifestWithMalformedJsonThrows(): void
-    {
-        $providerPath = dirname(__DIR__, 2) . '/fixtures/providers/malformed-manifest';
-
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => 'scaffold.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/bad');
-
-        $this->expectException(JsonException::class);
-
-        (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
-    }
-
-    public function testExternalManifestWithMidPathColonIsNotTreatedAsAbsolute(): void
+    public function testLoadThrowsWhenExternalManifestPathIsNotString(): void
     {
         $package = self::createStub(PackageInterface::class);
 
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => 'nested/C:file.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/test');
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 42]]);
+        $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);
-        // Must fall through to the "not found" branch rather than being caught by the absolute-path regex.
-        $this->expectExceptionMessage('manifest file not found');
+        $this->expectExceptionMessage('non-empty string');
 
-        (new ManifestLoader(new ManifestSchema()))->load($package, '/nonexistent/provider');
+        $this->loader()->load($package, $this->tempDir);
     }
 
-    public function testExternalManifestWithMissingFileThrows(): void
+    public function testLoadThrowsWhenInlineManifestOmitsCopy(): void
     {
         $package = self::createStub(PackageInterface::class);
 
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => 'nonexistent.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/test');
+        $package->method('getExtra')->willReturn(['scaffold' => ['modes' => ['*.php' => 'replace']]]);
+        $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('not found');
+        $this->expectExceptionMessage('"copy"');
 
-        (new ManifestLoader(new ManifestSchema()))->load($package, '/nonexistent/path');
-    }
-
-    public function testExternalManifestWithNonObjectJsonThrows(): void
-    {
-        // write a JSON payload that decodes to a scalar, not an object.
-        file_put_contents("{$this->tempDir}/scaffold.json", '"just a string"');
-
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => 'scaffold.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/bad');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('must decode to an object');
-
-        (new ManifestLoader(new ManifestSchema()))->load($package, $this->tempDir);
-    }
-
-    public function testExternalManifestWithTraversalPathThrows(): void
-    {
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => ['manifest' => '../escape.json'],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/bad');
-
-        $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('must be a relative path inside the provider root');
-
-        (new ManifestLoader(new ManifestSchema()))->load($package, '/vendor/yii2-extensions/bad');
-    }
-
-    public function testInlineFileMappingCarriesProviderNameAndPath(): void
-    {
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => [
-                        'file-mapping' => [
-                            'nginx.conf' => [
-                                'source' => 'stubs/nginx.conf',
-                                'mode' => 'replace',
-                            ],
-                        ],
-                    ],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/nginx-scaffold');
-
-        $result = (new ManifestLoader(new ManifestSchema()))->load(
-            $package,
-            '/vendor/yii2-extensions/nginx-scaffold',
-        );
-
-        self::assertCount(1, $result);
-
-        $mapping = array_shift($result);
-
-        if ($mapping === null) {
-            self::fail('Expected one FileMapping in result.');
-        }
-
-        self::assertSame(
-            'yii2-extensions/nginx-scaffold',
-            $mapping->providerName,
-            "Expected providerName to be 'yii2-extensions/nginx-scaffold'",
-        );
-        self::assertSame(
-            '/vendor/yii2-extensions/nginx-scaffold',
-            $mapping->providerPath,
-            "Expected providerPath to be '/vendor/yii2-extensions/nginx-scaffold'",
-        );
-    }
-
-    public function testInlineMappingLoadsFileMappings(): void
-    {
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn(
-                [
-                    'scaffold' => [
-                        'file-mapping' => [
-                            'config/params.php' => [
-                                'source' => 'stubs/params.php',
-                                'mode' => 'preserve',
-                            ],
-                            'vite.config.js' => [
-                                'source' => 'stubs/vite.config.js',
-                                'mode' => 'replace',
-                            ],
-                        ],
-                    ],
-                ],
-            );
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/inertia-vue-scaffold');
-
-        $result = (new ManifestLoader(new ManifestSchema()))->load(
-            $package,
-            '/vendor/yii2-extensions/inertia-vue-scaffold',
-        );
-
-        self::assertCount(
-            2,
-            $result,
-            "Expected exactly '2' FileMappings in result.",
-        );
-
-        $first = array_shift($result);
-
-        if ($first === null) {
-            self::fail('Expected at least one FileMapping in result.');
-        }
-
-        self::assertSame(
-            'config/params.php',
-            $first->destination,
-            "Expected destination to be 'config/params.php'",
-        );
-        self::assertSame(
-            'stubs/params.php',
-            $first->source,
-            "Expected source to be 'stubs/params.php'",
-        );
-        self::assertSame(
-            FileMode::Preserve,
-            $first->mode,
-            "Expected mode to be 'FileMode::Preserve'.",
-        );
-        self::assertSame(
-            'yii2-extensions/inertia-vue-scaffold',
-            $first->providerName,
-            "Expected providerName to be 'yii2-extensions/inertia-vue-scaffold'",
-        );
-        self::assertSame(
-            '/vendor/yii2-extensions/inertia-vue-scaffold',
-            $first->providerPath,
-            "Expected providerPath to be '/vendor/yii2-extensions/inertia-vue-scaffold'",
-        );
-    }
-
-    public function testPackageWithNoScaffoldExtraReturnsEmptyArray(): void
-    {
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn([]);
-        $package
-            ->method('getName')
-            ->willReturn('some/package');
-
-        self::assertSame(
-            [],
-            (new ManifestLoader(new ManifestSchema()))->load($package, '/vendor/some/package'),
-            'Expected empty array when no scaffold extra is present',
-        );
-    }
-
-    public function testPackageWithScaffoldExtraButNoMappingReturnsEmptyArray(): void
-    {
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn(['scaffold' => ['locations' => ['web-root' => 'public/']]]);
-        $package
-            ->method('getName')
-            ->willReturn('some/package');
-
-        self::assertSame(
-            [],
-            (new ManifestLoader(new ManifestSchema()))->load($package, '/vendor/some/package'),
-            'Expected empty array when scaffold extra is present but no mapping is defined',
-        );
-    }
-
-    public function testSchemaViolationInExternalManifestThrows(): void
-    {
-        $providerPath = dirname(__DIR__, 2) . '/fixtures/providers/invalid-traversal';
-
-        $package = self::createStub(PackageInterface::class);
-
-        $package
-            ->method('getExtra')
-            ->willReturn([
-                'scaffold' => ['manifest' => 'scaffold.json'],
-            ]);
-        $package
-            ->method('getName')
-            ->willReturn('yii2-extensions/bad');
-
-        $this->expectException(RuntimeException::class);
-
-        (new ManifestLoader(new ManifestSchema()))->load($package, $providerPath);
+        $this->loader()->load($package, $this->tempDir);
     }
 
     protected function setUp(): void
@@ -503,5 +291,25 @@ final class ManifestLoaderTest extends TestCase
     protected function tearDown(): void
     {
         $this->tearDownTempDirectory();
+    }
+
+    /**
+     * Builds a {@see ManifestLoader} with real dependencies.
+     */
+    private function loader(): ManifestLoader
+    {
+        return new ManifestLoader(new ManifestSchema(), new ManifestExpander());
+    }
+
+    /**
+     * Writes an empty file at `$relative` under the temp directory, creating intermediate directories as needed.
+     */
+    private function seedFile(string $relative): void
+    {
+        $absolute = "{$this->tempDir}/{$relative}";
+
+        $this->ensureTestDirectory(dirname($absolute));
+
+        file_put_contents($absolute, '');
     }
 }

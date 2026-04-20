@@ -7,31 +7,39 @@ namespace yii\scaffold\Manifest;
 use Composer\Package\PackageInterface;
 use RuntimeException;
 
+use function file_get_contents;
+use function in_array;
 use function is_array;
+use function is_file;
+use function is_string;
+use function json_decode;
+use function preg_match;
+use function preg_split;
 use function sprintf;
+use function str_starts_with;
 
 /**
- * Loads scaffold file mappings from a Composer package manifest.
+ * Loads and expands a scaffold provider's manifest into a flat list of {@see FileMapping} entries.
  *
- * Supports both inline `extra.scaffold.file-mapping` declarations and external `extra.scaffold.manifest` JSON files
- * relative to the provider root.
+ * Supports both inline `extra.scaffold` declarations and external JSON manifests referenced by
+ * `extra.scaffold.manifest` relative to the provider root.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
 final class ManifestLoader
 {
-    public function __construct(private readonly ManifestSchema $schema) {}
+    public function __construct(private readonly ManifestSchema $schema, private readonly ManifestExpander $expander) {}
 
     /**
-     * Loads all file mappings declared by a scaffold provider package.
+     * Loads the provider's manifest and expands it into concrete file mappings.
      *
      * @param PackageInterface $package Provider Composer package.
-     * @param string $packagePath Absolute path to the provider root inside vendor.
+     * @param string $packagePath Absolute path to the provider root on disk.
      *
-     * @return list<FileMapping> List of file mappings declared by the provider.
+     * @throws RuntimeException when the manifest file is missing, malformed, or structurally invalid.
      *
-     * @throws RuntimeException when the manifest file is missing or invalid.
+     * @return list<FileMapping> File mappings ready for the scaffolder.
      */
     public function load(PackageInterface $package, string $packagePath): array
     {
@@ -43,56 +51,27 @@ final class ManifestLoader
             return [];
         }
 
-        if (isset($scaffold['manifest'])) {
-            return $this->loadExternal($scaffold['manifest'], $package->getName(), $packagePath);
-        }
+        $raw = isset($scaffold['manifest'])
+            ? $this->readExternal($scaffold['manifest'], $package->getName(), $packagePath)
+            : $scaffold;
 
-        if (isset($scaffold['file-mapping'])) {
-            return $this->buildFromValidated(
-                $this->schema->validate(['file-mapping' => $scaffold['file-mapping']]),
-                $package->getName(),
-                $packagePath,
-            );
-        }
+        $validated = $this->schema->validate($raw);
 
-        return [];
+        return $this->expander->expand($validated, $packagePath, $package->getName());
     }
 
     /**
-     * Builds file mappings from already validated manifest data.
-     *
-     * @param array<string, array{source: string, mode: FileMode}> $fileMapping Validated file-mapping data, with `mode`
-     * already resolved by {@see ManifestSchema} to the corresponding {@see FileMode} case.
-     *
-     * @return list<FileMapping> List of file mappings built from the validated manifest data.
-     */
-    private function buildFromValidated(array $fileMapping, string $packageName, string $packagePath): array
-    {
-        $mappings = [];
-
-        foreach ($fileMapping as $destination => $entry) {
-            $mappings[] = new FileMapping(
-                destination: $destination,
-                source: $entry['source'],
-                mode: $entry['mode'],
-                providerName: $packageName,
-                providerPath: $packagePath,
-            );
-        }
-
-        return $mappings;
-    }
-
-    /**
-     * Loads file mappings from an external manifest JSON file declared by the provider.
+     * Reads and decodes an external manifest file referenced from `extra.scaffold.manifest`.
      *
      * @param mixed $manifestPath Raw manifest path from the provider declaration, expected to be a non-empty string.
-     * @param string $packageName Name of the provider package.
-     * @param string $packagePath Absolute path to the provider root inside vendor.
+     * @param string $packageName Provider Composer package name (used for error messages).
+     * @param string $packagePath Absolute path to the provider root on disk.
      *
-     * @return list<FileMapping> List of file mappings loaded from the external manifest file.
+     * @throws RuntimeException on any failure to read or decode the file.
+     *
+     * @return array<mixed> Raw decoded JSON content ready for {@see ManifestSchema::validate()}.
      */
-    private function loadExternal(mixed $manifestPath, string $packageName, string $packagePath): array
+    private function readExternal(mixed $manifestPath, string $packageName, string $packagePath): array
     {
         if (!is_string($manifestPath) || $manifestPath === '') {
             throw new RuntimeException(
@@ -100,11 +79,14 @@ final class ManifestLoader
             );
         }
 
-        if (
-            str_starts_with($manifestPath, '/')
+        // Windows-absolute-path guards, equivalent under POSIX.
+        // @codeCoverageIgnoreStart
+        $isAbsolute = str_starts_with($manifestPath, '/')
             || str_starts_with($manifestPath, '\\')
-            || preg_match('/^[A-Za-z]:/', $manifestPath) === 1
-        ) {
+            || preg_match('/^[A-Za-z]:/', $manifestPath) === 1;
+        // @codeCoverageIgnoreEnd
+
+        if ($isAbsolute) {
             throw new RuntimeException(
                 sprintf('Provider "%s": "manifest" must be a relative path inside the provider root.', $packageName),
             );
@@ -142,10 +124,6 @@ final class ManifestLoader
             );
         }
 
-        return $this->buildFromValidated(
-            $this->schema->validate($raw),
-            $packageName,
-            $packagePath,
-        );
+        return $raw;
     }
 }

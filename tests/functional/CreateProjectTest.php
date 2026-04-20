@@ -31,7 +31,7 @@ final class CreateProjectTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createStubFile('demo/scaffold', '.gitignore', "/runtime/\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -48,6 +48,7 @@ final class CreateProjectTest extends TestCase
 
         // pre-populate the lock so partial scaffold (fullScaffold=false) would skip '.gitignore'.
         $builder->createProjectFile('.gitignore', "existing\n");
+
         (new LockFile($builder->getProjectRoot()))->write(
             [
                 'providers' => [
@@ -57,7 +58,7 @@ final class CreateProjectTest extends TestCase
                     '.gitignore' => [
                         'hash' => 'sha256:' . hash('sha256', "existing\n"),
                         'provider' => 'demo/scaffold',
-                        'source' => 'stubs/.gitignore',
+                        'source' => '.gitignore',
                         'mode' => 'append',
                     ],
                 ],
@@ -71,12 +72,8 @@ final class CreateProjectTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
-                ],
+                'copy' => ['.gitignore'],
+                'modes' => ['.gitignore' => 'append'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -96,7 +93,7 @@ final class CreateProjectTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createStubFile('demo/scaffold', '.gitignore', "/runtime/\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -118,12 +115,8 @@ final class CreateProjectTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
-                ],
+                'copy' => ['.gitignore'],
+                'modes' => ['.gitignore' => 'append'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -142,7 +135,7 @@ final class CreateProjectTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createStubFile('demo/scaffold', '.gitignore', "/runtime/\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -164,12 +157,8 @@ final class CreateProjectTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
-                ],
+                'copy' => ['.gitignore'],
+                'modes' => ['.gitignore' => 'append'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -192,7 +181,7 @@ final class CreateProjectTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/config/params.php', "<?php return [];\n");
+        $builder->createStubFile('demo/scaffold', 'config/params.php', "<?php return [];\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -214,12 +203,7 @@ final class CreateProjectTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    'config/params.php' => [
-                        'source' => 'stubs/config/params.php',
-                        'mode' => 'replace',
-                    ],
-                ],
+                'copy' => ['config/params.php'],
             ],
             '2.5.0',
         );
@@ -254,7 +238,7 @@ final class CreateProjectTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createStubFile('demo/scaffold', '.gitignore', "/runtime/\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -270,6 +254,7 @@ final class CreateProjectTest extends TestCase
         );
 
         $builder->createProjectFile('.gitignore', "existing\n");
+
         (new LockFile($builder->getProjectRoot()))->write(
             [
                 'providers' => [
@@ -279,7 +264,7 @@ final class CreateProjectTest extends TestCase
                     '.gitignore' => [
                         'hash' => 'sha256:' . hash('sha256', "existing\n"),
                         'provider' => 'demo/scaffold',
-                        'source' => 'stubs/.gitignore',
+                        'source' => '.gitignore',
                         'mode' => 'append',
                     ],
                 ],
@@ -293,12 +278,8 @@ final class CreateProjectTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
-                ],
+                'copy' => ['.gitignore'],
+                'modes' => ['.gitignore' => 'append'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
@@ -318,7 +299,7 @@ final class CreateProjectTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        $builder->createStubFile('demo/scaffold', 'stubs/.gitignore', "/runtime/\n");
+        $builder->createStubFile('demo/scaffold', '.gitignore', "/runtime/\n");
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -334,6 +315,7 @@ final class CreateProjectTest extends TestCase
         );
 
         $builder->createProjectFile('.gitignore', "existing\n");
+
         (new LockFile($builder->getProjectRoot()))->write(
             [
                 'providers' => [
@@ -343,7 +325,7 @@ final class CreateProjectTest extends TestCase
                     '.gitignore' => [
                         'hash' => 'sha256:' . hash('sha256', "existing\n"),
                         'provider' => 'demo/scaffold',
-                        'source' => 'stubs/.gitignore',
+                        'source' => '.gitignore',
                         'mode' => 'append',
                     ],
                 ],
@@ -357,12 +339,8 @@ final class CreateProjectTest extends TestCase
             $composer,
             'demo/scaffold',
             [
-                'file-mapping' => [
-                    '.gitignore' => [
-                        'source' => 'stubs/.gitignore',
-                        'mode' => 'append',
-                    ],
-                ],
+                'copy' => ['.gitignore'],
+                'modes' => ['.gitignore' => 'append'],
             ],
         );
         $this->resetInstallScaffoldRanFlag();
