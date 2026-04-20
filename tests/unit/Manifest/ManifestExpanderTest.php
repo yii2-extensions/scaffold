@@ -12,6 +12,8 @@ use yii\scaffold\tests\support\TempDirectoryTrait;
 
 use function chmod;
 use function file_put_contents;
+use function function_exists;
+use function posix_geteuid;
 
 /**
  * Unit tests for {@see ManifestExpander} covering directory walking, exclusions, and mode resolution.
@@ -251,9 +253,12 @@ final class ManifestExpanderTest extends TestCase
 
     public function testExpandPrunesDefaultExcludedDirectoriesWithoutDescendingIntoThem(): void
     {
-        // 'vendor/**' is a default-excluded pattern. Making 'vendor' unreadable proves the recursive filter rejects
-        // descent BEFORE the iterator attempts it: if descent occurred, opendir() on a 0-mode directory would abort
-        // the walk. The walk completing cleanly is the behavioral proof that 'matchesDirectory' pruned the subtree.
+        // Behavioral proof of descent pruning on POSIX non-root: 'chmod 0' on 'vendor' makes 'opendir()' throw
+        // 'UnexpectedValueException', so the walk only completes when the recursive filter rejects descent BEFORE
+        // the iterator attempts to read the subtree. Windows ignores POSIX mode bits and root bypasses them, so on
+        // those environments the chmod is a no-op; the assertion still holds there via file-level exclude matching,
+        // but the descent-prevention proof is only meaningful when the platform and user honour mode bits.
+        $this->skipUnlessChmodDeniesDirectoryReads();
         $this->seedFile('src/main.php');
         $this->seedFile('vendor/pkg/bogus.php');
 
@@ -281,9 +286,10 @@ final class ManifestExpanderTest extends TestCase
 
     public function testExpandPrunesUserExcludedDirectoriesWithoutDescendingIntoThem(): void
     {
-        // A user exclude of the form 'X/**' behaves symmetrically to default patterns: the filter rejects descent
-        // into 'secrets' so the walk never tries to read its contents. 'secrets' is chmod'd to 0 to fail loudly if
-        // descent ever happens.
+        // Same behavioral proof as the default-exclude companion: requires a platform and user that honour POSIX
+        // mode bits so 'chmod 0' actually denies reads. On Windows or root the chmod is a no-op and this test
+        // degrades to a file-level exclusion check; the guard below skips it explicitly in those cases.
+        $this->skipUnlessChmodDeniesDirectoryReads();
         $this->seedFile('src/main.php');
         $this->seedFile('secrets/keys.txt');
 
@@ -531,5 +537,23 @@ final class ManifestExpanderTest extends TestCase
         $this->ensureTestDirectory(dirname($absolute));
 
         file_put_contents($absolute, '');
+    }
+
+    /**
+     * Skips the current test when the platform or user cannot make `chmod(dir, 0)` deny directory reads.
+     *
+     * Windows ignores POSIX mode bits entirely, and the root user bypasses them, so a `chmod 0` guard degrades to a
+     * no-op in either environment; the tests that rely on it for descent-prevention proof cannot produce a signal
+     * there and must be skipped rather than silently pass.
+     */
+    private function skipUnlessChmodDeniesDirectoryReads(): void
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            self::markTestSkipped('chmod mode bits are not enforced on Windows.');
+        }
+
+        if (function_exists('posix_geteuid') && posix_geteuid() === 0) {
+            self::markTestSkipped('Running as root bypasses chmod mode bits.');
+        }
     }
 }

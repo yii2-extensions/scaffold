@@ -9,6 +9,7 @@ use JsonException;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Xepozz\InternalMocker\MockerState;
 use yii\scaffold\Manifest\{FileMode, ManifestExpander, ManifestLoader, ManifestSchema};
 use yii\scaffold\tests\support\TempDirectoryTrait;
 
@@ -176,6 +177,34 @@ final class ManifestLoaderTest extends TestCase
         );
     }
 
+    public function testLoadThrowsWhenExternalManifestCannotBeRead(): void
+    {
+        // Forcing 'file_get_contents' to 'false' isolates the narrow error path where 'is_file()' succeeds but reading
+        // the file fails (for example, a race in which the file is unlinked between the existence check and the read,
+        // or a filesystem quota hit mid-read). The mocker intercepts the call in the 'yii\\scaffold\\Manifest'
+        // namespace so the production code returns the expected I/O failure without touching real filesystem state.
+        $manifestPath = "{$this->tempDir}/scaffold.json";
+
+        file_put_contents($manifestPath, '{}');
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Manifest',
+            'file_get_contents',
+            [$manifestPath, false, null, 0, null],
+            false,
+        );
+
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'scaffold.json']]);
+        $package->method('getName')->willReturn('pkg/unreadable');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('could not read manifest file');
+
+        $this->loader()->load($package, $this->tempDir);
+    }
+
     public function testLoadThrowsWhenExternalManifestDecodesToNonObject(): void
     {
         file_put_contents("{$this->tempDir}/scaffold.json", '"just-a-string"');
@@ -236,6 +265,32 @@ final class ManifestLoaderTest extends TestCase
         $package = self::createStub(PackageInterface::class);
 
         $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => '/etc/malicious.json']]);
+        $package->method('getName')->willReturn('pkg/bad');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        $this->loader()->load($package, $this->tempDir);
+    }
+
+    public function testLoadThrowsWhenExternalManifestPathIsAbsoluteWindowsBackslash(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => '\\Windows\\scaffold.json']]);
+        $package->method('getName')->willReturn('pkg/bad');
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        $this->loader()->load($package, $this->tempDir);
+    }
+
+    public function testLoadThrowsWhenExternalManifestPathIsAbsoluteWindowsDrive(): void
+    {
+        $package = self::createStub(PackageInterface::class);
+
+        $package->method('getExtra')->willReturn(['scaffold' => ['manifest' => 'C:\\malicious.json']]);
         $package->method('getName')->willReturn('pkg/bad');
 
         $this->expectException(RuntimeException::class);

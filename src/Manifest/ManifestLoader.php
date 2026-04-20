@@ -7,7 +7,6 @@ namespace yii\scaffold\Manifest;
 use Composer\Package\PackageInterface;
 use RuntimeException;
 
-use function file_get_contents;
 use function in_array;
 use function is_array;
 use function is_file;
@@ -79,12 +78,10 @@ final class ManifestLoader
             );
         }
 
-        // Windows-absolute-path guards, equivalent under POSIX.
-        // @codeCoverageIgnoreStart
+        // reject absolute paths: POSIX ('/foo'), Windows UNC/backslash ('\foo'), Windows drive ('C:\foo').
         $isAbsolute = str_starts_with($manifestPath, '/')
             || str_starts_with($manifestPath, '\\')
             || preg_match('/^[A-Za-z]:/', $manifestPath) === 1;
-        // @codeCoverageIgnoreEnd
 
         if ($isAbsolute) {
             throw new RuntimeException(

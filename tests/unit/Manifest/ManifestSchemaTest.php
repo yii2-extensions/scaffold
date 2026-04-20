@@ -77,6 +77,7 @@ final class ManifestSchemaTest extends TestCase
             'All four FileMode cases must resolve correctly from their string values.',
         );
     }
+
     public function testValidateReturnsTypedStructureForMinimalManifest(): void
     {
         $result = (new ManifestSchema())->validate(['copy' => ['src']]);
@@ -102,6 +103,14 @@ final class ManifestSchemaTest extends TestCase
         $this->expectExceptionMessage('relative path');
 
         (new ManifestSchema())->validate(['copy' => ['/etc']]);
+    }
+
+    public function testValidateThrowsWhenCopyEntryIsAbsoluteWindowsBackslashPath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('relative path');
+
+        (new ManifestSchema())->validate(['copy' => ['\\Windows\\System32']]);
     }
 
     public function testValidateThrowsWhenCopyEntryIsAbsoluteWindowsPath(): void
