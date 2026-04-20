@@ -83,9 +83,7 @@ final class CreateProjectTest extends TestCase
         self::assertSame(
             "existing\n/runtime/\n",
             file_get_contents($builder->getProjectRoot() . '/.gitignore'),
-            "'onPostCreateProject' must dispatch with 'fullScaffold=true' so append entries are applied even when the "
-            . "destination is already recorded in the lock; flipping the flag to 'false' would short-circuit the append "
-            . "through the 'isset(\$lockData['files'][\$destination])' guard and leave the file untouched.",
+            "'onPostCreateProject' must dispatch with 'fullScaffold=true' so append entries apply even when already locked.",
         );
     }
 
@@ -126,8 +124,7 @@ final class CreateProjectTest extends TestCase
         self::assertSame(
             "/runtime/\n",
             file_get_contents($builder->getProjectRoot() . '/.gitignore'),
-            "'post-create-project-cmd' alone must apply append-mode entries when post-install-cmd did not run "
-            . 'before it.',
+            "'post-create-project-cmd' alone must apply append-mode entries when post-install-cmd did not run before it.",
         );
     }
 
@@ -172,8 +169,7 @@ final class CreateProjectTest extends TestCase
         self::assertSame(
             "/runtime/\n",
             file_get_contents($builder->getProjectRoot() . '/.gitignore'),
-            "'post-create-project-cmd' must short-circuit when 'post-install-cmd' already ran so append-mode lines are "
-            . 'not concatenated twice within the same Composer invocation.',
+            "'post-create-project-cmd' must short-circuit when 'post-install-cmd' already ran to avoid duplicate appends.",
         );
     }
 
@@ -289,9 +285,7 @@ final class CreateProjectTest extends TestCase
         self::assertSame(
             "existing\n",
             file_get_contents($builder->getProjectRoot() . '/.gitignore'),
-            "'onPostInstall' must dispatch with 'fullScaffold=false' so append entries already tracked in the lock are "
-            . "skipped; flipping the flag to 'true' would re-apply the stub and duplicate content across composer "
-            . 'install invocations.',
+            "'onPostInstall' must dispatch with 'fullScaffold=false' so locked append entries are skipped.",
         );
     }
 
@@ -350,9 +344,7 @@ final class CreateProjectTest extends TestCase
         self::assertSame(
             "existing\n",
             file_get_contents($builder->getProjectRoot() . '/.gitignore'),
-            "'onPostUpdate' must dispatch with 'fullScaffold=false' so append entries already tracked in the lock are "
-            . "skipped; flipping the flag to 'true' would re-apply the stub and duplicate content across composer "
-            . 'update invocations.',
+            "'onPostUpdate' must dispatch with 'fullScaffold=false' so locked append entries are skipped.",
         );
     }
 

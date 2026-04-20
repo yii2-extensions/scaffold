@@ -193,8 +193,7 @@ final class VendorDirResolverTest extends TestCase
         self::assertSame(
             'C:\\opt\\vendor',
             VendorDirResolver::resolve($this->tempDir),
-            "An absolute Windows path ('C:\\\\opt\\\\vendor') must be used verbatim without being joined to the "
-            . 'project root.',
+            "An absolute Windows path ('C:\\\\opt\\\\vendor') must be used verbatim without joining to the project root.",
         );
     }
 
@@ -205,8 +204,7 @@ final class VendorDirResolverTest extends TestCase
         self::assertSame(
             $this->tempDir . '/C:vendor',
             VendorDirResolver::resolve($this->tempDir),
-            "Windows drive-relative 'C:vendor' (no separator after the drive letter) is not absolute and must be "
-            . 'resolved against the project root.',
+            "Windows drive-relative 'C:vendor' (no separator after the drive letter) must be resolved under the root.",
         );
     }
 
@@ -217,8 +215,7 @@ final class VendorDirResolverTest extends TestCase
         self::assertSame(
             'C:\\',
             VendorDirResolver::resolve($this->tempDir),
-            "The drive root 'C:\\\\' must keep its trailing separator so it stays absolute; stripping it would "
-            . "turn it into the drive-relative 'C:' token.",
+            "The drive root 'C:\\\\' must keep its trailing separator to stay absolute (not drive-relative 'C:').",
         );
     }
 

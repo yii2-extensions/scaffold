@@ -134,8 +134,7 @@ final class StatusCommandTest extends TestCase
         self::assertSame(
             Command::FAILURE,
             $exitCode,
-            "When 'getcwd()' returns 'false', the command must fail fast instead of propagating an empty "
-            . 'project root.',
+            "When 'getcwd()' returns 'false', the command must fail fast instead of propagating an empty project root.",
         );
         self::assertStringContainsString(
             'Unable to determine current working directory',

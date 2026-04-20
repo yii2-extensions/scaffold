@@ -158,9 +158,7 @@ final class PreserveModeTest extends TestCase
             self::assertSame(
                 0755,
                 fileperms("{$this->tempDir}/project/output.txt") & 0777,
-                "After 'PreserveMode::apply' copies the stub, it must invoke 'syncPermissions' so the destination "
-                . "inherits the source executable bit (0755 here); without 'syncPermissions' the file would keep the "
-                . "umask-derived 0644 that 'copy()' produces, breaking scaffolded CLI stubs.",
+                "After 'PreserveMode::apply' copies the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {
             umask($oldUmask);

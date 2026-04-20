@@ -108,9 +108,6 @@ final class ManifestExpanderTest extends TestCase
 
     public function testExpandContinuesToNextCopyEntryAfterDeduplicatingRepeatedFile(): void
     {
-        // Listing the same file twice seeds the dedup map on iter 1 and routes iter 2 through the 'isset' branch.
-        // A third entry after the duplicate proves the outer loop resumes: replacing 'continue' with 'break' on the
-        // dedup branch would exit the foreach and strip 'other.txt' from the output.
         $this->seedFile('yii');
         $this->seedFile('other.txt');
 
@@ -125,15 +122,12 @@ final class ManifestExpanderTest extends TestCase
         self::assertContains(
             'other.txt',
             $this->destinations($mappings),
-            "After a duplicate file entry hits the dedup branch, the outer loop must 'continue' so subsequent copy "
-            . "entries still process; replacing the 'continue' with 'break' would drop 'other.txt' from the output.",
+            "After a duplicate file entry hits the dedup branch, the outer loop must 'continue' to process subsequent entries.",
         );
     }
 
     public function testExpandContinuesToNextCopyEntryAfterWalkingDirectory(): void
     {
-        // Two sibling directories in 'copy[]' prove the outer loop resumes after a successful dir walk: replacing the
-        // trailing 'continue' with 'break' would exit the foreach after walking 'dir1' and strip 'dir2/b.txt' out.
         $this->seedFile('dir1/a.txt');
         $this->seedFile('dir2/b.txt');
 
@@ -148,19 +142,13 @@ final class ManifestExpanderTest extends TestCase
         self::assertContains(
             'dir2/b.txt',
             $this->destinations($mappings),
-            "After walking the first directory, the outer loop must 'continue' so the next entry is walked too; "
-            . "replacing the 'continue' with 'break' would drop 'dir2/b.txt' from the output.",
+            "After walking the first directory, the outer loop must 'continue' so the next entry is walked too.",
         );
     }
 
     public function testExpandDedupContinueDoesNotBreakDirectoryWalk(): void
     {
-        /*
-         * Alphabetic iteration guarantees 'a.php' is processed first by the walk. Pre-adding it as an explicit file
-         * entry in 'copy[]' seeds the dedup map for that key; the walk then hits 'a.php', finds it already seen,
-         * and must 'continue' to iterate 'b.php' / 'c.php'. Replacing 'continue' with 'break' would halt the walk
-         * and strip both follow-up destinations from the output.
-         */
+        // Pre-adding 'a.php' as an explicit entry seeds the dedup map so the walk must 'continue' onto 'b.php' / 'c.php'.
         $this->seedFile('a.php');
         $this->seedFile('b.php');
         $this->seedFile('c.php');
@@ -229,9 +217,6 @@ final class ManifestExpanderTest extends TestCase
 
     public function testExpandNormalisesTrailingSeparatorInCopyDirectoryEntry(): void
     {
-        // A trailing '/' on a dir entry used to make the walk skip one character from each filename and emit destinations
-        // like 'src//ile.php'. The 'rtrim' in both the dir-prefix and the absolute-prefix derivation keep the output
-        // identical whether the provider writes 'src' or 'src/'.
         $this->seedFile('src/controllers/SiteController.php');
 
         $mappings = $this->expand(
@@ -245,19 +230,14 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             ['src/controllers/SiteController.php'],
             $this->destinations($mappings),
-            "A trailing '/' on a 'copy' directory entry must produce the same destinations as the un-slashed form; the "
-            . 'expander rtrims trailing separators before deriving paths so no character is dropped and no double slash '
-            . 'appears.',
+            "A trailing '/' on a 'copy' directory entry must produce the same destinations as the un-slashed form.",
         );
     }
 
     public function testExpandPrunesDefaultExcludedDirectoriesWithoutDescendingIntoThem(): void
     {
-        // Behavioral proof of descent pruning on POSIX non-root: 'chmod 0' on 'vendor' makes 'opendir()' throw
-        // 'UnexpectedValueException', so the walk only completes when the recursive filter rejects descent BEFORE
-        // the iterator attempts to read the subtree. Windows ignores POSIX mode bits and root bypasses them, so on
-        // those environments the chmod is a no-op; the assertion still holds there via file-level exclude matching,
-        // but the descent-prevention proof is only meaningful when the platform and user honour mode bits.
+        // Descent-pruning proof requires POSIX mode bits to be honoured: 'chmod 0' on 'vendor' must deny 'opendir()'
+        // so the walk only completes when the recursive filter rejects descent BEFORE reading the subtree.
         $this->skipUnlessChmodDeniesDirectoryReads();
         $this->seedFile('src/main.php');
         $this->seedFile('vendor/pkg/bogus.php');
@@ -279,16 +259,13 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             ['src/main.php'],
             $this->destinations($mappings),
-            "Default-excluded directories must be pruned BEFORE descent; otherwise an unreadable 'vendor/' would "
-            . 'derail the walk instead of being silently skipped.',
+            "Default-excluded directories must be pruned BEFORE descent; otherwise an unreadable 'vendor/' would derail it.",
         );
     }
 
     public function testExpandPrunesUserExcludedDirectoriesWithoutDescendingIntoThem(): void
     {
-        // Same behavioral proof as the default-exclude companion: requires a platform and user that honour POSIX
-        // mode bits so 'chmod 0' actually denies reads. On Windows or root the chmod is a no-op and this test
-        // degrades to a file-level exclusion check; the guard below skips it explicitly in those cases.
+        // Requires POSIX mode bits: Windows and root ignore 'chmod 0', which would reduce the test to file-level exclusion.
         $this->skipUnlessChmodDeniesDirectoryReads();
         $this->seedFile('src/main.php');
         $this->seedFile('secrets/keys.txt');
@@ -310,16 +287,13 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             ['src/main.php'],
             $this->destinations($mappings),
-            "User-exclude patterns of form 'X/**' must prune the directory BEFORE descent; otherwise an unreadable "
-            . "'secrets/' subtree would derail the walk instead of being silently skipped.",
+            "User-exclude patterns 'X/**' must prune directories BEFORE descent; otherwise unreadable subtrees derail the walk.",
         );
     }
 
     public function testExpandResolvesExactMatchInModesAndShortCircuitsGlobLoop(): void
     {
-        // Declaration order matters: the broader glob 'config/*.php' is declared BEFORE the exact path; the default
-        // code path short-circuits via 'isset($modes[$relative])' returning Replace. Removing that early return
-        // would fall through to the foreach and let the first-declared glob win with Preserve, a distinct mode.
+        // Declaration order is deliberate: the glob is declared BEFORE the exact path to exercise the 'isset' short-circuit.
         $this->seedFile('config/params.php');
 
         $mappings = $this->expand(
@@ -336,8 +310,7 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             FileMode::Replace,
             $mappings[0]->mode ?? null,
-            'Exact path match must win over a preceding-but-also-matching glob; removing the early return from the '
-            . "'isset' check flips the result to the glob's mode.",
+            "Exact path match must win over a preceding-but-also-matching glob via the 'isset' early return.",
         );
     }
 
@@ -386,8 +359,7 @@ final class ManifestExpanderTest extends TestCase
 
     public function testExpandReturnsWalkResultsInAlphabeticallySortedOrder(): void
     {
-        // Seed files in reverse-alphabetic creation order so the directory's dirent order likely reverses the
-        // desired sequence; the walk must still produce alphabetic ordering, which only holds when 'sort' runs.
+        // Seed in reverse-alphabetic order so the dirent order cannot accidentally match the expected sorted output.
         $this->seedFile('zzz.php');
         $this->seedFile('mmm.php');
         $this->seedFile('aaa.php');
@@ -405,16 +377,12 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             ['aaa.php', 'mmm.php', 'zzz.php'],
             $rawOrder,
-            "Walk results must be sorted alphabetically so 'scaffold-lock.json' stays deterministic; removing the "
-            . "'sort()' call would leak filesystem-dependent ordering into the lock and make git diffs noisy.",
+            "Walk results must be sorted alphabetically so 'scaffold-lock.json' stays deterministic across filesystems.",
         );
     }
 
     public function testExpandSkipsExcludedFilesAndContinuesToRemainingEntries(): void
     {
-        // An exclude pattern that drops one file while keeping its sibling proves the walk resumes after the skip:
-        // replacing the 'continue' in the exclude branch with 'break' would exit the foreach on the first excluded
-        // entry and strip the surviving sibling from the output.
         $this->seedFile('src/drop.txt');
         $this->seedFile('src/keep.txt');
 
@@ -429,8 +397,7 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             ['src/keep.txt'],
             $this->destinations($mappings),
-            "After an excluded file hits the skip branch, the walk must 'continue' so remaining files still process; "
-            . "replacing the 'continue' with 'break' would drop 'src/keep.txt' from the output.",
+            "After an excluded file hits the skip branch, the walk must 'continue' so remaining files still process.",
         );
     }
 
@@ -463,8 +430,7 @@ final class ManifestExpanderTest extends TestCase
         self::assertSame(
             ['runtime/.gitignore'],
             $this->destinations($mappings),
-            'An explicit file entry under a default-excluded directory must still ship because explicit entries bypass '
-            . 'the default excludes.',
+            'An explicit file entry under a default-excluded directory must still ship; explicit entries bypass excludes.',
         );
     }
 

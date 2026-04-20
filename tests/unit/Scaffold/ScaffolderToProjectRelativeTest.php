@@ -44,10 +44,6 @@ final class ScaffolderToProjectRelativeTest extends TestCase
 
     public function testNormalizesBackslashSeparatorsInAbsolutePathBeforePrefixMatch(): void
     {
-        /*
-         * Pins the 'str_replace('\\', '/', $absolutePath)' normalization at line 263. Same idea as the projectRoot
-         * test, but on the package-path side.
-         */
         self::assertSame(
             'pkg',
             $this->call('/tmp/project/subdir\\pkg', '/tmp/project/subdir'),
@@ -56,11 +52,6 @@ final class ScaffolderToProjectRelativeTest extends TestCase
     }
     public function testNormalizesBackslashSeparatorsInProjectRootBeforePrefixMatch(): void
     {
-        /*
-         * Pins the 'str_replace('\\', '/', $projectRoot)' normalization at line 262. With a backslash in projectRoot,
-         * default normalizes both sides to forward-slashes → prefix match → returns relative 'pkg'. Without that
-         * str_replace the mutant keeps '\' in the needle, prefix-match fails, and the full absolute path is returned.
-         */
         self::assertSame(
             'pkg',
             $this->call('/tmp/project/subdir/pkg', '/tmp/project\\subdir'),
@@ -81,9 +72,7 @@ final class ScaffolderToProjectRelativeTest extends TestCase
         self::assertSame(
             '',
             $this->call('/tmp/project', '/tmp/project'),
-            "When the package path equals the project root exactly, 'toProjectRelative' must return an empty string; "
-            . "the boundary-enforcing '. \"/\"' concatenation on 'normalizedPath' guards this edge case and its "
-            . 'removal would return the full absolute path instead.',
+            "When the package path equals the project root exactly, 'toProjectRelative' must return an empty string.",
         );
     }
 
@@ -92,8 +81,7 @@ final class ScaffolderToProjectRelativeTest extends TestCase
         self::assertSame(
             '/outside/project/pkg',
             $this->call('/outside/project/pkg', '/tmp/project'),
-            'Package paths outside the project root must fall back to the normalized absolute path so the lock '
-            . 'still records a usable location.',
+            'Package paths outside the project root must fall back to the normalized absolute path.',
         );
     }
 
@@ -102,8 +90,7 @@ final class ScaffolderToProjectRelativeTest extends TestCase
         self::assertSame(
             '/other/location',
             $this->call('/other/location/', '/tmp/project'),
-            "When the package path lies outside the project root, the fallback must still 'rtrim' trailing separators "
-            . "so absolute lock paths are recorded without spurious trailing '/'.",
+            "When the package path is outside the project root, the fallback must 'rtrim' trailing separators.",
         );
     }
 
@@ -112,9 +99,7 @@ final class ScaffolderToProjectRelativeTest extends TestCase
         self::assertSame(
             'vendor/pkg',
             $this->call('/tmp/project/vendor/pkg', '/tmp/project/'),
-            "A trailing separator on the project root must be stripped before the prefix check; without 'rtrim' the "
-            . "doubled slash ('/tmp/project//') would miss the prefix and leak the absolute package path into the "
-            . 'lock.',
+            "A trailing separator on the project root must be stripped before the prefix check via 'rtrim'.",
         );
     }
 
@@ -123,8 +108,7 @@ final class ScaffolderToProjectRelativeTest extends TestCase
         self::assertSame(
             'vendor/pkg',
             $this->call('/tmp/project/vendor/pkg/', '/tmp/project'),
-            "A trailing separator on the relative segment (after 'substr') must be stripped so lock entries never "
-            . "record paths like 'vendor/pkg/'; the outer 'rtrim(substr(...), \"/\")' guards this.",
+            "A trailing separator on the relative segment (after 'substr') must be stripped via outer 'rtrim'.",
         );
     }
 

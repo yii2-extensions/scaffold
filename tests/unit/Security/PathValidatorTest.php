@@ -221,11 +221,7 @@ final class PathValidatorTest extends TestCase
 
     public function testNormalizePathStripsTrailingSeparatorFromCombinedResult(): void
     {
-        /*
-         * Pins the outer 'rtrim($combined, DIRECTORY_SEPARATOR)' at line 194: with a relative that ends in a
-         * separator, 'normalizePath' must trim it so downstream 'dirname' iterations and string comparisons work on
-         * a canonical absolute path. Exercised via reflection because 'normalizePath' is private.
-         */
+        // Private 'normalizePath' exercised via reflection: must 'rtrim' trailing separators from the combined result.
         $method = new ReflectionMethod(PathValidator::class, 'normalizePath');
 
         /** @var string $result */

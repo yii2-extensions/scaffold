@@ -110,8 +110,7 @@ final class PathResolverTest extends TestCase
         self::assertGreaterThanOrEqual(
             2,
             $isDirCalls,
-            "'is_dir' must be consulted again after 'mkdir' returns 'false' so a concurrent creation is not treated "
-            . 'as failure.',
+            "'is_dir' must be rechecked after 'mkdir' returns 'false' so a concurrent creation is not treated as failure.",
         );
     }
 
@@ -173,12 +172,6 @@ final class PathResolverTest extends TestCase
 
     public function testResolveProviderRootDetectsUncLikePathAsAbsoluteViaBackslashPrefix(): void
     {
-        /*
-         * recordedPath starts with `\` (UNC-style). Default isAbsolute is true via the second 'str_starts_with' in
-         * the OR chain; mutating the '||' between the first two operands to '&&' with the third operand folds the
-         * detection into '(starts_with('\\') && preg_match drive-letter)', which is false for pure UNC paths — the
-         * path is then misclassified as relative and joined under 'projectRoot', landing outside vendor.
-         */
         $vendor = PathResolver::realpathOrFallback($this->tempDir);
 
         $result = PathResolver::resolveProviderRoot(
@@ -190,19 +183,12 @@ final class PathResolverTest extends TestCase
 
         self::assertNotNull(
             $result['warning'],
-            "A UNC-like recordedPath starting with '\\' must stay absolute and land outside vendor, emitting a "
-            . "warning; the '||' disjunction on the 'str_starts_with' operands is what keeps it classified correctly.",
+            "A UNC-like recordedPath starting with '\\' must stay absolute and land outside vendor, emitting a warning.",
         );
     }
 
     public function testResolveProviderRootDoesNotClassifyRelativePathContainingDriveLetterInMiddleAsAbsolute(): void
     {
-        /*
-         * recordedPath 'foo/C:/bar' is relative but carries a drive-letter substring; only the regex '^' anchor
-         * keeps it classified as relative. Default: joined under projectRoot and stays inside vendor → no warning.
-         * Without '^' the mutant flips isAbsolute to true, '$expanded' becomes 'foo/C:/bar' verbatim (relative), the
-         * realpath fallback leaves it with no vendor prefix, and containment fails → warning.
-         */
         $vendor = PathResolver::realpathOrFallback($this->tempDir);
 
         $result = PathResolver::resolveProviderRoot(
@@ -214,8 +200,7 @@ final class PathResolverTest extends TestCase
 
         self::assertNull(
             $result['warning'],
-            "A relative recordedPath with a drive-letter substring must stay classified as relative; the regex '^' "
-            . 'anchor keeps it joined under projectRoot so it lands inside vendor without warning.',
+            "A relative recordedPath with a drive-letter substring must stay relative; '^' anchor keeps it under projectRoot.",
         );
     }
 
@@ -234,8 +219,7 @@ final class PathResolverTest extends TestCase
         self::assertSame(
             realpath($vendor) . DIRECTORY_SEPARATOR . 'pkg/name',
             $result['root'],
-            'When the lock-recorded path escapes vendor, resolveProviderRoot must fall back to the vendor-derived '
-            . 'path.',
+            'When the lock-recorded path escapes vendor, resolveProviderRoot must fall back to the vendor-derived path.',
         );
         self::assertNotNull(
             $result['warning'],
@@ -276,8 +260,7 @@ final class PathResolverTest extends TestCase
 
         self::assertNotNull(
             $result['warning'],
-            'A lock path outside vendor that only shares a string prefix must emit a warning and fall back to the '
-            . 'default root.',
+            'A lock path outside vendor that only shares a string prefix must warn and fall back to the default root.',
         );
     }
 
@@ -355,8 +338,7 @@ final class PathResolverTest extends TestCase
         self::assertSame(
             PathResolver::realpathOrFallback($this->tempDir) . DIRECTORY_SEPARATOR . 'pkg/name',
             $result['root'],
-            'When the lock record is missing or does not contain a path, resolveProviderRoot must fall back to the '
-            . 'default root (canonicalized via realpathOrFallback to match implementation behavior).',
+            'When the lock record lacks a path, resolveProviderRoot must fall back to the canonicalized default root.',
         );
         self::assertNull(
             $result['warning'],
@@ -406,8 +388,7 @@ final class PathResolverTest extends TestCase
             self::assertSame(
                 0755,
                 fileperms($destination) & 0777,
-                "Under a permissive '0022' umask, 'syncPermissions()' must preserve the source executable bit so "
-                . 'scaffolded CLI stubs remain directly runnable.',
+                "Under a permissive '0022' umask, 'syncPermissions()' must preserve the source executable bit.",
             );
         } finally {
             umask($oldUmask);
@@ -437,8 +418,7 @@ final class PathResolverTest extends TestCase
             self::assertSame(
                 0700,
                 fileperms($destination) & 0777,
-                "Under a restrictive '0077' umask, 'syncPermissions()' must mask the source permissions and drop "
-                . 'group/other bits so security-restrictive setups are never silently widened.',
+                "Under a restrictive '0077' umask, 'syncPermissions()' must mask source perms and drop group/other bits.",
             );
         } finally {
             umask($oldUmask);
@@ -460,11 +440,7 @@ final class PathResolverTest extends TestCase
         chmod($source, 0640);
         chmod($destination, 0600);
 
-        /*
-         * A permissive '0000' umask isolates the `$perms & 0777` bitmask from the umask mask; any mutation that
-         * swaps `&` for `|` (widening 0640 to 0777 via bitwise OR) becomes observable without being masked out by
-         * the umask step that follows.
-         */
+        // '0000' umask isolates the `& 0777` mask from the umask step so `& → |` mutations are directly observable.
         $oldUmask = umask(0000);
 
         try {
@@ -473,9 +449,7 @@ final class PathResolverTest extends TestCase
             self::assertSame(
                 0640,
                 fileperms($destination) & 0777,
-                "Under a permissive '0000' umask the destination must land on exactly the source permissions (0640); "
-                . "mutating '\$perms & 0777' to '\$perms | 0777' widens to 0777 and this assertion fails, pinning the "
-                . 'bitmask intent.',
+                "Under a permissive '0000' umask, the destination must land on exactly the source permissions (0640).",
             );
         } finally {
             umask($oldUmask);
@@ -499,8 +473,7 @@ final class PathResolverTest extends TestCase
         self::assertSame(
             0644,
             fileperms($destination) & 0777,
-            "When 'fileperms()' on the source returns 'false' (missing/unreadable source), 'syncPermissions()' "
-            . 'must return early and leave the destination permissions untouched.',
+            "When 'fileperms()' returns 'false', 'syncPermissions()' must return early and leave the destination untouched.",
         );
     }
 

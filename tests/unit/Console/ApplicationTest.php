@@ -61,8 +61,7 @@ final class ApplicationTest extends TestCase
     {
         self::assertNotEmpty(
             (new Application())->getVersion(),
-            "'Application::getVersion()' must always return a non-empty string so 'vendor/bin/scaffold --version' "
-            . 'renders a meaningful value regardless of how the plugin was installed.',
+            "'Application::getVersion()' must always return a non-empty string for 'vendor/bin/scaffold --version'.",
         );
     }
 
@@ -86,8 +85,7 @@ final class ApplicationTest extends TestCase
         self::assertSame(
             $prettyVersion,
             Application::resolveVersion(Application::NAME),
-            "'Application::resolveVersion()' must return the exact Composer 'pretty_version' for an installed "
-            . 'package, not the hard-coded fallback.',
+            "'Application::resolveVersion()' must return the Composer 'pretty_version' for an installed package.",
         );
     }
 }

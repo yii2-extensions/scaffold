@@ -170,9 +170,7 @@ final class ReplaceModeTest extends TestCase
             self::assertSame(
                 0755,
                 fileperms("{$this->tempDir}/project/output.txt") & 0777,
-                "After 'ReplaceMode::apply' copies the stub, it must invoke 'syncPermissions' so the destination "
-                . "inherits the source executable bit (0755 here); without 'syncPermissions' the file would keep the "
-                . "umask-derived 0644 that 'copy()' produces, breaking scaffolded CLI stubs.",
+                "After 'ReplaceMode::apply' copies the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {
             umask($oldUmask);
@@ -289,7 +287,8 @@ final class ReplaceModeTest extends TestCase
      * Helper to create a source file for testing.
      *
      * @param string $content Content to write to the source file, defaulting to 'stub content'.
-     * @param string $relative Relative path of the source file within the provider directory, defaulting to 'stubs/source.txt'.
+     * @param string $relative Relative path of the source file within the provider directory, defaulting to
+     * 'stubs/source.txt'.
      */
     private function makeSourceFile(string $content = 'stub content', string $relative = 'stubs/source.txt'): void
     {

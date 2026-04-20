@@ -146,10 +146,7 @@ final class ComposerInstallTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        /**
-         * `composer.json` has no `extra.scaffold` key at all. runScaffold must continue without errors, emit the
-         * no-config notice inside Scaffolder, and leave the project untouched.
-         */
+        // No 'extra.scaffold' key: runScaffold must emit the no-config notice and leave the project untouched.
         $builder->createComposerJson(
             [
                 'name' => 'demo/smoke-project',
@@ -167,8 +164,7 @@ final class ComposerInstallTest extends TestCase
         self::assertStringContainsString(
             'No extra.scaffold configuration found',
             $io->getOutput(),
-            'Projects without `extra.scaffold` must still dispatch the handler; it must gracefully emit the no-config '
-            . 'notice instead of raising an error.',
+            'Projects without `extra.scaffold` must still dispatch the handler and gracefully emit the no-config notice.',
         );
     }
 
@@ -286,11 +282,7 @@ final class ComposerInstallTest extends TestCase
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
-        /**
-         * `pre-populate` scaffold-lock.json with malformed JSON so LockFile::read() throws inside
-         * `Scaffolder::scaffold()`. The EventSubscriber must catch the Throwable and log
-         * `[scaffold] Scaffolding aborted: ...`.
-         */
+        // Malformed lock JSON makes 'LockFile::read()' throw; the EventSubscriber must catch and log the abort.
         file_put_contents("{$builder->getProjectRoot()}/scaffold-lock.json", '{ not valid json');
 
         $builder->createStubFile(

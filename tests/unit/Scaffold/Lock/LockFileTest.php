@@ -356,8 +356,7 @@ final class LockFileTest extends TestCase
         );
         self::assertFileDoesNotExist(
             $tmp,
-            "After 'rename' fails, the cleanup branch must 'unlink' the orphan '.tmp' sidecar so repeated write "
-            . 'attempts never see stale partial content; skipping the unlink leaks the sidecar to disk.',
+            "After 'rename' fails, the cleanup branch must 'unlink' the orphan '.tmp' sidecar to avoid stale content.",
         );
     }
 

@@ -21,16 +21,13 @@ final class ManifestSchemaTest extends TestCase
 {
     public function testValidateAcceptsCopyEntryContainingColonInNonLeadingPosition(): void
     {
-        // The '^' anchor in the drive-letter regex '/^[A-Za-z]:/' is load-bearing: without it, any letter followed by
-        // a colon anywhere in the string would trigger the absolute-path rejection, blocking legitimate relative
-        // paths that happen to include ':' (namespace separators, resource fork addresses, stream wrappers, etc.).
+        // Pins the '^' anchor in '/^[A-Za-z]:/': non-leading colons (namespaces, stream wrappers) must not be rejected.
         $result = (new ManifestSchema())->validate(['copy' => ['some/module:file.php']]);
 
         self::assertSame(
             ['some/module:file.php'],
             $result['copy'],
-            'A colon that is not the second character of the path must be treated as a literal filename byte; the '
-            . "drive-letter check must only fire when the path STARTS with '[A-Za-z]:'.",
+            'A colon past the second character must be treated as a literal byte; the drive-letter check fires only on leading.',
         );
     }
 
@@ -62,8 +59,7 @@ final class ManifestSchemaTest extends TestCase
         self::assertSame(
             ['first.php', 'second.php', 'third.php'],
             $result['exclude'],
-            "Every 'exclude[]' entry must round-trip through the validator; dropping entries would hide patterns that "
-            . 'the expander must apply.',
+            "Every 'exclude[]' entry must round-trip through the validator; dropping entries hides expander patterns.",
         );
     }
 
