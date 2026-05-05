@@ -56,6 +56,20 @@ Declare the providers that are permitted to write files into your project:
 
 Run `composer install` to trigger the scaffold process. Commit `scaffold-lock.json` to version control.
 
+To opt out of auto-trigger and manage updates manually via `vendor/bin/scaffold`, set `auto: false` (see
+[Configuration Reference](docs/configuration.md#auto)):
+
+```json
+{
+    "extra": {
+        "scaffold": {
+            "auto": false,
+            "allowed-packages": ["yii2-extensions/app-base"]
+        }
+    }
+}
+```
+
 ## Configuration
 
 Minimal `composer.json` for a project using one scaffold provider:
@@ -109,7 +123,7 @@ See [`docs/console.md`](docs/console.md) for the full reference.
 
 ## Documentation
 
-- 📥 [Installation Guide](docs/installation.md)
+- 📚 [Installation Guide](docs/installation.md)
 - ⚙️ [Configuration Reference](docs/configuration.md)
 - 📦 [Creating Providers](docs/providers.md)
 - 🔀 [File Modes](docs/modes.md)

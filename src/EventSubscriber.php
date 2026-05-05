@@ -136,11 +136,35 @@ final class EventSubscriber implements EventSubscriberInterface
             if (is_string($item)) {
                 $allowed[] = $item;
             } else {
-                $io->writeError('[scaffold] Non-string entry in allowed-packages ignored.');
+                $io->writeError(
+                    '[scaffold] Non-string entry in allowed-packages ignored.',
+                );
             }
         }
 
         return $allowed;
+    }
+
+    /**
+     * Reads the consumer's `extra.scaffold.auto` flag.
+     *
+     * Auto-trigger is enabled by default. Only an explicit `false` disables the post-install/post-update/
+     * post-create-project hooks, in which case the consumer must invoke `vendor/bin/scaffold` manually to apply
+     * provider templates. Non-boolean values are treated as enabled to avoid silent disable on typo.
+     *
+     * @param array<mixed> $extra `extra` section from the root package's composer.json.
+     *
+     * @return bool `true` when auto-trigger is enabled, `false` only when explicitly disabled by the consumer.
+     */
+    private function isAutoEnabled(array $extra): bool
+    {
+        $scaffold = $extra['scaffold'] ?? null;
+
+        if (!is_array($scaffold)) {
+            return true;
+        }
+
+        return ($scaffold['auto'] ?? null) !== false;
     }
 
     /**
@@ -154,19 +178,32 @@ final class EventSubscriber implements EventSubscriberInterface
     {
         $composer = $event->getComposer();
         $io = $event->getIO();
+
+        if (!$this->isAutoEnabled($composer->getPackage()->getExtra())) {
+            $io->write(
+                '[scaffold] Auto-scaffold disabled via "extra.scaffold.auto"; run "vendor/bin/scaffold" manually.',
+            );
+
+            return;
+        }
+
         $vendorDirRaw = $composer->getConfig()->get('vendor-dir');
 
         if ($vendorDirRaw === '') {
-            $io->writeError('[scaffold] Unable to resolve vendor-dir from Composer config; aborting scaffold.');
+            $io->writeError(
+                '[scaffold] Unable to resolve vendor-dir from Composer config; aborting scaffold.',
+            );
 
             return;
         }
 
         $vendorDirResolved = realpath($vendorDirRaw);
+
         $vendorDir = $vendorDirResolved !== false ? $vendorDirResolved : $vendorDirRaw;
 
         $projectRootRaw = dirname($composer->getConfig()->getConfigSource()->getName());
         $projectRootResolved = realpath($projectRootRaw);
+
         $projectRoot = $projectRootResolved !== false ? $projectRootResolved : $projectRootRaw;
 
         $allowedPackages = $this->extractAllowedPackages($composer->getPackage()->getExtra(), $io);
@@ -194,7 +231,9 @@ final class EventSubscriber implements EventSubscriberInterface
                 $installPaths,
             );
         } catch (Throwable $e) {
-            $io->writeError(sprintf('[scaffold] Scaffolding aborted: %s', $e->getMessage()));
+            $io->writeError(
+                sprintf('[scaffold] Scaffolding aborted: %s', $e->getMessage()),
+            );
         }
     }
 }

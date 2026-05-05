@@ -26,6 +26,38 @@ This allows specialised layers to override base-layer defaults without forking t
 
 If the list is empty or absent the plugin writes a notice and exits without modifying any files.
 
+## auto
+
+**Optional, defaults to `true`.** Controls whether the plugin auto-triggers on Composer script events
+(`post-install-cmd`, `post-update-cmd`, `post-create-project-cmd`).
+
+```json
+{
+    "extra": {
+        "scaffold": {
+            "auto": false,
+            "allowed-packages": ["php-forge/baseline"]
+        }
+    }
+}
+```
+
+When `auto: false`, the plugin remains installed and authorised but does not hook into Composer events.
+The CLI commands at `vendor/bin/scaffold` continue to work, so the consumer can sync provider templates
+on demand:
+
+```bash
+vendor/bin/scaffold reapply --provider=php-forge/baseline
+vendor/bin/scaffold diff <file>
+vendor/bin/scaffold status
+```
+
+Use this when **explicit, opt-in updates** matter more than continuous synchronisation, for example on
+repositories where every change to project standards should be reviewed before being applied.
+
+Only an explicit `false` disables the auto-trigger; missing, `null`, non-boolean, or any other value defaults to
+enabled to avoid silent disable on typo.
+
 ## Full annotated example
 
 ```json
