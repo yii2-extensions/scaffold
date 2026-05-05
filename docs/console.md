@@ -131,3 +131,11 @@ All commands follow standard Symfony Console conventions:
 
 Use the exit code in CI scripts to halt on failures (for example, `vendor/bin/scaffold status` always returns `0`
 regardless of `modified` / `missing` entries; inspect the text output yourself if you want CI to gate on drift).
+
+## Next steps
+
+- 📖 [Readme](../README.md)
+- 🔀 [File Modes](modes.md)
+- ⚙️ [Configuration Reference](configuration.md)
+- 📦 [Creating Providers](providers.md)
+- 🧪 [Testing Guide](testing.md)

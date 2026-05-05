@@ -56,7 +56,7 @@ final class ScaffolderTest extends TestCase
         );
     }
 
-    public function testAppendModeAppliedOnFullScaffoldEvenIfAlreadyInLock(): void
+    public function testAppendModeIsIdempotentOnFullScaffold(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);
 
@@ -75,20 +75,20 @@ final class ScaffolderTest extends TestCase
         $root = $this->makeRootPackage(['yii2-extensions/test']);
         $scaffolder = $this->makeScaffolder(['yii2-extensions/test'], $builder);
 
-        // first run: full scaffold writes append.
+        // first run: full scaffold writes the missing line.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
 
         $afterFirst = file_get_contents($builder->getProjectRoot() . '/.gitignore');
 
-        // second full scaffold: re-appends even though entry exists in lock.
+        // second full scaffold: every provider line is already present, so nothing should change.
         $scaffolder->scaffold($root, [$provider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
 
         $afterSecond = file_get_contents($builder->getProjectRoot() . '/.gitignore');
 
-        self::assertNotSame(
+        self::assertSame(
             $afterFirst,
             $afterSecond,
-            'Append mode file should be re-appended on full scaffold even if already in lock.',
+            'Append mode must be idempotent on full scaffold and never duplicate provider lines already present.',
         );
     }
 
@@ -291,7 +291,7 @@ final class ScaffolderTest extends TestCase
 
         $providerRootInsideProject = $builder->getProjectRoot() . '/vendor/yii2-extensions/test';
 
-        mkdir($providerRootInsideProject, 0777, recursive: true);
+        mkdir($providerRootInsideProject, 0o777, recursive: true);
         file_put_contents($providerRootInsideProject . '/app.php', 'a');
 
         $provider = $this->makeProviderPackage(
@@ -373,7 +373,7 @@ final class ScaffolderTest extends TestCase
         );
         self::assertCount(
             1,
-            array_filter(array_keys($lockData['files']), static fn(string $k) => $k === 'app.php'),
+            array_filter(array_keys($lockData['files']), static fn(string $k): bool => $k === 'app.php'),
             "Lock must contain exactly one entry for 'app.php'.",
         );
         self::assertSame(

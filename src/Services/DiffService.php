@@ -14,7 +14,6 @@ use yii\scaffold\Security\PathValidator;
 
 use function implode;
 use function is_file;
-use function is_string;
 use function preg_replace;
 use function rtrim;
 use function sprintf;
@@ -49,13 +48,12 @@ final class DiffService
 
         $differ = new Differ(new DiffOnlyOutputBuilder(''));
 
+        /** @var list<array{0: string, 1: int}> $entries */
         $entries = $differ->diffToArray($stubContent, $currentContent);
 
         $output = [];
 
         foreach ($entries as [$line, $type]) {
-            $line = is_string($line) ? $line : '';
-
             if ($type === Differ::REMOVED) {
                 $output[] = '- ' . rtrim($line, "\n");
             } elseif ($type === Differ::ADDED) {

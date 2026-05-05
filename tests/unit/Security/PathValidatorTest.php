@@ -42,7 +42,7 @@ final class PathValidatorTest extends TestCase
         // walking to an existing in-root ancestor must NOT trigger an escape detection.
         $root = "{$this->tempDir}/root";
 
-        mkdir($root . '/sub', 0777, recursive: true);
+        mkdir($root . '/sub', 0o777, recursive: true);
 
         $this->expectNotToPerformAssertions();
 
@@ -68,7 +68,7 @@ final class PathValidatorTest extends TestCase
         // a symlink whose resolved target is `realRoot` itself must pass when used as an ancestor of a missing leaf.
         $root = "{$this->tempDir}/root";
 
-        mkdir($root, 0777, recursive: true);
+        mkdir($root, 0o777, recursive: true);
 
         $this->createSymlinkOrSkip($root, $root . '/loop');
         $this->expectNotToPerformAssertions();
@@ -90,8 +90,8 @@ final class PathValidatorTest extends TestCase
         $root = "{$this->tempDir}/root";
         $sibling = "{$this->tempDir}/rootsibling";
 
-        mkdir($root, 0777, recursive: true);
-        mkdir($sibling, 0777, recursive: true);
+        mkdir($root, 0o777, recursive: true);
+        mkdir($sibling, 0o777, recursive: true);
 
         $this->createSymlinkOrSkip($sibling, $root . '/link');
 
@@ -107,8 +107,8 @@ final class PathValidatorTest extends TestCase
         $root = "{$this->tempDir}/root";
         $outside = "{$this->tempDir}/outside";
 
-        mkdir($root, 0777, recursive: true);
-        mkdir($outside, 0777, recursive: true);
+        mkdir($root, 0o777, recursive: true);
+        mkdir($outside, 0o777, recursive: true);
 
         $this->createSymlinkOrSkip($outside, $root . '/escape');
         $this->expectException(RuntimeException::class);
@@ -124,8 +124,8 @@ final class PathValidatorTest extends TestCase
         $root = "{$this->tempDir}/root";
         $outside = "{$this->tempDir}/outside";
 
-        mkdir($root, 0777, recursive: true);
-        mkdir($outside, 0777, recursive: true);
+        mkdir($root, 0o777, recursive: true);
+        mkdir($outside, 0o777, recursive: true);
 
         $this->createSymlinkOrSkip($outside, "{$root}/escape");
         $this->expectException(RuntimeException::class);
@@ -140,8 +140,8 @@ final class PathValidatorTest extends TestCase
         $root = "{$this->tempDir}/root";
         $sibling = "{$this->tempDir}/rootsibling";
 
-        mkdir($root, 0777, recursive: true);
-        mkdir($sibling, 0777, recursive: true);
+        mkdir($root, 0o777, recursive: true);
+        mkdir($sibling, 0o777, recursive: true);
 
         $this->createSymlinkOrSkip($sibling, "{$root}/link");
         $this->expectException(RuntimeException::class);
@@ -247,8 +247,8 @@ final class PathValidatorTest extends TestCase
         $root = "{$this->tempDir}/provider";
         $outside = "{$this->tempDir}/outside";
 
-        mkdir($root, 0777, recursive: true);
-        mkdir($outside, 0777, recursive: true);
+        mkdir($root, 0o777, recursive: true);
+        mkdir($outside, 0o777, recursive: true);
 
         $this->createSymlinkOrSkip($outside, "{$root}/escape");
         $this->expectException(RuntimeException::class);

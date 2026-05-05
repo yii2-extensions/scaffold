@@ -10,11 +10,11 @@ root project's `allowed-packages` list.
 
 Every provider declares a `scaffold` manifest with three keys:
 
-- `copy` (required, array of paths) — directories or files relative to the provider root. Directories are walked
+- `copy` (required, array of paths) directories or files relative to the provider root. Directories are walked
   recursively.
-- `exclude` (optional, array of glob patterns) — patterns omitted from the walk. Only applies to directory entries in
+- `exclude` (optional, array of glob patterns) patterns omitted from the walk. Only applies to directory entries in
   `copy`; explicit file entries bypass this filter.
-- `modes` (optional, map of glob pattern → [file mode](modes.md)) — overrides the default write mode per destination.
+- `modes` (optional, map of glob pattern → [file mode](modes.md)) overrides the default write mode per destination.
   Exact path matches win over glob matches; the default when no pattern matches is `replace`.
 
 ## Inline manifest
@@ -102,12 +102,12 @@ Patterns in `exclude` and the keys of `modes` support:
 
 ## File modes
 
-| Mode       | Behaviour                                                                                            |
-| ---------- | ---------------------------------------------------------------------------------------------------- |
-| `replace`  | Writes the stub. Skips if the destination has been modified by the user since the last scaffold run. |
-| `preserve` | Writes the stub only if the destination does not already exist on disk. Never overwrites.            |
-| `append`   | Appends the stub content to the destination. Creates the file if absent.                             |
-| `prepend`  | Prepends the stub content before existing destination content. Creates the file if absent.           |
+| Mode       | Behaviour                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------- |
+| `replace`  | Writes the stub. Skips if the destination has been modified by the user since the last scaffold run.                |
+| `preserve` | Writes the stub only if the destination does not already exist on disk. Never overwrites.                           |
+| `append`   | Appends only stub lines not already present in the destination (idempotent line merge). Creates the file if absent. |
+| `prepend`  | Prepends the stub content before existing destination content. Creates the file if absent.                          |
 
 See [File Modes](modes.md) for a detailed description of each mode and the hash-tracking mechanism.
 
@@ -134,7 +134,7 @@ can list the exact path as an explicit file entry in `copy`; explicit file entri
 
 ## Provider layout
 
-Because `copy` walks the provider tree directly, providers look like real Yii2 apps — there is no `stubs/` wrapper and
+Because `copy` walks the provider tree directly, providers look like real Yii2 apps there is no `stubs/` wrapper and
 no per-file declaration:
 
 ```text
@@ -171,5 +171,6 @@ The plugin validates every entry before writing:
 
 ## Next steps
 
+- 📖 [Readme](../README.md)
 - 🔀 [File Modes](modes.md)
 - 🖥️ [Console Commands](console.md)

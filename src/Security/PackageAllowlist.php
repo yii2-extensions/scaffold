@@ -17,12 +17,12 @@ use function in_array;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class PackageAllowlist
+final readonly class PackageAllowlist
 {
     /**
      * @param list<string> $allowedPackages Package names from `extra.scaffold.allowed-packages`.
      */
-    public function __construct(private readonly array $allowedPackages) {}
+    public function __construct(private array $allowedPackages) {}
 
     /**
      * Asserts that the given package is authorized to write scaffold files.

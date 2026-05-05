@@ -746,13 +746,13 @@ final class ReapplyServiceTest extends TestCase
 
         $stubPath = "{$this->tempDir}/vendor/pkg/name/stubs/yii";
 
-        chmod($stubPath, 0755);
+        chmod($stubPath, 0o755);
 
         $destination = "{$this->tempDir}/yii";
 
-        chmod($destination, 0644);
+        chmod($destination, 0o644);
 
-        $oldUmask = umask(0022);
+        $oldUmask = umask(0o022);
 
         try {
             $out = new BufferedOutputWriter();
@@ -766,8 +766,8 @@ final class ReapplyServiceTest extends TestCase
             );
 
             self::assertSame(
-                0755,
-                fileperms($destination) & 0777,
+                0o755,
+                fileperms($destination) & 0o777,
                 "After 'ReapplyService' rewrites the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {

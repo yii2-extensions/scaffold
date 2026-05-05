@@ -54,7 +54,7 @@ final class PathResolver
     {
         $dir = dirname($absoluteFilePath);
 
-        if (!is_dir($dir) && mkdir($dir, 0777, recursive: true) === false && !is_dir($dir)) {
+        if (!is_dir($dir) && mkdir($dir, 0o777, recursive: true) === false && !is_dir($dir)) {
             throw new RuntimeException(sprintf('Could not create directory "%s".', $dir));
         }
     }
@@ -172,6 +172,6 @@ final class PathResolver
 
         $currentUmask = umask();
 
-        @chmod($destination, $perms & 0777 & ~$currentUmask);
+        @chmod($destination, $perms & 0o777 & ~$currentUmask);
     }
 }

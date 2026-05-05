@@ -10,11 +10,11 @@ namespace yii\scaffold\Scaffold\Modes;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class ApplyResult
+final readonly class ApplyResult
 {
     public function __construct(
-        public readonly ApplyOutcome $outcome,
-        public readonly string $newHash,
-        public readonly string|null $warning,
+        public ApplyOutcome $outcome,
+        public string $newHash,
+        public string|null $warning,
     ) {}
 }

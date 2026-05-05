@@ -253,7 +253,7 @@ final class ManifestExpanderTest extends TestCase
                 ],
             );
         } finally {
-            chmod("{$this->tempDir}/vendor", 0755);
+            chmod("{$this->tempDir}/vendor", 0o755);
         }
 
         self::assertSame(
@@ -281,7 +281,7 @@ final class ManifestExpanderTest extends TestCase
                 ],
             );
         } finally {
-            chmod("{$this->tempDir}/secrets", 0755);
+            chmod("{$this->tempDir}/secrets", 0o755);
         }
 
         self::assertSame(

@@ -13,10 +13,10 @@ use function preg_replace_callback;
  *
  * Supports the subset used by `scaffold.json`:
  *
- * - `*` — any sequence of characters that does NOT include a path separator.
- * - `**` — any sequence, including path separators (matches across directories).
- * - `?` — a single character that is not a path separator.
- * - literals — everything else matches byte-exact.
+ * - `*` any sequence of characters that does NOT include a path separator.
+ * - `**` any sequence, including path separators (matches across directories).
+ * - `?` a single character that is not a path separator.
+ * - literals everything else matches byte-exact.
  *
  * Paths are normalised to forward slashes before matching so providers can share patterns across POSIX and Windows.
  *
@@ -52,7 +52,7 @@ final class Glob
         // @codeCoverageIgnoreStart
         $regex = (string) preg_replace_callback(
             '#\*\*/|\*\*|\*|\?|[^*?]+#',
-            static fn(array $match) => match ($match[0]) {
+            static fn(array $match): string => match ($match[0]) {
                 '**/' => '(?:.*/)?',
                 '**' => '.*',
                 '*' => '[^/]*',

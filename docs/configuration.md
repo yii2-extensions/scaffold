@@ -89,6 +89,7 @@ Versions come from Composer's `getPrettyVersion()`.
 
 ## Next steps
 
+- 📖 [Readme](../README.md)
 - 📦 [Creating Providers](providers.md)
 - 🔀 [File Modes](modes.md)
 - 🖥️ [Console Commands](console.md)

@@ -22,14 +22,14 @@ final class AppendModeTest extends TestCase
 {
     use TempDirectoryTrait;
 
-    public function testAppendsToExistingFile(): void
+    public function testAppendsOnlyMissingLines(): void
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
-        file_put_contents($projectDir . '/output.txt', 'existing');
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\n");
 
-        $this->makeSourceFile(' appended');
+        $this->makeSourceFile("alpha\nbeta\ngamma\n");
 
         (new AppendMode())->apply(
             $this->makeMapping(),
@@ -39,9 +39,9 @@ final class AppendModeTest extends TestCase
         );
 
         self::assertSame(
-            'existing appended',
+            "alpha\nbeta\ngamma\n",
             file_get_contents($projectDir . '/output.txt'),
-            'AppendMode must append to the existing file content rather than overwriting it.',
+            'AppendMode must append only the lines not already present in the destination.',
         );
     }
 
@@ -67,26 +67,57 @@ final class AppendModeTest extends TestCase
         );
     }
 
-    public function testOutcomeIsAlwaysWritten(): void
+    public function testInsertsSeparatorWhenDestinationDoesNotEndWithNewline(): void
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'existing');
 
-        $this->makeSourceFile('extra');
+        $this->makeSourceFile('appended');
 
-        $result = (new AppendMode())->apply(
+        (new AppendMode())->apply(
             $this->makeMapping(),
             $projectDir,
             new Hasher(),
-            'sha256:some-recorded-hash',
+            null,
         );
 
         self::assertSame(
-            ApplyOutcome::Written,
-            $result->outcome,
-            "AppendMode must always return 'ApplyOutcome::Written' regardless of the previous file state.",
+            "existing\nappended\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must insert a newline separator when the destination does not end with one.',
+        );
+    }
+
+    public function testPreservesConsumerAdditionsOnRepeatedApplies(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\nproject-specific-line\n");
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        // Apply again must remain idempotent.
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\nproject-specific-line\nbeta\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must remain idempotent and never duplicate provider lines or remove consumer additions.',
         );
     }
 
@@ -106,6 +137,82 @@ final class AppendModeTest extends TestCase
             $hasher->hash("{$this->tempDir}/project/output.txt"),
             $result->newHash,
             'AppendMode must return a new hash that matches the actual content of the written file.',
+        );
+    }
+
+    public function testReturnsSkippedWhenAllProviderLinesAlreadyPresent(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\ngamma\n");
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            "AppendMode must return 'ApplyOutcome::Skipped' when every provider line is already present.",
+        );
+        self::assertSame(
+            "alpha\nbeta\ngamma\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must leave the destination untouched when every provider line is already present.',
+        );
+    }
+
+    public function testReturnsWrittenWhenAtLeastOneLineIsAppended(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\n");
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            'sha256:some-recorded-hash',
+        );
+
+        self::assertSame(
+            ApplyOutcome::Written,
+            $result->outcome,
+            "AppendMode must return 'ApplyOutcome::Written' when at least one missing line is appended.",
+        );
+    }
+
+    public function testRtrimsTrailingNewlineFromConsumerBeforeDiffing(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\n");
+
+        // Provider declares an explicit empty line between 'alpha' and 'beta'. Without rtrim'ing the consumer the
+        // trailing-newline split would inject a phantom empty entry into the consumer set, masking the missing line.
+        $this->makeSourceFile("alpha\n\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\nbeta\n\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must rtrim consumer trailing newline before diffing so empty provider lines are detected.',
         );
     }
 
@@ -160,10 +267,10 @@ final class AppendModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
-        file_put_contents($projectDir . '/output.txt', 'existing');
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\n");
 
-        $this->makeSourceFile('extra');
+        $this->makeSourceFile("alpha\nbeta\n");
 
         $capturedFlag = null;
 
@@ -172,7 +279,7 @@ final class AppendModeTest extends TestCase
             'file_put_contents',
             [
                 $projectDir . DIRECTORY_SEPARATOR . 'output.txt',
-                'extra',
+                "beta\n",
                 FILE_APPEND,
                 null,
             ],
@@ -193,7 +300,7 @@ final class AppendModeTest extends TestCase
         self::assertSame(
             FILE_APPEND,
             $capturedFlag,
-            'AppendMode must pass FILE_APPEND when the destination already exists.',
+            'AppendMode must pass FILE_APPEND when appending missing lines to an existing destination.',
         );
     }
 

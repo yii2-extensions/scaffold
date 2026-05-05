@@ -66,7 +66,7 @@ final class PrependModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'EXISTING');
 
         $this->makeSourceFile('PREPENDED');
@@ -100,7 +100,7 @@ final class PrependModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'existing');
 
         $this->makeSourceFile('prepended ');
@@ -142,7 +142,7 @@ final class PrependModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents("{$projectDir}/output.txt", 'existing');
 
         $sourcePath = "{$this->tempDir}/provider/stubs/source.txt";

@@ -45,7 +45,7 @@ final class ApplierTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'existing');
 
         $this->makeSourceFile();
@@ -67,7 +67,7 @@ final class ApplierTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'existing');
 
         $this->makeSourceFile('stub');
@@ -96,7 +96,7 @@ final class ApplierTest extends TestCase
         // validateDestination runs first and needs the project dir to exist.
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('source');
@@ -126,7 +126,7 @@ final class ApplierTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user-modified content');
 
         $this->makeSourceFile('stub content');
@@ -167,7 +167,7 @@ final class ApplierTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
 
         $this->makeSourceFile();
         $result = $this->makeApplier()->apply(

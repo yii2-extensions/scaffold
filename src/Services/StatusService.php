@@ -99,10 +99,10 @@ final class StatusService
             return ExitCode::Ok->value;
         }
 
-        $colFile = max(4, max(array_map('strlen', array_keys($statuses))));
-        $colProvider = max(8, max(array_map('strlen', array_column($statuses, 'provider'))));
-        $colMode = max(4, max(array_map('strlen', array_column($statuses, 'mode'))));
-        $colStatus = max(6, max(array_map('strlen', array_column($statuses, 'status'))));
+        $colFile = max(4, max(array_map(strlen(...), array_keys($statuses))));
+        $colProvider = max(8, max(array_map(strlen(...), array_column($statuses, 'provider'))));
+        $colMode = max(4, max(array_map(strlen(...), array_column($statuses, 'mode'))));
+        $colStatus = max(6, max(array_map(strlen(...), array_column($statuses, 'status'))));
         $separator = str_repeat('-', $colFile + $colProvider + $colMode + $colStatus + 6);
 
         $out->writeStdout(

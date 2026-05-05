@@ -27,19 +27,19 @@ use function substr;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class Scaffolder
+final readonly class Scaffolder
 {
     /**
      * @var array<string, ModeInterface> Pre-instantiated mode implementations keyed by the backing value of
      * {@see FileMode} for efficient resolution during scaffolding.
      */
-    private readonly array $modes;
+    private array $modes;
 
     public function __construct(
-        private readonly ManifestLoader $loader,
-        private readonly Applier $applier,
-        private readonly LockFile $lockFile,
-        private readonly IOInterface $io,
+        private ManifestLoader $loader,
+        private Applier $applier,
+        private LockFile $lockFile,
+        private IOInterface $io,
     ) {
         $this->modes = [
             FileMode::Replace->value => new ReplaceMode(),

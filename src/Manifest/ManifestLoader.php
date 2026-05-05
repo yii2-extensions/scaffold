@@ -26,9 +26,9 @@ use function str_starts_with;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class ManifestLoader
+final readonly class ManifestLoader
 {
-    public function __construct(private readonly ManifestSchema $schema, private readonly ManifestExpander $expander) {}
+    public function __construct(private ManifestSchema $schema, private ManifestExpander $expander) {}
 
     /**
      * Loads the provider's manifest and expands it into concrete file mappings.
