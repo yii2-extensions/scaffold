@@ -56,7 +56,7 @@ final class AppendMode implements ModeInterface
         $consumerContent = file_get_contents($destination);
 
         if ($consumerContent === false) {
-            throw new RuntimeException(sprintf('Could not read source file "%s".', $destination));
+            throw new RuntimeException(sprintf('Could not read destination file "%s".', $destination));
         }
 
         $consumerLines = $consumerContent === '' ? [] : explode("\n", rtrim($consumerContent, "\n"));

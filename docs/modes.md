@@ -24,7 +24,7 @@ On subsequent runs the plugin compares the current on-disk hash to the recorded 
   to stderr. For `preserve`, the file is always skipped regardless of hash.
 
 `append` does not compare hashes; instead it diffs the stub lines against the destination and writes only the missing
-ones. The operation is therefore idempotent repeated runs over a file that already contains every stub line are a no-op.
+ones. The operation is therefore idempotent: repeated runs over a file that already contains every stub line are a no-op.
 On partial scaffold runs (`post-install-cmd`, `post-update-cmd`), `append` and `prepend` are also skipped at the
 scaffolder level for files already recorded in the lockfile as a performance optimisation; the line-diff guarantees
 correctness even without that skip.

@@ -216,6 +216,63 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testThrowsWhenAppendWriteFails(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "existing\n");
+
+        // Source has a line not present in the destination, so the append-write path is reached.
+        $this->makeSourceFile("missing\n");
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Modes',
+            'file_put_contents',
+            [],
+            false,
+            default: true,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not write to');
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+    }
+
+    public function testThrowsWhenDestinationReadFails(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', 'existing');
+
+        $this->makeSourceFile('extra');
+
+        // Mock the destination read by exact path to fail; the source read (different path) is unaffected.
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Modes',
+            'file_get_contents',
+            [$projectDir . DIRECTORY_SEPARATOR . 'output.txt', false, null, 0, null],
+            false,
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Could not read destination file');
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+    }
+
     public function testThrowsWhenSourceReadFails(): void
     {
         $this->makeSourceFile('x');

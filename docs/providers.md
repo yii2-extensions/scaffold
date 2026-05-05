@@ -134,7 +134,7 @@ can list the exact path as an explicit file entry in `copy`; explicit file entri
 
 ## Provider layout
 
-Because `copy` walks the provider tree directly, providers look like real Yii2 apps there is no `stubs/` wrapper and
+Because `copy` walks the provider tree directly, providers look like real Yii2 apps. There is no `stubs/` wrapper and
 no per-file declaration:
 
 ```text
