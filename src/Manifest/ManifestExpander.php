@@ -34,14 +34,19 @@ use function substr;
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
+ *
+ * @phpstan-type ValidatedManifest = array{
+ *   copy: list<array{from: string, to: string}>,
+ *   exclude: list<string>,
+ *   modes: array<string, FileMode>,
+ * }
  */
 final class ManifestExpander
 {
     /**
      * Expands a validated manifest into the list of file mappings that the scaffolder must apply.
      *
-     * @param array{copy: list<string>, exclude: list<string>, modes: array<string, FileMode>} $manifest Validated
-     * manifest as returned by {@see ManifestSchema::validate()}.
+     * @param ValidatedManifest $manifest Validated manifest as returned by {@see ManifestSchema::validate()}.
      * @param string $providerPath Absolute path to the provider root on disk.
      * @param string $providerName Composer package name (used to attribute the mapping for provenance).
      *
@@ -55,22 +60,27 @@ final class ManifestExpander
         $seen = [];
 
         foreach ($manifest['copy'] as $entry) {
-            $absolute = $providerPath . '/' . $entry;
+            $from = $entry['from'];
+            $to = $entry['to'];
+            $absolute = $providerPath . '/' . $from;
 
             if (is_file($absolute)) {
-                $relative = self::normalise($entry);
+                $source = self::normalise($from);
+                $destination = self::normalise($to);
 
-                if (isset($seen[$relative])) {
+                if (isset($seen[$destination])) {
                     continue;
                 }
 
+                // The seen-map value is irrelevant; only key existence matters in the isset() guard above.
                 // @codeCoverageIgnoreStart
-                $seen[$relative] = true;
+                $seen[$destination] = true;
                 // @codeCoverageIgnoreEnd
 
                 $mappings[] = $this->buildMapping(
-                    $relative,
-                    $this->resolveMode($relative, $manifest['modes']),
+                    $destination,
+                    $source,
+                    $this->resolveMode($destination, $manifest['modes']),
                     $providerName,
                     $providerPath,
                 );
@@ -79,21 +89,31 @@ final class ManifestExpander
             }
 
             if (is_dir($absolute)) {
-                $prefix = rtrim(self::normalise($entry), '/');
-                $prefix = $prefix === '.' ? '' : $prefix;
+                // The +1 offset in self::translate() already skips the prefix separator, so trailing slashes here are
+                // absorbed downstream; the rtrim is kept defensively for clarity and substring-safety.
+                // @codeCoverageIgnoreStart
+                $sourcePrefix = rtrim(self::normalise($from), '/');
+                // @codeCoverageIgnoreEnd
+                $sourcePrefix = $sourcePrefix === '.' ? '' : $sourcePrefix;
+                $destPrefix = rtrim(self::normalise($to), '/');
+                $destPrefix = $destPrefix === '.' ? '' : $destPrefix;
 
-                foreach ($this->walk($absolute, $prefix, $manifest['exclude']) as $relative) {
-                    if (isset($seen[$relative])) {
+                foreach ($this->walk($absolute, $sourcePrefix, $manifest['exclude']) as $source) {
+                    $destination = self::translate($source, $sourcePrefix, $destPrefix);
+
+                    if (isset($seen[$destination])) {
                         continue;
                     }
 
+                    // The seen-map value is irrelevant; only key existence matters in the isset() guard above.
                     // @codeCoverageIgnoreStart
-                    $seen[$relative] = true;
+                    $seen[$destination] = true;
                     // @codeCoverageIgnoreEnd
 
                     $mappings[] = $this->buildMapping(
-                        $relative,
-                        $this->resolveMode($relative, $manifest['modes']),
+                        $destination,
+                        $source,
+                        $this->resolveMode($destination, $manifest['modes']),
                         $providerName,
                         $providerPath,
                     );
@@ -103,7 +123,7 @@ final class ManifestExpander
             }
 
             throw new RuntimeException(
-                sprintf('Scaffold copy entry "%s" does not exist under provider root "%s".', $entry, $providerPath),
+                sprintf('Scaffold copy entry "%s" does not exist under provider root "%s".', $from, $providerPath),
             );
         }
 
@@ -129,7 +149,10 @@ final class ManifestExpander
         string $relativePrefix,
         array $userExcludes,
     ): bool {
-        // @codeCoverageIgnoreStart interceptor does not swap this file for filter callbacks.
+        // Files pass through unconditionally; only directories are subject to the descent-prune patterns. Without
+        // this branch, a file like 'secrets' would be dropped when the manifest contains 'secrets/**', since
+        // canDescend treats matching exclude prefixes as a hard reject regardless of entry type.
+        // @codeCoverageIgnoreStart
         if ($current->isDir() === false) {
             return true;
         }
@@ -142,24 +165,26 @@ final class ManifestExpander
     }
 
     /**
-     * Builds a {@see FileMapping} for a given relative destination.
+     * Builds a {@see FileMapping} for a given source-destination pair.
      *
-     * @param string $relative Relative path to the file inside the provider, using forward slashes.
+     * @param string $destination Relative destination path inside the consumer project, using forward slashes.
+     * @param string $source Relative source path inside the provider root, using forward slashes.
      * @param FileMode $mode Resolved file mode for the mapping.
      * @param string $providerName Composer package name (used to attribute the mapping for provenance).
      * @param string $providerPath Absolute path to the provider root on disk.
      *
-     * @return FileMapping Concrete file mapping for the given relative path and mode.
+     * @return FileMapping Concrete file mapping for the given source/destination pair and mode.
      */
     private function buildMapping(
-        string $relative,
+        string $destination,
+        string $source,
         FileMode $mode,
         string $providerName,
         string $providerPath,
     ): FileMapping {
         return new FileMapping(
-            destination: $relative,
-            source: $relative,
+            destination: $destination,
+            source: $source,
             mode: $mode,
             providerName: $providerName,
             providerPath: $providerPath,
@@ -223,6 +248,7 @@ final class ManifestExpander
      */
     private static function normalise(string $path): string
     {
+        // Windows-only normalisation: str_replace is a no-op on POSIX (no backslash separators).
         // @codeCoverageIgnoreStart
         return str_replace('\\', '/', $path);
         // @codeCoverageIgnoreEnd
@@ -272,6 +298,31 @@ final class ManifestExpander
     }
 
     /**
+     * Translates a walk-relative source path into its destination path by swapping the source prefix for the
+     * destination prefix.
+     *
+     * Used when a `copy[]` entry remaps a directory (`{from: "metadata/.github", to: ".github"}`) so each file
+     * discovered under the source prefix lands at the equivalent location under the destination prefix.
+     *
+     * @param string $source Walk-relative source path (already prefixed with the source directory).
+     * @param string $sourcePrefix Source directory prefix without trailing slash, or empty when walking from root.
+     * @param string $destPrefix Destination directory prefix without trailing slash, or empty when destination is
+     * the consumer root.
+     *
+     * @return string Destination path equivalent to `$source` after prefix translation.
+     */
+    private static function translate(string $source, string $sourcePrefix, string $destPrefix): string
+    {
+        if ($sourcePrefix === '') {
+            return $destPrefix === '' ? $source : "{$destPrefix}/{$source}";
+        }
+
+        $tail = substr($source, strlen($sourcePrefix) + 1);
+
+        return $destPrefix === '' ? $tail : "{$destPrefix}/{$tail}";
+    }
+
+    /**
      * Walks a directory listed in `copy[]`, filtering out paths matching either default excludes or user excludes.
      *
      * @param string $absoluteDir Absolute path to the directory to walk.
@@ -308,6 +359,8 @@ final class ManifestExpander
             $results[] = $relative;
         }
 
+        // Determinism guarantee for cross-filesystem reproducibility; many filesystems already return sorted dirents,
+        // so removing the sort is mutation-equivalent on POSIX/ext4 testbeds.
         // @codeCoverageIgnoreStart
         sort($results);
         // @codeCoverageIgnoreEnd

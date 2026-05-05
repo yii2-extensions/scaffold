@@ -59,6 +59,64 @@ final class ManifestExpanderTest extends TestCase
         );
     }
 
+    public function testExpandAppliesFromToRemapForDirectoryEntry(): void
+    {
+        $this->seedFile('metadata/.github/linters/actionlint.yml');
+        $this->seedFile('metadata/.github/linters/.markdown-lint.yml');
+
+        $mappings = $this->expand(
+            [
+                'copy' => [['from' => 'metadata/.github', 'to' => '.github']],
+                'exclude' => [],
+                'modes' => [],
+            ],
+        );
+
+        $pairs = array_map(
+            static fn(FileMapping $mapping): array => [
+                'source' => $mapping->source,
+                'destination' => $mapping->destination,
+            ],
+            $mappings,
+        );
+
+        self::assertSame(
+            [
+                ['source' => 'metadata/.github/linters/.markdown-lint.yml', 'destination' => '.github/linters/.markdown-lint.yml'],
+                ['source' => 'metadata/.github/linters/actionlint.yml', 'destination' => '.github/linters/actionlint.yml'],
+            ],
+            $pairs,
+            "Directory '{from, to}' entries must rewrite the source prefix to the destination prefix on each walked file.",
+        );
+    }
+
+    public function testExpandAppliesFromToRemapForFileEntry(): void
+    {
+        $this->seedFile('metadata/.editorconfig');
+
+        $mappings = $this->expand(
+            [
+                'copy' => [['from' => 'metadata/.editorconfig', 'to' => '.editorconfig']],
+                'exclude' => [],
+                'modes' => [],
+            ],
+        );
+
+        $pairs = array_map(
+            static fn(FileMapping $mapping): array => [
+                'source' => $mapping->source,
+                'destination' => $mapping->destination,
+            ],
+            $mappings,
+        );
+
+        self::assertSame(
+            [['source' => 'metadata/.editorconfig', 'destination' => '.editorconfig']],
+            $pairs,
+            "File '{from, to}' entries must remap the destination while preserving the provider-relative source.",
+        );
+    }
+
     public function testExpandAppliesUserExcludesOnTopOfDefaults(): void
     {
         $this->seedFile('src/controllers/SiteController.php');
@@ -484,12 +542,21 @@ final class ManifestExpanderTest extends TestCase
     /**
      * Invokes {@see ManifestExpander::expand()} against the test's temp directory.
      *
-     * @param array{copy: list<string>, exclude: list<string>, modes: array<string, FileMode>} $manifest
+     * Accepts the legacy string form (`'copy' => ['src']`) and normalises it to the typed `{from, to}` form expected
+     * by the expander, so existing tests do not need to be rewritten when only a single path is being declared.
+     *
+     * @param array{copy: list<string|array{from: string, to: string}>, exclude: list<string>, modes: array<string, FileMode>} $manifest
      *
      * @return list<FileMapping>
      */
     private function expand(array $manifest, string $providerName = 'pkg/test'): array
     {
+        $manifest['copy'] = array_map(
+            static fn(mixed $entry): array => is_string($entry) ? ['from' => $entry, 'to' => $entry] : $entry,
+            $manifest['copy'],
+        );
+
+        /** @var array{copy: list<array{from: string, to: string}>, exclude: list<string>, modes: array<string, FileMode>} $manifest */
         return (new ManifestExpander())->expand($manifest, $this->tempDir, $providerName);
     }
 

@@ -7,6 +7,7 @@ namespace yii\scaffold\Manifest;
 use RuntimeException;
 
 use function array_column;
+use function array_is_list;
 use function array_key_exists;
 use function implode;
 use function in_array;
@@ -24,7 +25,12 @@ use function str_starts_with;
  * {@see ManifestExpander} to consume. Throws {@see RuntimeException} with a descriptive message on the first
  * structural violation found.
  *
- * @phpstan-type ValidatedManifest array{copy: list<string>, exclude: list<string>, modes: array<string, FileMode>}
+ * `copy[]` entries may be either a plain string (path used as both source and destination) or an object
+ * `{"from": "<source>", "to": "<destination>"}` for explicit source-to-destination remapping. The validator
+ * normalises strings into the object form so downstream consumers see a single shape.
+ *
+ * @phpstan-type CopyEntry array{from: string, to: string}
+ * @phpstan-type ValidatedManifest array{copy: list<CopyEntry>, exclude: list<string>, modes: array<string, FileMode>}
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -38,8 +44,9 @@ final class ManifestSchema
      *
      * @throws RuntimeException when the manifest structure is invalid.
      *
-     * @return array{copy: list<string>, exclude: list<string>, modes: array<string, FileMode>} Typed manifest with
-     * `copy[]` paths normalised to forward slashes and `modes` values resolved to {@see FileMode} cases.
+     * @return array{copy: list<array{from: string, to: string}>, exclude: list<string>, modes: array<string, FileMode>}
+     * Typed manifest with `copy[]` entries normalised to `{from, to}` form and `modes` values resolved to
+     * {@see FileMode} cases.
      */
     public function validate(array $raw): array
     {
@@ -91,9 +98,13 @@ final class ManifestSchema
     /**
      * Validates the `copy` key.
      *
+     * Accepts plain string entries (treated as `from === to`) and `{from, to}` object entries for explicit
+     * source-to-destination remapping. The result always uses the object form for uniform downstream handling.
+     *
      * @param array<mixed> $raw Raw manifest array.
      *
-     * @return list<string> List of non-empty, relative, non-traversal paths.
+     * @return list<array{from: string, to: string}> List of normalised entries; both fields are non-empty, relative,
+     * non-traversal paths.
      */
     private function validateCopy(array $raw): array
     {
@@ -101,19 +112,42 @@ final class ManifestSchema
             throw new RuntimeException('Manifest is missing required key "copy" or it is not an array.');
         }
 
+        if ($raw['copy'] !== [] && !array_is_list($raw['copy'])) {
+            throw new RuntimeException(
+                'Manifest "copy" must be a sequential list of entries, not an associative object.',
+            );
+        }
+
         if ($raw['copy'] === []) {
             throw new RuntimeException('Manifest "copy" must declare at least one path.');
         }
 
-        $paths = [];
+        $entries = [];
 
-        foreach ($raw['copy'] as $path) {
-            $this->assertSafeRelativePath($path, 'copy');
+        foreach ($raw['copy'] as $entry) {
+            if (is_string($entry)) {
+                $this->assertSafeRelativePath($entry, 'copy');
 
-            $paths[] = $path;
+                $entries[] = ['from' => $entry, 'to' => $entry];
+
+                continue;
+            }
+
+            if (is_array($entry) && isset($entry['from'], $entry['to'])) {
+                $this->assertSafeRelativePath($entry['from'], 'copy.from');
+                $this->assertSafeRelativePath($entry['to'], 'copy.to');
+
+                $entries[] = ['from' => $entry['from'], 'to' => $entry['to']];
+
+                continue;
+            }
+
+            throw new RuntimeException(
+                'Manifest "copy" entries must be either a string or an object with "from" and "to" keys.',
+            );
         }
 
-        return $paths;
+        return $entries;
     }
 
     /**

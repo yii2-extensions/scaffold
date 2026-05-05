@@ -188,6 +188,7 @@ final class PathValidator
      */
     private function normalizePath(string $base, string $relative): string
     {
+        // Windows-only normalisation: str_replace is a no-op on POSIX (separator is '/').
         // @codeCoverageIgnoreStart
         $normalizedRelative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
         // @codeCoverageIgnoreEnd

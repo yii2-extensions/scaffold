@@ -19,13 +19,34 @@ use yii\scaffold\Manifest\{FileMode, ManifestSchema};
 #[Group('manifest')]
 final class ManifestSchemaTest extends TestCase
 {
+    public function testValidateAcceptsCopyEntryAsFromToObjectWithRemap(): void
+    {
+        $result = (new ManifestSchema())->validate(
+            [
+                'copy' => [
+                    ['from' => 'metadata/.editorconfig', 'to' => '.editorconfig'],
+                    ['from' => 'metadata/.gitignore', 'to' => '.gitignore'],
+                ],
+            ],
+        );
+
+        self::assertSame(
+            [
+                ['from' => 'metadata/.editorconfig', 'to' => '.editorconfig'],
+                ['from' => 'metadata/.gitignore', 'to' => '.gitignore'],
+            ],
+            $result['copy'],
+            "Object 'copy' entries must round-trip with separate 'from' and 'to' to support source-destination remapping.",
+        );
+    }
+
     public function testValidateAcceptsCopyEntryContainingColonInNonLeadingPosition(): void
     {
         // Pins the '^' anchor in '/^[A-Za-z]:/': non-leading colons (namespaces, stream wrappers) must not be rejected.
         $result = (new ManifestSchema())->validate(['copy' => ['some/module:file.php']]);
 
         self::assertSame(
-            ['some/module:file.php'],
+            [['from' => 'some/module:file.php', 'to' => 'some/module:file.php']],
             $result['copy'],
             'A colon past the second character must be treated as a literal byte; the drive-letter check fires only on leading.',
         );
@@ -41,7 +62,13 @@ final class ManifestSchemaTest extends TestCase
             ],
         );
 
-        self::assertSame(['src', 'config'], $result['copy']);
+        self::assertSame(
+            [
+                ['from' => 'src', 'to' => 'src'],
+                ['from' => 'config', 'to' => 'config'],
+            ],
+            $result['copy'],
+        );
         self::assertSame(['config/test-local.php'], $result['exclude']);
         self::assertSame([FileMode::Preserve], array_values($result['modes']));
         self::assertSame(['config/*.php'], array_keys($result['modes']));
@@ -94,7 +121,11 @@ final class ManifestSchemaTest extends TestCase
         $result = (new ManifestSchema())->validate(['copy' => ['src']]);
 
         self::assertSame(
-            ['copy' => ['src'], 'exclude' => [], 'modes' => []],
+            [
+                'copy' => [['from' => 'src', 'to' => 'src']],
+                'exclude' => [],
+                'modes' => [],
+            ],
             $result,
             "Minimal manifest with only 'copy' must default 'exclude' to empty list and 'modes' to empty map.",
         );
@@ -103,7 +134,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyEntryContainsTraversal(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('traversal');
+        $this->expectExceptionMessage(
+            'Manifest "copy" entry "../escape" must not contain path traversal segments.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['../escape']]);
     }
@@ -111,7 +144,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyEntryIsAbsoluteUnixPath(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('relative path');
+        $this->expectExceptionMessage(
+            'Manifest "copy" entry "/etc" must be a relative path.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['/etc']]);
     }
@@ -119,7 +154,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyEntryIsAbsoluteWindowsBackslashPath(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('relative path');
+        $this->expectExceptionMessage(
+            'Manifest "copy" entry "\Windows\System32" must be a relative path.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['\\Windows\\System32']]);
     }
@@ -127,7 +164,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyEntryIsAbsoluteWindowsPath(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('relative path');
+        $this->expectExceptionMessage(
+            'Manifest "copy" entry "C:\\Windows" must be a relative path.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['C:\\Windows']]);
     }
@@ -135,15 +174,52 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyEntryIsEmptyString(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('non-empty');
+        $this->expectExceptionMessage(
+            'Manifest "copy" entries must be non-empty strings.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['']]);
+    }
+
+    public function testValidateThrowsWhenCopyEntryIsNeitherStringNorFromToObject(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Manifest "copy" entries must be either a string or an object with "from" and "to" keys.',
+        );
+
+        (new ManifestSchema())->validate(['copy' => [42]]);
+    }
+
+    public function testValidateThrowsWhenCopyFromContainsTraversal(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Manifest "copy.from" entry "../escape" must not contain path traversal segments.',
+        );
+
+        (new ManifestSchema())->validate(
+            ['copy' => [['from' => '../escape', 'to' => 'escape']]],
+        );
+    }
+
+    public function testValidateThrowsWhenCopyIsAssociativeObject(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Manifest "copy" must be a sequential list of entries, not an associative object.');
+
+        // The plain object form must be rejected so its keys are not silently iterated as two unrelated string entries.
+        (new ManifestSchema())->validate(
+            ['copy' => ['from' => 'metadata/.gitignore', 'to' => '.gitignore']],
+        );
     }
 
     public function testValidateThrowsWhenCopyIsEmptyArray(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('at least one path');
+        $this->expectExceptionMessage(
+            'Manifest "copy" must declare at least one path.',
+        );
 
         (new ManifestSchema())->validate(['copy' => []]);
     }
@@ -151,7 +227,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyIsNotArray(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"copy"');
+        $this->expectExceptionMessage(
+            'Manifest is missing required key "copy" or it is not an array.',
+        );
 
         (new ManifestSchema())->validate(['copy' => 'src']);
     }
@@ -159,15 +237,31 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenCopyKeyIsMissing(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"copy"');
+        $this->expectExceptionMessage(
+            'Manifest is missing required key "copy" or it is not an array.',
+        );
 
         (new ManifestSchema())->validate([]);
+    }
+
+    public function testValidateThrowsWhenCopyToIsAbsolutePath(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            'Manifest "copy.to" entry "/etc/foo" must be a relative path.',
+        );
+
+        (new ManifestSchema())->validate(
+            ['copy' => [['from' => 'metadata/foo', 'to' => '/etc/foo']]],
+        );
     }
 
     public function testValidateThrowsWhenExcludeEntryContainsTraversal(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('traversal');
+        $this->expectExceptionMessage(
+            'Manifest "exclude" entry "../bad" must not contain path traversal segments.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'exclude' => ['../bad']]);
     }
@@ -175,7 +269,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenExcludeIsNotArray(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"exclude"');
+        $this->expectExceptionMessage(
+            'Manifest "exclude" must be an array when present.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'exclude' => 'not-an-array']);
     }
@@ -183,7 +279,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesIsNotObject(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"modes"');
+        $this->expectExceptionMessage(
+            'Manifest "modes" must be an object when present.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => 'invalid']);
     }
@@ -191,7 +289,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesKeyContainsTraversal(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('traversal');
+        $this->expectExceptionMessage(
+            'Manifest "modes" entry "../escape" must not contain path traversal segments.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['../escape' => 'preserve']]);
     }
@@ -199,7 +299,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesKeyIsAbsoluteUnixPath(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('relative path');
+        $this->expectExceptionMessage(
+            'Manifest "modes" entry "/etc/passwd" must be a relative path.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['/etc/passwd' => 'preserve']]);
     }
@@ -207,7 +309,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesKeyIsAbsoluteWindowsPath(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('relative path');
+        $this->expectExceptionMessage(
+            'Manifest "modes" entry "C:\Windows" must be a relative path.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['C:\\Windows' => 'preserve']]);
     }
@@ -215,7 +319,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesKeyIsEmptyString(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('non-empty');
+        $this->expectExceptionMessage(
+            'Manifest "modes" entries must be non-empty strings.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['' => 'preserve']]);
     }
@@ -223,7 +329,9 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesValueIsNotString(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('must be a string');
+        $this->expectExceptionMessage(
+            'Manifest "modes" value for pattern "config/*.php" must be a string.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['config/*.php' => 123]]);
     }
@@ -231,7 +339,10 @@ final class ManifestSchemaTest extends TestCase
     public function testValidateThrowsWhenModesValueIsUnknownMode(): void
     {
         $this->expectException(RuntimeException::class);
-        $this->expectExceptionMessage('"unknown-mode"');
+        $this->expectExceptionMessage(
+            'Manifest "modes" value for pattern "config/*.php" has invalid mode "unknown-mode". Allowed: append, '
+            . 'prepend, preserve, replace.',
+        );
 
         (new ManifestSchema())->validate(['copy' => ['src'], 'modes' => ['config/*.php' => 'unknown-mode']]);
     }

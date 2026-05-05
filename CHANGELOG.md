@@ -20,3 +20,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - feat!: replace `file-mapping` with `copy` / `exclude` / `modes` in `scaffold.json`; providers declare directories to copy and glob-based mode overrides instead of enumerating every file.
 - test: shorten test assertion messages and inline comments; extract inline data providers to `tests/providers/` using `#[DataProviderExternal]`.
 - feat!: make `AppendMode` idempotent: append only stub lines not already present in the destination; repeated runs are a no-op and consumer-specific additions are never removed or duplicated.
+- feat: support `{from, to}` object entries in `copy[]` for source-to-destination remapping; providers can ship templates from a dedicated subdirectory (for example, `metadata/`) without polluting the consumer's vendor with their own development copies.
