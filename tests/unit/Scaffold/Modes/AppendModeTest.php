@@ -191,6 +191,37 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testNormalizesLineEndingsBeforeDiffing(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Destination uses CRLF (typical for files checked out on Windows or repos with mixed EOL).
+        file_put_contents($projectDir . '/output.txt', "alpha\r\nbeta\r\n");
+
+        // Provider ships LF.
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            'AppendMode must normalise line endings so CRLF destinations match LF stubs.',
+        );
+        self::assertSame(
+            "alpha\r\nbeta\r\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must leave the destination untouched when EOL-normalised content matches.',
+        );
+    }
+
     public function testRtrimsTrailingNewlineFromConsumerBeforeDiffing(): void
     {
         $projectDir = "{$this->tempDir}/project";

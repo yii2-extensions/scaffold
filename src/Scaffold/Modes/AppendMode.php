@@ -12,6 +12,7 @@ use yii\scaffold\Scaffold\PathResolver;
 use function array_diff;
 use function explode;
 use function implode;
+use function preg_replace;
 use function rtrim;
 use function sprintf;
 use function str_ends_with;
@@ -58,6 +59,10 @@ final class AppendMode implements ModeInterface
         if ($consumerContent === false) {
             throw new RuntimeException(sprintf('Could not read destination file "%s".', $destination));
         }
+
+        // Normalise line endings so CRLF/CR destinations diff identically against an LF stub.
+        $providerContent = (string) preg_replace('/\r\n|\r/', "\n", $providerContent);
+        $consumerContent = (string) preg_replace('/\r\n|\r/', "\n", $consumerContent);
 
         $consumerLines = $consumerContent === '' ? [] : explode("\n", rtrim($consumerContent, "\n"));
         $providerLines = $providerContent === '' ? [] : explode("\n", rtrim($providerContent, "\n"));
