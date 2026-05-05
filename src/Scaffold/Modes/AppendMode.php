@@ -13,9 +13,9 @@ use function array_count_values;
 use function explode;
 use function implode;
 use function preg_replace;
-use function rtrim;
 use function sprintf;
 use function str_ends_with;
+use function substr;
 
 /**
  * Applies a scaffold file by line-merging its content into the destination, or writing it fresh.
@@ -64,8 +64,8 @@ final class AppendMode implements ModeInterface
         $providerContent = (string) preg_replace('/\r\n|\r/', "\n", $providerContent);
         $consumerContent = (string) preg_replace('/\r\n|\r/', "\n", $consumerContent);
 
-        $consumerLines = $consumerContent === '' ? [] : explode("\n", rtrim($consumerContent, "\n"));
-        $providerLines = $providerContent === '' ? [] : explode("\n", rtrim($providerContent, "\n"));
+        $consumerLines = self::splitLines($consumerContent);
+        $providerLines = self::splitLines($providerContent);
 
         // Count-based diff preserves multiplicity: a stub with two 'alpha' lines whose destination has only one
         // appends the second occurrence instead of dropping it as set-based 'array_diff' would.
@@ -94,5 +94,29 @@ final class AppendMode implements ModeInterface
         }
 
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
+    }
+
+    /**
+     * Splits a normalised text into its constituent lines, stripping at most one trailing newline.
+     *
+     * Stripping only the final EOL marker (not every trailing newline) preserves any intentional blank lines at the
+     * end of the file. Otherwise repeated runs would re-detect the trailing blank as missing on every full scaffold,
+     * defeating idempotency.
+     *
+     * @param string $content Normalised text whose lines must be extracted.
+     *
+     * @return list<string> Ordered list of lines, never including a synthetic trailing empty entry from the final EOL.
+     */
+    private static function splitLines(string $content): array
+    {
+        if ($content === '') {
+            return [];
+        }
+
+        if (str_ends_with($content, "\n")) {
+            $content = substr($content, 0, -1);
+        }
+
+        return explode("\n", $content);
     }
 }

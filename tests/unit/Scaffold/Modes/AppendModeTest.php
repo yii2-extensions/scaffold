@@ -115,6 +115,44 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testIsIdempotentWhenStubEndsWithBlankLine(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Stub ends with an intentional trailing blank line.
+        $this->makeSourceFile("alpha\n\n");
+
+        // Two passes: the first must write the trailing blank; the second must detect it as already present.
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        $afterFirst = file_get_contents($projectDir . '/output.txt');
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            'AppendMode must remain idempotent when the stub ends with a blank line.',
+        );
+        self::assertSame(
+            $afterFirst,
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must not re-append the trailing blank line on subsequent runs.',
+        );
+    }
+
     public function testNormalizesLineEndingsBeforeDiffing(): void
     {
         $projectDir = "{$this->tempDir}/project";
