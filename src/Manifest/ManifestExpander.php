@@ -149,8 +149,15 @@ final class ManifestExpander
         string $relativePrefix,
         array $userExcludes,
     ): bool {
-        // canDescend safely handles both files (which never match any directory exclude prefix) and directories
-        // (which short-circuit when an exclude pattern targets them), so a file/dir branch is unnecessary here.
+        // Files pass through unconditionally; only directories are subject to the descent-prune patterns. Without
+        // this branch, a file like 'secrets' would be dropped when the manifest contains 'secrets/**', since
+        // canDescend treats matching exclude prefixes as a hard reject regardless of entry type.
+        // @codeCoverageIgnoreStart
+        if ($current->isDir() === false) {
+            return true;
+        }
+        // @codeCoverageIgnoreEnd
+
         return self::canDescend(
             self::relativise($current, $absolutePrefix, $relativePrefix),
             $userExcludes,

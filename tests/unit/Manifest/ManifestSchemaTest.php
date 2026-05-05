@@ -203,6 +203,17 @@ final class ManifestSchemaTest extends TestCase
         );
     }
 
+    public function testValidateThrowsWhenCopyIsAssociativeObject(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Manifest "copy" must be a sequential list of entries, not an associative object.');
+
+        // The plain object form must be rejected so its keys are not silently iterated as two unrelated string entries.
+        (new ManifestSchema())->validate(
+            ['copy' => ['from' => 'metadata/.gitignore', 'to' => '.gitignore']],
+        );
+    }
+
     public function testValidateThrowsWhenCopyIsEmptyArray(): void
     {
         $this->expectException(RuntimeException::class);

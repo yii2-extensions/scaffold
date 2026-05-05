@@ -59,6 +59,64 @@ final class ManifestExpanderTest extends TestCase
         );
     }
 
+    public function testExpandAppliesFromToRemapForDirectoryEntry(): void
+    {
+        $this->seedFile('metadata/.github/linters/actionlint.yml');
+        $this->seedFile('metadata/.github/linters/.markdown-lint.yml');
+
+        $mappings = $this->expand(
+            [
+                'copy' => [['from' => 'metadata/.github', 'to' => '.github']],
+                'exclude' => [],
+                'modes' => [],
+            ],
+        );
+
+        $pairs = array_map(
+            static fn(FileMapping $mapping): array => [
+                'source' => $mapping->source,
+                'destination' => $mapping->destination,
+            ],
+            $mappings,
+        );
+
+        self::assertSame(
+            [
+                ['source' => 'metadata/.github/linters/.markdown-lint.yml', 'destination' => '.github/linters/.markdown-lint.yml'],
+                ['source' => 'metadata/.github/linters/actionlint.yml', 'destination' => '.github/linters/actionlint.yml'],
+            ],
+            $pairs,
+            "Directory '{from, to}' entries must rewrite the source prefix to the destination prefix on each walked file.",
+        );
+    }
+
+    public function testExpandAppliesFromToRemapForFileEntry(): void
+    {
+        $this->seedFile('metadata/.editorconfig');
+
+        $mappings = $this->expand(
+            [
+                'copy' => [['from' => 'metadata/.editorconfig', 'to' => '.editorconfig']],
+                'exclude' => [],
+                'modes' => [],
+            ],
+        );
+
+        $pairs = array_map(
+            static fn(FileMapping $mapping): array => [
+                'source' => $mapping->source,
+                'destination' => $mapping->destination,
+            ],
+            $mappings,
+        );
+
+        self::assertSame(
+            [['source' => 'metadata/.editorconfig', 'destination' => '.editorconfig']],
+            $pairs,
+            "File '{from, to}' entries must remap the destination while preserving the provider-relative source.",
+        );
+    }
+
     public function testExpandAppliesUserExcludesOnTopOfDefaults(): void
     {
         $this->seedFile('src/controllers/SiteController.php');

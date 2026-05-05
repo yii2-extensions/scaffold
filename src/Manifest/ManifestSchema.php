@@ -7,6 +7,7 @@ namespace yii\scaffold\Manifest;
 use RuntimeException;
 
 use function array_column;
+use function array_is_list;
 use function array_key_exists;
 use function implode;
 use function in_array;
@@ -109,6 +110,12 @@ final class ManifestSchema
     {
         if (!array_key_exists('copy', $raw) || !is_array($raw['copy'])) {
             throw new RuntimeException('Manifest is missing required key "copy" or it is not an array.');
+        }
+
+        if ($raw['copy'] !== [] && !array_is_list($raw['copy'])) {
+            throw new RuntimeException(
+                'Manifest "copy" must be a sequential list of entries, not an associative object.',
+            );
         }
 
         if ($raw['copy'] === []) {
