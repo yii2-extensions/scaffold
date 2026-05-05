@@ -109,7 +109,7 @@ See [`docs/console.md`](docs/console.md) for the full reference.
 
 ## Documentation
 
-- 📥 [Installation Guide](docs/installation.md)
+- 📚 [Installation Guide](docs/installation.md)
 - ⚙️ [Configuration Reference](docs/configuration.md)
 - 📦 [Creating Providers](docs/providers.md)
 - 🔀 [File Modes](docs/modes.md)
