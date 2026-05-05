@@ -1,3 +1,7 @@
+# AI agents (if present)
+.codex
+.claude
+
 # codecoverage (if present)
 code_coverage
 
@@ -24,12 +28,13 @@ nbproject
 # node_modules (if present)
 node_modules
 package-lock.json
-
-# phpstorm project (if present)
-.idea
+!src/assets/package-lock.json
 
 # phpactor (if present)
 .phpactor.*
+
+# phpstorm project (if present)
+.idea
 
 # phpunit (if present)
 .phpunit.cache
@@ -52,3 +57,4 @@ Thumbs.db
 .buildpath
 .project
 .settings
+phpunit.xml

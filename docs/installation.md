@@ -13,7 +13,7 @@ PHP projects as long as they use Composer.
 Add the plugin to your project:
 
 ```bash
-composer require yii2-extensions/scaffold
+composer require yii2-extensions/scaffold:^0.1
 ```
 
 Because `yii2-extensions/scaffold` is a Composer plugin, you must allow it explicitly:
@@ -55,8 +55,8 @@ The plugin applies all file mappings declared by the listed providers and writes
 ## Commit the lockfile
 
 `scaffold-lock.json` records the hash of every file written by the scaffold process.
-Commit it to version control alongside `composer.lock` so that collaborators and CI
-can detect user-modified files and reproduce the exact scaffold state.
+Commit it to version control alongside `composer.lock` so that collaborators and CI can detect user-modified files and
+reproduce the exact scaffold state.
 
 ```bash
 git add scaffold-lock.json
