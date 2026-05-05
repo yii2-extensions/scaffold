@@ -14,6 +14,7 @@ use function explode;
 use function implode;
 use function preg_replace;
 use function sprintf;
+use function str_contains;
 use function str_ends_with;
 use function substr;
 
@@ -60,6 +61,10 @@ final class AppendMode implements ModeInterface
             throw new RuntimeException(sprintf('Could not read destination file "%s".', $destination));
         }
 
+        // Detect the destination EOL style BEFORE normalising so the appended block can be emitted in the same style,
+        // avoiding mixed CRLF/LF output on Windows-style files.
+        $eol = self::detectEol($consumerContent);
+
         // Normalise line endings so CRLF/CR destinations diff identically against an LF stub.
         $providerContent = (string) preg_replace('/\r\n|\r/', "\n", $providerContent);
         $consumerContent = (string) preg_replace('/\r\n|\r/', "\n", $consumerContent);
@@ -86,14 +91,38 @@ final class AppendMode implements ModeInterface
             return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);
         }
 
-        $separator = $consumerContent === '' || str_ends_with($consumerContent, "\n") ? '' : "\n";
-        $appendData = $separator . implode("\n", $missing) . "\n";
+        $separator = $consumerContent === '' || str_ends_with($consumerContent, "\n") ? '' : $eol;
+        $appendData = $separator . implode($eol, $missing) . $eol;
 
         if (file_put_contents($destination, $appendData, FILE_APPEND) === false) {
             throw new RuntimeException(sprintf('Could not write to "%s".', $destination));
         }
 
         return new ApplyResult(ApplyOutcome::Written, $hasher->hash($destination), null);
+    }
+
+    /**
+     * Detects the dominant end-of-line sequence used by `$content`.
+     *
+     * Returns `"\r\n"` for Windows-style content, `"\r"` for legacy Mac-style content, and `"\n"` otherwise (Unix or
+     * empty). The result is used to emit appended lines in the same EOL style as the destination so the file does not
+     * end up with mixed line endings.
+     *
+     * @param string $content Original (un-normalised) destination content.
+     *
+     * @return string The detected EOL sequence.
+     */
+    private static function detectEol(string $content): string
+    {
+        if (str_contains($content, "\r\n")) {
+            return "\r\n";
+        }
+
+        if (str_contains($content, "\r")) {
+            return "\r";
+        }
+
+        return "\n";
     }
 
     /**

@@ -92,6 +92,56 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testEmitsAppendedLinesUsingCREolWhenDestinationUsesCR(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Legacy Mac-style CR-only destination.
+        file_put_contents($projectDir . '/output.txt', "alpha\r");
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\rbeta\r",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must emit appended lines using CR when the destination uses CR-only EOL.',
+        );
+    }
+
+    public function testEmitsAppendedLinesUsingCRLFEolWhenDestinationUsesCRLF(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Windows-style CRLF destination.
+        file_put_contents($projectDir . '/output.txt', "alpha\r\n");
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\r\nbeta\r\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must emit appended lines using CRLF when the destination uses CRLF EOL.',
+        );
+    }
+
     public function testHandlesEmptyStub(): void
     {
         $projectDir = "{$this->tempDir}/project";
