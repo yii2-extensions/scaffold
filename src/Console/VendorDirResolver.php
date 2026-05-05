@@ -47,6 +47,7 @@ final class VendorDirResolver
             return self::absolutize($env, $projectRoot);
         }
 
+        // Windows-only normalisation: rtrim of the backslash variant cannot be exercised on POSIX.
         // @codeCoverageIgnoreStart
         $trimmedRoot = rtrim($projectRoot, '/\\');
         // @codeCoverageIgnoreEnd
@@ -103,6 +104,7 @@ final class VendorDirResolver
             return rtrim($path, '/\\');
         }
 
+        // Windows-only normalisation: ltrim of the backslash variant cannot be exercised on POSIX.
         // @codeCoverageIgnoreStart
         $strippedPath = ltrim($path, '/\\');
         // @codeCoverageIgnoreEnd

@@ -142,6 +142,7 @@ final class PathResolver
     {
         $relative = ltrim($source, '/\\');
 
+        // Windows-only normalisation: str_replace is a no-op on POSIX (separator is '/').
         // @codeCoverageIgnoreStart
         $relative = str_replace('/', DIRECTORY_SEPARATOR, $relative);
         // @codeCoverageIgnoreEnd

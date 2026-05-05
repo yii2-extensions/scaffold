@@ -484,12 +484,21 @@ final class ManifestExpanderTest extends TestCase
     /**
      * Invokes {@see ManifestExpander::expand()} against the test's temp directory.
      *
-     * @param array{copy: list<string>, exclude: list<string>, modes: array<string, FileMode>} $manifest
+     * Accepts the legacy string form (`'copy' => ['src']`) and normalises it to the typed `{from, to}` form expected
+     * by the expander, so existing tests do not need to be rewritten when only a single path is being declared.
+     *
+     * @param array{copy: list<string|array{from: string, to: string}>, exclude: list<string>, modes: array<string, FileMode>} $manifest
      *
      * @return list<FileMapping>
      */
     private function expand(array $manifest, string $providerName = 'pkg/test'): array
     {
+        $manifest['copy'] = array_map(
+            static fn(mixed $entry): array => is_string($entry) ? ['from' => $entry, 'to' => $entry] : $entry,
+            $manifest['copy'],
+        );
+
+        /** @var array{copy: list<array{from: string, to: string}>, exclude: list<string>, modes: array<string, FileMode>} $manifest */
         return (new ManifestExpander())->expand($manifest, $this->tempDir, $providerName);
     }
 
