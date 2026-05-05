@@ -2,7 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
+The format is based on [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## 0.1.0 Under development
 
@@ -22,3 +23,4 @@ The format is based on Keep a Changelog, and this project adheres to Semantic Ve
 - feat!: make `AppendMode` idempotent: append only stub lines not already present in the destination; repeated runs are a no-op and consumer-specific additions are never removed or duplicated.
 - feat: support `{from, to}` object entries in `copy[]` for source-to-destination remapping; providers can ship templates from a dedicated subdirectory (for example, `metadata/`) without polluting the consumer's vendor with their own development copies.
 - feat: support `extra.scaffold.auto` flag so consumers can opt out of post-install/post-update/post-create-project auto-trigger and manage provider templates manually via `vendor/bin/scaffold`.
+- chore: prepare the `0.1.0` release.

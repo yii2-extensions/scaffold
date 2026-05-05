@@ -36,7 +36,7 @@
 ## Installation
 
 ```bash
-composer require yii2-extensions/scaffold
+composer require yii2-extensions/scaffold:^0.1
 composer config allow-plugins.yii2-extensions/scaffold true
 ```
 
