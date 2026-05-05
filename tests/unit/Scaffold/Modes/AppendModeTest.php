@@ -92,6 +92,35 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testHandlesEmptyStub(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\n");
+
+        // Empty stub yields zero provider lines; the destination must remain untouched.
+        $this->makeSourceFile('');
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            "AppendMode must return 'ApplyOutcome::Skipped' when the stub is empty.",
+        );
+        self::assertSame(
+            "alpha\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must leave the destination untouched when the stub is empty.',
+        );
+    }
+
     public function testInsertsSeparatorWhenDestinationDoesNotEndWithNewline(): void
     {
         $projectDir = "{$this->tempDir}/project";
@@ -112,6 +141,37 @@ final class AppendModeTest extends TestCase
             "existing\nappended\n",
             file_get_contents($projectDir . '/output.txt'),
             'AppendMode must insert a newline separator when the destination does not end with one.',
+        );
+    }
+
+    public function testIsIdempotentWhenConsumerHasNoTrailingNewlineAndStubDoes(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Destination has no trailing newline; stub ends with one. The trailing-EOL stripping must treat both as
+        // equivalent so no phantom empty line gets appended.
+        file_put_contents($projectDir . '/output.txt', 'alpha');
+
+        $this->makeSourceFile("alpha\n");
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            "AppendMode must treat 'alpha' and 'alpha\\n' as equivalent for diffing purposes.",
+        );
+        self::assertSame(
+            'alpha',
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must not modify a destination that differs from the stub only by the final EOL.',
         );
     }
 

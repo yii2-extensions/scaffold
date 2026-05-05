@@ -92,6 +92,52 @@ final class ScaffolderTest extends TestCase
         );
     }
 
+    public function testAppendModeRefreshesLockOwnershipWhenNewProviderClaimsExistingFile(): void
+    {
+        $builder = new FakeProjectBuilder($this->tempDir);
+
+        // Two providers ship the same '.gitignore' content; the destination already matches both stubs identically.
+        $builder->createStubFile('yii2-extensions/old-provider', '.gitignore', "*.log\n");
+        $builder->createStubFile('yii2-extensions/new-provider', '.gitignore', "*.log\n");
+        $builder->createProjectFile('.gitignore', "*.log\n");
+
+        $oldProvider = $this->makeProviderPackage(
+            'yii2-extensions/old-provider',
+            ['scaffold' => ['copy' => ['.gitignore'], 'modes' => ['.gitignore' => 'append']]],
+        );
+        $newProvider = $this->makeProviderPackage(
+            'yii2-extensions/new-provider',
+            ['scaffold' => ['copy' => ['.gitignore'], 'modes' => ['.gitignore' => 'append']]],
+        );
+
+        // First run: only the old provider is allowed; lock records its ownership.
+        $oldRoot = $this->makeRootPackage(['yii2-extensions/old-provider']);
+        $oldScaffolder = $this->makeScaffolder(['yii2-extensions/old-provider'], $builder);
+        $oldScaffolder->scaffold($oldRoot, [$oldProvider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $oldLock = (new LockFile($builder->getProjectRoot()))->read();
+
+        self::assertSame(
+            'yii2-extensions/old-provider',
+            $oldLock['files']['.gitignore']['provider'] ?? null,
+            'Initial scaffold must record the old provider as the owner.',
+        );
+
+        // Second run: only the new provider is allowed. AppendMode finds no missing lines (Skipped) but the
+        // ownership metadata must be refreshed to point to the new provider.
+        $newRoot = $this->makeRootPackage(['yii2-extensions/new-provider']);
+        $newScaffolder = $this->makeScaffolder(['yii2-extensions/new-provider'], $builder);
+        $newScaffolder->scaffold($newRoot, [$newProvider], $builder->getProjectRoot(), $builder->getVendorDir(), true);
+
+        $newLock = (new LockFile($builder->getProjectRoot()))->read();
+
+        self::assertSame(
+            'yii2-extensions/new-provider',
+            $newLock['files']['.gitignore']['provider'] ?? null,
+            'Skipped append must refresh the lock ownership metadata when a different provider claims the file.',
+        );
+    }
+
     public function testAppendModeSkippedOnInstallWhenAlreadyInLock(): void
     {
         $builder = new FakeProjectBuilder($this->tempDir);

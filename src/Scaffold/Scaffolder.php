@@ -172,14 +172,21 @@ final readonly class Scaffolder
                         'mode' => $mapping->mode->value,
                     ];
                     $dirty = true;
-                } elseif ($result->newHash !== '' && !isset($lockData['files'][$destination])) {
-                    $lockData['files'][$destination] = [
-                        'hash' => $result->newHash,
+                } elseif ($result->newHash !== '') {
+                    // Refresh ownership metadata when a different provider claims the file but the on-disk content
+                    // is already in sync; the hash is left intact so replace-mode user-modification detection keeps
+                    // its original baseline.
+                    $expected = [
+                        'hash' => $lockData['files'][$destination]['hash'] ?? $result->newHash,
                         'provider' => $mapping->providerName,
                         'source' => $mapping->source,
                         'mode' => $mapping->mode->value,
                     ];
-                    $dirty = true;
+
+                    if (($lockData['files'][$destination] ?? null) !== $expected) {
+                        $lockData['files'][$destination] = $expected;
+                        $dirty = true;
+                    }
                 }
             } catch (Throwable $e) {
                 $this->io->writeError(
