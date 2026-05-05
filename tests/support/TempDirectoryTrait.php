@@ -52,7 +52,7 @@ trait TempDirectoryTrait
             return;
         }
 
-        if (mkdir($path, 0777, recursive: true) === false && !is_dir($path)) {
+        if (mkdir($path, 0o777, recursive: true) === false && !is_dir($path)) {
             self::fail(sprintf('Failed to create test directory "%s".', $path));
         }
     }
@@ -68,7 +68,7 @@ trait TempDirectoryTrait
     {
         $path = sys_get_temp_dir() . '/scaffold-test-' . uniqid('', true);
 
-        if (mkdir($path, 0777, recursive: true) === false) {
+        if (mkdir($path, 0o777, recursive: true) === false) {
             throw new RuntimeException(sprintf('Could not create temp directory "%s".', $path));
         }
 

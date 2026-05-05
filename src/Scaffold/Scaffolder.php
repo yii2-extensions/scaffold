@@ -27,19 +27,19 @@ use function substr;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class Scaffolder
+final readonly class Scaffolder
 {
     /**
      * @var array<string, ModeInterface> Pre-instantiated mode implementations keyed by the backing value of
      * {@see FileMode} for efficient resolution during scaffolding.
      */
-    private readonly array $modes;
+    private array $modes;
 
     public function __construct(
-        private readonly ManifestLoader $loader,
-        private readonly Applier $applier,
-        private readonly LockFile $lockFile,
-        private readonly IOInterface $io,
+        private ManifestLoader $loader,
+        private Applier $applier,
+        private LockFile $lockFile,
+        private IOInterface $io,
     ) {
         $this->modes = [
             FileMode::Replace->value => new ReplaceMode(),
@@ -88,14 +88,14 @@ final class Scaffolder
             return;
         }
 
-        // index installed packages by name for O(1) lookup.
+        // Index installed packages by name for O(1) lookup.
         $byName = [];
 
         foreach ($installedPackages as $package) {
             $byName[$package->getName()] = $package;
         }
 
-        // merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
+        // Merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
         $merged = [];
         $providerEntries = [];
 
@@ -172,14 +172,21 @@ final class Scaffolder
                         'mode' => $mapping->mode->value,
                     ];
                     $dirty = true;
-                } elseif ($result->newHash !== '' && !isset($lockData['files'][$destination])) {
-                    $lockData['files'][$destination] = [
-                        'hash' => $result->newHash,
+                } elseif ($result->newHash !== '') {
+                    // Refresh ownership metadata when a different provider claims the file but the on-disk content
+                    // is already in sync; the hash is left intact so replace-mode user-modification detection keeps
+                    // its original baseline.
+                    $expected = [
+                        'hash' => $lockData['files'][$destination]['hash'] ?? $result->newHash,
                         'provider' => $mapping->providerName,
                         'source' => $mapping->source,
                         'mode' => $mapping->mode->value,
                     ];
-                    $dirty = true;
+
+                    if (($lockData['files'][$destination] ?? null) !== $expected) {
+                        $lockData['files'][$destination] = $expected;
+                        $dirty = true;
+                    }
                 }
             } catch (Throwable $e) {
                 $this->io->writeError(

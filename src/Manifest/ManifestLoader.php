@@ -26,9 +26,9 @@ use function str_starts_with;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class ManifestLoader
+final readonly class ManifestLoader
 {
-    public function __construct(private readonly ManifestSchema $schema, private readonly ManifestExpander $expander) {}
+    public function __construct(private ManifestSchema $schema, private ManifestExpander $expander) {}
 
     /**
      * Loads the provider's manifest and expands it into concrete file mappings.
@@ -78,7 +78,7 @@ final class ManifestLoader
             );
         }
 
-        // reject absolute paths: POSIX ('/foo'), Windows UNC/backslash ('\foo'), Windows drive ('C:\foo').
+        // Reject absolute paths: POSIX ('/foo'), Windows UNC/backslash ('\foo'), Windows drive ('C:\foo').
         $isAbsolute = str_starts_with($manifestPath, '/')
             || str_starts_with($manifestPath, '\\')
             || preg_match('/^[A-Za-z]:/', $manifestPath) === 1;

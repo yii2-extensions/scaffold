@@ -34,14 +34,14 @@ final class StatusServiceTest extends TestCase
             [
                 'providers' => [],
                 'files' => [
-                    // first entry fails validation (path traversal) and must emit 'error' while the loop continues.
+                    // First entry fails validation (path traversal) and must emit 'error' while the loop continues.
                     '../escape.php' => [
                         'hash' => 'sha256:abc',
                         'provider' => 'pkg/name',
                         'source' => 'stubs/escape.php',
                         'mode' => 'replace',
                     ],
-                    // second entry must still be reported after the first hit the error-continue path.
+                    // Second entry must still be reported after the first hit the error-continue path.
                     'valid.txt' => [
                         'hash' => $hash,
                         'provider' => 'pkg/name',
@@ -348,7 +348,7 @@ final class StatusServiceTest extends TestCase
         (new StatusService())->run($this->tempDir, $out);
 
         // colFile=max(4, len('../x')=4)=4, colProvider=max(8,1)=8, colMode=max(4,1)=4, colStatus=max(6, 5)=6
-        // separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
+        // Separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
         self::assertStringContainsString(
             PHP_EOL . str_repeat('-', 28) . PHP_EOL,
             $out->stdoutBuffer,
@@ -474,7 +474,7 @@ final class StatusServiceTest extends TestCase
         (new StatusService())->run($this->tempDir, $out);
 
         // colFile=max(4,1)=4, colProvider=max(8,1)=8, colMode=max(4,1)=4, colStatus=max(6,6 for 'synced')=6
-        // separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
+        // Separator width = 4 + 8 + 4 + 6 + 6 = 28 dashes.
         self::assertStringContainsString(
             PHP_EOL . str_repeat('-', 28) . PHP_EOL,
             $out->stdoutBuffer,

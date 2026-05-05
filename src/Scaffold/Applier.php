@@ -21,13 +21,13 @@ use function realpath;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class Applier
+final readonly class Applier
 {
     public function __construct(
-        private readonly PackageAllowlist $allowlist,
-        private readonly PathValidator $pathValidator,
-        private readonly Hasher $hasher,
-        private readonly IOInterface $io,
+        private PackageAllowlist $allowlist,
+        private PathValidator $pathValidator,
+        private Hasher $hasher,
+        private IOInterface $io,
     ) {}
 
     /**

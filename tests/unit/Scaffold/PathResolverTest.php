@@ -46,7 +46,7 @@ final class PathResolverTest extends TestCase
             self::markTestSkipped('POSIX umask-based permissions do not apply to NTFS (Windows always reports 0777).');
         }
 
-        $oldUmask = umask(0022);
+        $oldUmask = umask(0o022);
 
         try {
             $dir = $this->tempDir . '/fresh';
@@ -58,8 +58,8 @@ final class PathResolverTest extends TestCase
                 'Directory must be created if it does not exist.',
             );
             self::assertSame(
-                0755,
-                fileperms($dir) & 0777,
+                0o755,
+                fileperms($dir) & 0o777,
                 "Directory must be created with '0777' mode so umask '0022' yields '0755' effective permissions.",
             );
         } finally {
@@ -71,7 +71,7 @@ final class PathResolverTest extends TestCase
     {
         $dir = "{$this->tempDir}/existing";
 
-        mkdir($dir, 0777, recursive: true);
+        mkdir($dir, 0o777, recursive: true);
 
         PathResolver::ensureDirectory($dir . '/file.txt');
 
@@ -94,15 +94,15 @@ final class PathResolverTest extends TestCase
             static function () use (&$isDirCalls): bool {
                 $isDirCalls++;
 
-                // first call (guard): directory does not exist yet, so attempt mkdir.
-                // second call (recheck after mkdir failure): another process created the directory in between.
+                // First call (guard): directory does not exist yet, so attempt mkdir.
+                // Second call (recheck after mkdir failure): another process created the directory in between.
                 return $isDirCalls >= 2;
             },
         );
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold',
             'mkdir',
-            [$dir, 0777, true, null],
+            [$dir, 0o777, true, null],
             false,
         );
         PathResolver::ensureDirectory($dir . '/file.txt');
@@ -127,7 +127,7 @@ final class PathResolverTest extends TestCase
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold',
             'mkdir',
-            [$dir, 0777, true, null],
+            [$dir, 0o777, true, null],
             false,
         );
 
@@ -208,7 +208,7 @@ final class PathResolverTest extends TestCase
     {
         $vendor = $this->tempDir;
 
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+        mkdir($vendor . '/pkg/name', 0o777, recursive: true);
 
         $result = PathResolver::resolveProviderRoot(
             $vendor,
@@ -231,7 +231,7 @@ final class PathResolverTest extends TestCase
     {
         $vendor = $this->tempDir . '/vendor';
 
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+        mkdir($vendor . '/pkg/name', 0o777, recursive: true);
 
         $absoluteLockPath = realpath($vendor . '/pkg/name');
 
@@ -253,8 +253,8 @@ final class PathResolverTest extends TestCase
         $vendor = "{$this->tempDir}/vendor";
         $sibling = "{$this->tempDir}/vendorsibling";
 
-        mkdir($vendor, 0777, recursive: true);
-        mkdir($sibling, 0777, recursive: true);
+        mkdir($vendor, 0o777, recursive: true);
+        mkdir($sibling, 0o777, recursive: true);
 
         $result = PathResolver::resolveProviderRoot($vendor, 'pkg/name', ['path' => $sibling]);
 
@@ -269,7 +269,7 @@ final class PathResolverTest extends TestCase
         $projectRoot = $this->tempDir;
         $vendor = "{$projectRoot}/vendor";
 
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+        mkdir($vendor . '/pkg/name', 0o777, recursive: true);
 
         $result = PathResolver::resolveProviderRoot(
             $vendor,
@@ -293,7 +293,7 @@ final class PathResolverTest extends TestCase
     {
         $vendor = $this->tempDir;
 
-        mkdir($vendor . '/pkg/name', 0777, recursive: true);
+        mkdir($vendor . '/pkg/name', 0o777, recursive: true);
 
         $insidePath = "{$vendor}/pkg/name";
 
@@ -316,9 +316,9 @@ final class PathResolverTest extends TestCase
         $projectRoot = PathResolver::destination($tempDir, 'proj');
         $vendor = PathResolver::destination($projectRoot, 'vendor');
 
-        mkdir($vendor, 0777, recursive: true);
+        mkdir($vendor, 0o777, recursive: true);
 
-        // relative path normalized through the same helper the production join uses, minus the leading separator.
+        // Relative path normalized through the same helper the production join uses, minus the leading separator.
         $relativeInVendor = ltrim(PathResolver::source('', 'vendor/pkg/name-missing'), '/\\');
 
         $result = PathResolver::resolveProviderRoot(
@@ -348,7 +348,7 @@ final class PathResolverTest extends TestCase
 
     public function testSourceStripsLeadingSeparatorFromSource(): void
     {
-        // single segment avoids `str_replace('/', DIRECTORY_SEPARATOR, ...)` normalization differences on Windows.
+        // Single segment avoids `str_replace('/', DIRECTORY_SEPARATOR, ...)` normalization differences on Windows.
         self::assertSame(
             '/tmp/provider' . DIRECTORY_SEPARATOR . 'file.txt',
             PathResolver::source('/tmp/provider', '/file.txt'),
@@ -377,17 +377,17 @@ final class PathResolverTest extends TestCase
         file_put_contents($source, "#!/bin/sh\necho hello\n");
         file_put_contents($destination, "#!/bin/sh\necho hello\n");
 
-        chmod($source, 0755);
-        chmod($destination, 0644);
+        chmod($source, 0o755);
+        chmod($destination, 0o644);
 
-        $oldUmask = umask(0022);
+        $oldUmask = umask(0o022);
 
         try {
             PathResolver::syncPermissions($source, $destination);
 
             self::assertSame(
-                0755,
-                fileperms($destination) & 0777,
+                0o755,
+                fileperms($destination) & 0o777,
                 "Under a permissive '0022' umask, 'syncPermissions()' must preserve the source executable bit.",
             );
         } finally {
@@ -407,17 +407,17 @@ final class PathResolverTest extends TestCase
         file_put_contents($source, "#!/bin/sh\n");
         file_put_contents($destination, "#!/bin/sh\n");
 
-        chmod($source, 0755);
-        chmod($destination, 0600);
+        chmod($source, 0o755);
+        chmod($destination, 0o600);
 
-        $oldUmask = umask(0077);
+        $oldUmask = umask(0o077);
 
         try {
             PathResolver::syncPermissions($source, $destination);
 
             self::assertSame(
-                0700,
-                fileperms($destination) & 0777,
+                0o700,
+                fileperms($destination) & 0o777,
                 "Under a restrictive '0077' umask, 'syncPermissions()' must mask source perms and drop group/other bits.",
             );
         } finally {
@@ -437,18 +437,18 @@ final class PathResolverTest extends TestCase
         file_put_contents($source, "#!/bin/sh\n");
         file_put_contents($destination, "#!/bin/sh\n");
 
-        chmod($source, 0640);
-        chmod($destination, 0600);
+        chmod($source, 0o640);
+        chmod($destination, 0o600);
 
         // '0000' umask isolates the `& 0777` mask from the umask step so `& → |` mutations are directly observable.
-        $oldUmask = umask(0000);
+        $oldUmask = umask(0o000);
 
         try {
             PathResolver::syncPermissions($source, $destination);
 
             self::assertSame(
-                0640,
-                fileperms($destination) & 0777,
+                0o640,
+                fileperms($destination) & 0o777,
                 "Under a permissive '0000' umask, the destination must land on exactly the source permissions (0640).",
             );
         } finally {
@@ -466,13 +466,13 @@ final class PathResolverTest extends TestCase
 
         file_put_contents($destination, "#!/bin/sh\n");
 
-        chmod($destination, 0644);
+        chmod($destination, 0o644);
 
         PathResolver::syncPermissions("{$this->tempDir}/does-not-exist", $destination);
 
         self::assertSame(
-            0644,
-            fileperms($destination) & 0777,
+            0o644,
+            fileperms($destination) & 0o777,
             "When 'fileperms()' returns 'false', 'syncPermissions()' must return early and leave the destination untouched.",
         );
     }

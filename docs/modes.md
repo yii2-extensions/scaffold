@@ -6,12 +6,12 @@ when a file has been modified by the developer after scaffolding.
 
 ## Mode reference
 
-| Mode       | File absent                | File present (unmodified)                                                                                                                             | File present (user-modified)                              |
-| ---------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                   | **Skips** — emits warning to stderr.                      |
-| `preserve` | Writes stub, records hash. | **Skips**; never overwrites.                                                                                                                          | **Skips**; never overwrites.                              |
-| `append`   | Writes stub, records hash. | Appends stub content (`FILE_APPEND`), updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).          | Appends stub content, updates hash (full scaffold only).  |
-| `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock). | Prepends stub content, updates hash (full scaffold only). |
+| Mode       | File absent                | File present (unmodified)                                                                                                                                     | File present (user-modified)                                                                          |
+| ---------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                           | **Skips** emits warning to stderr.                                                                    |
+| `preserve` | Writes stub, records hash. | **Skips**; never overwrites.                                                                                                                                  | **Skips**; never overwrites.                                                                          |
+| `append`   | Writes stub, records hash. | Appends only stub lines not already present in the file (idempotent line merge); updates hash. Returns `Skipped` when every stub line is already in the file. | Appends only stub lines not already present in the file (idempotent line merge); user lines are kept. |
+| `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).         | Prepends stub content, updates hash (full scaffold only).                                             |
 
 ## Hash tracking
 
@@ -23,9 +23,11 @@ On subsequent runs the plugin compares the current on-disk hash to the recorded 
 - **Hashes differ**; the developer has modified the file. For `replace`, the plugin skips the file and writes a warning
   to stderr. For `preserve`, the file is always skipped regardless of hash.
 
-`append` and `prepend` do not compare hashes; they always add content. On partial scaffold runs (`post-install-cmd`,
-`post-update-cmd`) these modes are skipped for files already recorded in the lockfile, preventing duplicate content on
-repeated `composer install` calls.
+`append` does not compare hashes; instead it diffs the stub lines against the destination and writes only the missing
+ones. The operation is therefore idempotent: repeated runs over a file that already contains every stub line are a no-op.
+On partial scaffold runs (`post-install-cmd`, `post-update-cmd`), `append` and `prepend` are also skipped at the
+scaffolder level for files already recorded in the lockfile as a performance optimisation; the line-diff guarantees
+correctness even without that skip.
 
 ## replace
 
@@ -53,9 +55,17 @@ Once written, the file is never touched again by the scaffold process.
 
 ## append
 
-Appends the stub content to the end of the destination file on every full scaffold run.
-Useful for adding entries to `.gitignore`, environment variable lists, or configuration arrays
-where concatenation is safe.
+Idempotent line merge. The plugin reads both the stub and the destination, splits each on `\n` (after trimming the
+trailing newline), and appends only the stub lines that are not already present in the destination. Repeated runs over
+a destination that already contains every stub line are a no-op (`ApplyOutcome::Skipped`); developer-added lines are
+never removed.
+
+Use it for line-based, comment-tolerant files where the destination may already contain the stub content (because the
+project follows the same baseline) or where the developer routinely adds project-specific entries:
+
+- `.gitignore`, `.gitattributes`, `.editorconfig`
+- `.prettierignore`, `.stylelintignore`
+- Environment variable lists, plain-text allowlists
 
 ```json
 ".gitignore": {
@@ -63,6 +73,9 @@ where concatenation is safe.
     "mode": "append"
 }
 ```
+
+> **Note:** `append` operates at the line level. It is not safe for structured documents (JSON, YAML, TOML, XML); use
+> `replace` or `preserve` for those.
 
 ## prepend
 
@@ -89,5 +102,6 @@ This overwrites the file, computes the new hash, and updates `scaffold-lock.json
 
 ## Next steps
 
+- 📖 [Readme](../README.md)
 - 🖥️ [Console Commands](console.md)
 - ⚙️ [Configuration Reference](configuration.md)

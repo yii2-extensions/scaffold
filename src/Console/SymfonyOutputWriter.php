@@ -20,9 +20,9 @@ use Symfony\Component\Console\Output\{ConsoleOutputInterface, OutputInterface};
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class SymfonyOutputWriter implements OutputWriter
+final readonly class SymfonyOutputWriter implements OutputWriter
 {
-    public function __construct(private readonly OutputInterface $output) {}
+    public function __construct(private OutputInterface $output) {}
 
     /**
      * Writes `$message` to stderr followed by a single trailing newline, bypassing Symfony's formatter.

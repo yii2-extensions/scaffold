@@ -48,7 +48,7 @@ final class ReplaceModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'original scaffold content');
 
         $this->makeSourceFile('updated stub content');
@@ -101,14 +101,14 @@ final class ReplaceModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'original scaffold content');
 
         $this->makeSourceFile('updated stub content');
 
         $hasher = new Hasher();
 
-        // lock hash recorded for original; user then modified the file to different content.
+        // Lock hash recorded for original; user then modified the file to different content.
         $lockHash = 'sha256:' . hash('sha256', 'the-original-hash-that-no-longer-matches');
 
         $result = (new ReplaceMode())->apply(
@@ -137,7 +137,7 @@ final class ReplaceModeTest extends TestCase
             $result->warning,
             'Expected warning to mention the file name when file is skipped.',
         );
-        // file must NOT be overwritten.
+        // File must NOT be overwritten.
         self::assertSame(
             'original scaffold content',
             file_get_contents($projectDir . '/output.txt'),
@@ -155,9 +155,9 @@ final class ReplaceModeTest extends TestCase
 
         $this->makeSourceFile('#!/bin/sh');
 
-        chmod($source, 0755);
+        chmod($source, 0o755);
 
-        $oldUmask = umask(0022);
+        $oldUmask = umask(0o022);
 
         try {
             (new ReplaceMode())->apply(
@@ -168,8 +168,8 @@ final class ReplaceModeTest extends TestCase
             );
 
             self::assertSame(
-                0755,
-                fileperms("{$this->tempDir}/project/output.txt") & 0777,
+                0o755,
+                fileperms("{$this->tempDir}/project/output.txt") & 0o777,
                 "After 'ReplaceMode::apply' copies the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {
@@ -230,7 +230,7 @@ final class ReplaceModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'any existing content');
 
         $this->makeSourceFile('fresh stub');
@@ -239,7 +239,7 @@ final class ReplaceModeTest extends TestCase
             $this->makeMapping(),
             $projectDir,
             new Hasher(),
-            null, // no lock hash treat as untracked, overwrite unconditionally
+            null, // No lock hash treat as untracked, overwrite unconditionally.
         );
 
         self::assertSame(

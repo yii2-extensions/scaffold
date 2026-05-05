@@ -139,7 +139,7 @@ final class LockFileTest extends TestCase
 
         $first = $lock->read();
 
-        // remove the file from disk subsequent reads must still hit the in-memory cache.
+        // Remove the file from disk subsequent reads must still hit the in-memory cache.
         unlink($this->tempDir . '/scaffold-lock.json');
 
         self::assertSame(
@@ -205,7 +205,7 @@ final class LockFileTest extends TestCase
     {
         $lock = new LockFile($this->tempDir);
 
-        // ask the LockFile for the exact path so the mocker match honors the platform's DIRECTORY_SEPARATOR.
+        // Ask the LockFile for the exact path so the mocker match honors the platform's DIRECTORY_SEPARATOR.
         $path = $lock->getPath();
 
         file_put_contents($path, '{"providers":{},"files":{}}');
@@ -225,7 +225,7 @@ final class LockFileTest extends TestCase
 
     public function testReadThrowsWhenJsonDecodesToNonObject(): void
     {
-        // valid JSON, but it decodes to a scalar `is_array($decoded)` must be `false`, triggering the structural check.
+        // Valid JSON, but it decodes to a scalar `is_array($decoded)` must be `false`, triggering the structural check.
         file_put_contents($this->tempDir . '/scaffold-lock.json', '"just a string"');
 
         $this->expectException(RuntimeException::class);
@@ -305,7 +305,7 @@ final class LockFileTest extends TestCase
 
         $tmp = "{$path}.tmp";
 
-        // simulate `file_put_contents` succeeding but `rename` failing, exercising the cleanup + throw branch.
+        // Simulate `file_put_contents` succeeding but `rename` failing, exercising the cleanup + throw branch.
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'rename',

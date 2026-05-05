@@ -46,10 +46,10 @@ final class PreserveModeTest extends TestCase
 
     public function testLockHashIsIgnored(): void
     {
-        // preserveMode never overwrites the lock hash is irrelevant.
+        // 'PreserveMode' never overwrites the lock hash is irrelevant.
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user content');
 
         $this->makeSourceFile('different stub');
@@ -77,7 +77,7 @@ final class PreserveModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user content');
 
         $this->makeSourceFile();
@@ -104,7 +104,7 @@ final class PreserveModeTest extends TestCase
     {
         $projectDir = "{$this->tempDir}/project";
 
-        mkdir($projectDir, 0777, recursive: true);
+        mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', 'user content');
 
         $this->makeSourceFile('stub content');
@@ -121,7 +121,7 @@ final class PreserveModeTest extends TestCase
             $result->outcome,
             'PreserveMode must skip the file when it already exists.',
         );
-        // existing file must not be modified.
+        // Existing file must not be modified.
         self::assertSame(
             'user content',
             file_get_contents($projectDir . '/output.txt'),
@@ -143,9 +143,9 @@ final class PreserveModeTest extends TestCase
 
         $this->makeSourceFile('#!/bin/sh');
 
-        chmod($source, 0755);
+        chmod($source, 0o755);
 
-        $oldUmask = umask(0022);
+        $oldUmask = umask(0o022);
 
         try {
             (new PreserveMode())->apply(
@@ -156,8 +156,8 @@ final class PreserveModeTest extends TestCase
             );
 
             self::assertSame(
-                0755,
-                fileperms("{$this->tempDir}/project/output.txt") & 0777,
+                0o755,
+                fileperms("{$this->tempDir}/project/output.txt") & 0o777,
                 "After 'PreserveMode::apply' copies the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {

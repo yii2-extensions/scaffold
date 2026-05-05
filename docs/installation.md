@@ -80,6 +80,7 @@ No framework bootstrap is required; the binary starts directly from Composer's a
 
 ## Next steps
 
+- 📖 [Readme](../README.md)
 - ⚙️ [Configuration Reference](configuration.md)
 - 📦 [Creating Providers](providers.md)
 - 🔀 [File Modes](modes.md)

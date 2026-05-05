@@ -23,6 +23,36 @@ use yii\scaffold\EventSubscriber;
 #[Group('scaffold')]
 final class EventSubscriberTest extends TestCase
 {
+    public function testOnPostCreateProjectShortCircuitsWhenInstallScaffoldRanIsTrue(): void
+    {
+        $reflection = new ReflectionClass(EventSubscriber::class);
+
+        $property = $reflection->getProperty('installScaffoldRan');
+
+        $property->setValue(null, true);
+
+        $io = new BufferIO();
+
+        $config = self::createStub(Config::class);
+
+        // An empty 'vendor-dir' would cause 'runScaffold' to write the 'Unable to resolve vendor-dir' error message.
+        // The early return must prevent 'runScaffold' from being reached, so the buffer must remain empty.
+        $config->method('get')->willReturn('');
+
+        $composer = self::createStub(Composer::class);
+
+        $composer->method('getConfig')->willReturn($config);
+
+        (new EventSubscriber())->onPostCreateProject(
+            new ScriptEvent(ScriptEvents::POST_CREATE_PROJECT_CMD, $composer, $io, true),
+        );
+
+        self::assertSame(
+            '',
+            $io->getOutput(),
+            "'onPostCreateProject' must short-circuit silently when 'installScaffoldRan' is 'true'.",
+        );
+    }
     public function testRegistersPostCreateProjectCmd(): void
     {
         self::assertArrayHasKey(

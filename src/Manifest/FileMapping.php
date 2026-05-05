@@ -10,13 +10,13 @@ namespace yii\scaffold\Manifest;
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
  */
-final class FileMapping
+final readonly class FileMapping
 {
     public function __construct(
-        public readonly string $destination,
-        public readonly string $source,
-        public readonly FileMode $mode,
-        public readonly string $providerName,
-        public readonly string $providerPath,
+        public string $destination,
+        public string $source,
+        public FileMode $mode,
+        public string $providerName,
+        public string $providerPath,
     ) {}
 }

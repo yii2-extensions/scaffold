@@ -347,7 +347,7 @@ final class ReapplyServiceTest extends TestCase
         $this->seedTracked('first.txt', "stub\n", "stub\n");
         $this->seedTracked('second.txt', "stub\n", "stub\n");
 
-        // target the first destination exclusively so the mock does not leak into the second iteration's hash calls.
+        // Target the first destination exclusively so the mock does not leak into the second iteration's hash calls.
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'hash_file',
@@ -746,13 +746,13 @@ final class ReapplyServiceTest extends TestCase
 
         $stubPath = "{$this->tempDir}/vendor/pkg/name/stubs/yii";
 
-        chmod($stubPath, 0755);
+        chmod($stubPath, 0o755);
 
         $destination = "{$this->tempDir}/yii";
 
-        chmod($destination, 0644);
+        chmod($destination, 0o644);
 
-        $oldUmask = umask(0022);
+        $oldUmask = umask(0o022);
 
         try {
             $out = new BufferedOutputWriter();
@@ -766,8 +766,8 @@ final class ReapplyServiceTest extends TestCase
             );
 
             self::assertSame(
-                0755,
-                fileperms($destination) & 0777,
+                0o755,
+                fileperms($destination) & 0o777,
                 "After 'ReapplyService' rewrites the stub, 'syncPermissions' must propagate the source exec bit (0755).",
             );
         } finally {
