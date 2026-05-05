@@ -94,8 +94,8 @@ final class PathResolverTest extends TestCase
             static function () use (&$isDirCalls): bool {
                 $isDirCalls++;
 
-                // first call (guard): directory does not exist yet, so attempt mkdir.
-                // second call (recheck after mkdir failure): another process created the directory in between.
+                // First call (guard): directory does not exist yet, so attempt mkdir.
+                // Second call (recheck after mkdir failure): another process created the directory in between.
                 return $isDirCalls >= 2;
             },
         );
@@ -318,7 +318,7 @@ final class PathResolverTest extends TestCase
 
         mkdir($vendor, 0o777, recursive: true);
 
-        // relative path normalized through the same helper the production join uses, minus the leading separator.
+        // Relative path normalized through the same helper the production join uses, minus the leading separator.
         $relativeInVendor = ltrim(PathResolver::source('', 'vendor/pkg/name-missing'), '/\\');
 
         $result = PathResolver::resolveProviderRoot(
@@ -348,7 +348,7 @@ final class PathResolverTest extends TestCase
 
     public function testSourceStripsLeadingSeparatorFromSource(): void
     {
-        // single segment avoids `str_replace('/', DIRECTORY_SEPARATOR, ...)` normalization differences on Windows.
+        // Single segment avoids `str_replace('/', DIRECTORY_SEPARATOR, ...)` normalization differences on Windows.
         self::assertSame(
             '/tmp/provider' . DIRECTORY_SEPARATOR . 'file.txt',
             PathResolver::source('/tmp/provider', '/file.txt'),

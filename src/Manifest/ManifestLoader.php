@@ -78,7 +78,7 @@ final readonly class ManifestLoader
             );
         }
 
-        // reject absolute paths: POSIX ('/foo'), Windows UNC/backslash ('\foo'), Windows drive ('C:\foo').
+        // Reject absolute paths: POSIX ('/foo'), Windows UNC/backslash ('\foo'), Windows drive ('C:\foo').
         $isAbsolute = str_starts_with($manifestPath, '/')
             || str_starts_with($manifestPath, '\\')
             || preg_match('/^[A-Za-z]:/', $manifestPath) === 1;

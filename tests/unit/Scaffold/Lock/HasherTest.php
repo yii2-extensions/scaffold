@@ -117,7 +117,7 @@ final class HasherTest extends TestCase
 
         file_put_contents($file, 'content');
 
-        // force `is_readable()` inside the Lock namespace to report false while the file still exists.
+        // Force `is_readable()` inside the Lock namespace to report false while the file still exists.
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'is_readable',
@@ -137,7 +137,7 @@ final class HasherTest extends TestCase
 
         file_put_contents($file, 'content');
 
-        // real file is readable; force `hash_file()` itself to report false to hit the post-read failure branch.
+        // Real file is readable; force `hash_file()` itself to report false to hit the post-read failure branch.
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'hash_file',

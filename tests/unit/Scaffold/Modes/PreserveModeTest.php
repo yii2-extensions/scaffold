@@ -46,7 +46,7 @@ final class PreserveModeTest extends TestCase
 
     public function testLockHashIsIgnored(): void
     {
-        // preserveMode never overwrites the lock hash is irrelevant.
+        // 'PreserveMode' never overwrites the lock hash is irrelevant.
         $projectDir = "{$this->tempDir}/project";
 
         mkdir($projectDir, 0o777, recursive: true);
@@ -121,7 +121,7 @@ final class PreserveModeTest extends TestCase
             $result->outcome,
             'PreserveMode must skip the file when it already exists.',
         );
-        // existing file must not be modified.
+        // Existing file must not be modified.
         self::assertSame(
             'user content',
             file_get_contents($projectDir . '/output.txt'),

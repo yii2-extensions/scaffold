@@ -12,7 +12,7 @@ if (is_array($stubs) === false) {
     $stubs = [];
 }
 
-// override PHP `8.0+` "optional before required" deprecations by giving `$context` a default null.
+// Override PHP `8.0+` "optional before required" deprecations by giving `$context` a default null.
 $stubs['mkdir'] = [
     'signatureArguments' => 'string $directory, int $permissions = 0777, bool $recursive = false, $context = null',
     'arguments' => '$directory, $permissions, $recursive, $context',

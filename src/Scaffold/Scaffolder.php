@@ -88,14 +88,14 @@ final readonly class Scaffolder
             return;
         }
 
-        // index installed packages by name for O(1) lookup.
+        // Index installed packages by name for O(1) lookup.
         $byName = [];
 
         foreach ($installedPackages as $package) {
             $byName[$package->getName()] = $package;
         }
 
-        // merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
+        // Merge file mappings in allowed-packages order; last provider wins for duplicate destinations.
         $merged = [];
         $providerEntries = [];
 

@@ -46,7 +46,7 @@ final class CreateProjectTest extends TestCase
             ],
         );
 
-        // pre-populate the lock so partial scaffold (fullScaffold=false) would skip '.gitignore'.
+        // Pre-populate the lock so partial scaffold (fullScaffold=false) would skip '.gitignore'.
         $builder->createProjectFile('.gitignore', "existing\n");
 
         (new LockFile($builder->getProjectRoot()))->write(
@@ -162,7 +162,7 @@ final class CreateProjectTest extends TestCase
 
         $subscriber = new EventSubscriber();
 
-        // composer create-project fires post-install-cmd first, then post-create-project-cmd within the same process.
+        // Composer 'create-project' fires post-install-cmd first, then post-create-project-cmd within the same process.
         $subscriber->onPostInstall($this->makePostInstallEvent($composer, $io));
         $subscriber->onPostCreateProject($this->makePostCreateProjectEvent($composer, $io));
 

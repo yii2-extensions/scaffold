@@ -9,7 +9,7 @@ use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\PathResolver;
 
-use function array_diff;
+use function array_count_values;
 use function explode;
 use function implode;
 use function preg_replace;
@@ -66,7 +66,21 @@ final class AppendMode implements ModeInterface
 
         $consumerLines = $consumerContent === '' ? [] : explode("\n", rtrim($consumerContent, "\n"));
         $providerLines = $providerContent === '' ? [] : explode("\n", rtrim($providerContent, "\n"));
-        $missing = array_diff($providerLines, $consumerLines);
+
+        // Count-based diff preserves multiplicity: a stub with two 'alpha' lines whose destination has only one
+        // appends the second occurrence instead of dropping it as set-based 'array_diff' would.
+        $consumerCounts = array_count_values($consumerLines);
+        $missing = [];
+
+        foreach ($providerLines as $line) {
+            if (isset($consumerCounts[$line]) && $consumerCounts[$line] > 0) {
+                $consumerCounts[$line]--;
+
+                continue;
+            }
+
+            $missing[] = $line;
+        }
 
         if ($missing === []) {
             return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);

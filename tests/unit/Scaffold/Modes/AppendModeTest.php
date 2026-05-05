@@ -45,6 +45,31 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testAppendsRepeatedProviderLinesWhenDestinationHasFewer(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Destination has one 'alpha'; stub has two. The second occurrence must be appended (multiplicity-preserving).
+        file_put_contents($projectDir . '/output.txt', "alpha\n");
+
+        $this->makeSourceFile("alpha\nalpha\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\nalpha\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must preserve provider line multiplicity instead of treating destination lines as a set.',
+        );
+    }
+
     public function testCreatesIntermediateDirectories(): void
     {
         $this->makeSourceFile(relative: 'stubs/nested/deep.txt');

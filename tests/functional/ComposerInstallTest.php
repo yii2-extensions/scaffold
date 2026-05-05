@@ -251,7 +251,7 @@ final class ComposerInstallTest extends TestCase
 
         $subscriber->onPostInstall($this->makePostInstallEvent($composer, $io));
 
-        // simulate the user editing the replace-mode file between two install runs.
+        // Simulate the user editing the replace-mode file between two install runs.
         file_put_contents(
             $builder->getProjectRoot() . '/.env.dist',
             "APP_ENV=production\nUSER_EDIT=1\n",

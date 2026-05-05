@@ -95,7 +95,7 @@ final class VendorDirResolver
             || preg_match('#^[A-Za-z]:[/\\\\]#', $path) === 1;
 
         if ($isAbsolute) {
-            // preserve drive-root separator: "C:\" and "C:/" must remain 3 characters.
+            // Preserve drive-root separator: "C:\" and "C:/" must remain 3 characters.
             if (preg_match('#^([A-Za-z]:)([/\\\\])$#', $path, $matches) === 1) {
                 return $matches[1] . $matches[2];
             }

@@ -32,7 +32,7 @@ final class ApplierTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('destination');
 
-        // traversal is caught before the realpath check; no real project dir needed.
+        // Traversal is caught before the realpath check; no real project dir needed.
         $this->makeApplier()->apply(
             $this->makeMapping(destination: '../../../etc/passwd'),
             "{$this->tempDir}/project",
@@ -93,7 +93,7 @@ final class ApplierTest extends TestCase
 
     public function testSourceTraversalThrows(): void
     {
-        // validateDestination runs first and needs the project dir to exist.
+        // 'validateDestination' runs first and needs the project dir to exist.
         $projectDir = "{$this->tempDir}/project";
 
         mkdir($projectDir, 0o777, recursive: true);

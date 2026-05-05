@@ -37,7 +37,7 @@ final class MultiLayerCompositionTest extends TestCase
                 'name' => 'demo/composition',
                 'config' => ['vendor-dir' => $builder->getVendorDir()],
                 'extra' => [
-                    // provider-b is listed last, so its stub must win.
+                    // Provider 'provider-b' is listed last, so its stub must win.
                     'scaffold' => [
                         'allowed-packages' => [
                             'demo/provider-a',
@@ -80,7 +80,7 @@ final class MultiLayerCompositionTest extends TestCase
                 'name' => 'demo/composition',
                 'config' => ['vendor-dir' => $builder->getVendorDir()],
                 'extra' => [
-                    // now provider-a is listed last.
+                    // Now provider-a is listed last.
                     'scaffold' => [
                         'allowed-packages' => [
                             'demo/provider-b',

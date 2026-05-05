@@ -39,7 +39,7 @@ final class PathValidatorTest extends TestCase
 
     public function testDestinationAcceptsNonExistentFileInsideExistingSubdirectory(): void
     {
-        // walking to an existing in-root ancestor must NOT trigger an escape detection.
+        // Walking to an existing in-root ancestor must NOT trigger an escape detection.
         $root = "{$this->tempDir}/root";
 
         mkdir($root . '/sub', 0o777, recursive: true);
@@ -53,7 +53,7 @@ final class PathValidatorTest extends TestCase
     {
         $this->expectNotToPerformAssertions();
 
-        // colon in a non-leading segment must not be mistaken for a Windows drive letter prefix.
+        // Colon in a non-leading segment must not be mistaken for a Windows drive letter prefix.
         (new PathValidator())->validateDestination('nested/C:file.txt', $this->tempDir);
     }
 
@@ -65,7 +65,7 @@ final class PathValidatorTest extends TestCase
             self::markTestSkipped('Symlink canonicalization on Windows is not equivalent to POSIX.');
         }
 
-        // a symlink whose resolved target is `realRoot` itself must pass when used as an ancestor of a missing leaf.
+        // A symlink whose resolved target is `realRoot` itself must pass when used as an ancestor of a missing leaf.
         $root = "{$this->tempDir}/root";
 
         mkdir($root, 0o777, recursive: true);
@@ -114,7 +114,7 @@ final class PathValidatorTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('Destination path escapes the root via symlink');
 
-        // the terminal file does not exist, forcing the validator to walk ancestors.
+        // The terminal file does not exist, forcing the validator to walk ancestors.
         (new PathValidator())->validateDestination('escape/missing/file.txt', $root);
     }
 

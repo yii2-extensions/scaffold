@@ -108,7 +108,7 @@ final class ReplaceModeTest extends TestCase
 
         $hasher = new Hasher();
 
-        // lock hash recorded for original; user then modified the file to different content.
+        // Lock hash recorded for original; user then modified the file to different content.
         $lockHash = 'sha256:' . hash('sha256', 'the-original-hash-that-no-longer-matches');
 
         $result = (new ReplaceMode())->apply(
@@ -137,7 +137,7 @@ final class ReplaceModeTest extends TestCase
             $result->warning,
             'Expected warning to mention the file name when file is skipped.',
         );
-        // file must NOT be overwritten.
+        // File must NOT be overwritten.
         self::assertSame(
             'original scaffold content',
             file_get_contents($projectDir . '/output.txt'),
@@ -239,7 +239,7 @@ final class ReplaceModeTest extends TestCase
             $this->makeMapping(),
             $projectDir,
             new Hasher(),
-            null, // no lock hash treat as untracked, overwrite unconditionally
+            null, // No lock hash treat as untracked, overwrite unconditionally.
         );
 
         self::assertSame(

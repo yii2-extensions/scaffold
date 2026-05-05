@@ -347,7 +347,7 @@ final class ReapplyServiceTest extends TestCase
         $this->seedTracked('first.txt', "stub\n", "stub\n");
         $this->seedTracked('second.txt', "stub\n", "stub\n");
 
-        // target the first destination exclusively so the mock does not leak into the second iteration's hash calls.
+        // Target the first destination exclusively so the mock does not leak into the second iteration's hash calls.
         MockerState::addCondition(
             'yii\\scaffold\\Scaffold\\Lock',
             'hash_file',
