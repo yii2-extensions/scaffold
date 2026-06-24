@@ -62,7 +62,7 @@ final class ManifestExpander
         foreach ($manifest['copy'] as $entry) {
             $from = $entry['from'];
             $to = $entry['to'];
-            $absolute = $providerPath . '/' . $from;
+            $absolute = "{$providerPath}/{$from}";
 
             if (is_file($absolute)) {
                 $source = self::normalise($from);
