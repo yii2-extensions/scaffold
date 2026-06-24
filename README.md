@@ -20,6 +20,9 @@
     <a href="https://github.com/yii2-extensions/scaffold/actions/workflows/static.yml" target="_blank">
         <img src="https://img.shields.io/github/actions/workflow/status/yii2-extensions/scaffold/static.yml?style=for-the-badge&logo=github&label=PHPStan" alt="PHPStan">
     </a>
+    <a href="https://github.com/yii2-extensions/scaffold/actions/workflows/security.yml" target="_blank">
+        <img src="https://img.shields.io/github/actions/workflow/status/yii2-extensions/scaffold/security.yml?style=for-the-badge&label=Security&logo=github" alt="Security">
+    </a>
 </p>
 
 <p align="center">
@@ -136,11 +139,11 @@ See [`docs/console.md`](docs/console.md) for the full reference.
 [![Latest Stable Version](https://img.shields.io/packagist/v/yii2-extensions/scaffold.svg?style=for-the-badge&logo=packagist&logoColor=white&label=Stable)](https://packagist.org/packages/yii2-extensions/scaffold)
 [![Total Downloads](https://img.shields.io/packagist/dt/yii2-extensions/scaffold.svg?style=for-the-badge&logo=composer&logoColor=white&label=Downloads)](https://packagist.org/packages/yii2-extensions/scaffold)
 
-## Quality code
+## Project status
 
 [![PHPStan Level Max](https://img.shields.io/badge/PHPStan-Level%20Max-4F5D95.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.com/yii2-extensions/scaffold/actions/workflows/static.yml)
-[![Super-Linter](https://img.shields.io/github/actions/workflow/status/yii2-extensions/scaffold/linter.yml?style=for-the-badge&label=Super-Linter&logo=github)](https://github.com/yii2-extensions/scaffold/actions/workflows/linter.yml)
-[![StyleCI](https://img.shields.io/badge/StyleCI-Passed-44CC11.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.styleci.io/repos/scaffold?branch=main)
+[![Quality](https://img.shields.io/github/actions/workflow/status/yii2-extensions/scaffold/quality.yml?style=for-the-badge&label=Quality&logo=github)](https://github.com/yii2-extensions/scaffold/actions/workflows/quality.yml)
+[![StyleCI](https://img.shields.io/badge/StyleCI-Passed-44CC11.svg?style=for-the-badge&logo=github&logoColor=white)](https://github.styleci.io/repos/1212894073?branch=main)
 
 ## Our social networks
 
