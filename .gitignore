@@ -39,7 +39,6 @@ package-lock.json
 # phpunit (if present)
 .phpunit.cache
 .phpunit.result.cache
-phpunit.xml*
 
 # vagrant (if present)
 .vagrant
@@ -57,4 +56,3 @@ Thumbs.db
 .buildpath
 .project
 .settings
-phpunit.xml

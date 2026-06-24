@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 0.1.1 Under development
 
+- ci: migrate GitHub workflows to pinned reusable quality and security checks.
+
 ## 0.1.0 May 05, 2026
 
 - feat: initial `yii2-extensions/scaffold` package structure.
