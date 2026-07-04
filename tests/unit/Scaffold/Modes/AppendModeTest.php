@@ -217,6 +217,32 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testInsertsContextuallyInCrOnlyDestination(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Legacy Mac CR-only destination with a mid-file insertion: every existing CR terminator must survive,
+        // including the final one, which no end-of-file separator would repair.
+        file_put_contents($projectDir . '/output.txt', "alpha\rbeta\r");
+
+        $this->makeSourceFile("alpha\ngamma\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\rgamma\rbeta\r",
+            file_get_contents($projectDir . '/output.txt'),
+            'All CR terminators must survive a mid-file insertion.',
+        );
+    }
+
     public function testInsertsMissingProviderLineAtContextualPosition(): void
     {
         $projectDir = "{$this->tempDir}/project";
@@ -534,6 +560,45 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testPreservesPerLineEolsForMixedEolDestination(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Mixed endings: 'alpha' is LF-terminated, 'beta' is CRLF-terminated. Existing terminators must survive the
+        // rewrite byte-for-byte; only the inserted line adopts the dominant (CRLF) style.
+        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\r\n");
+
+        $this->makeSourceFile("alpha\ngamma\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\ngamma\r\nbeta\r\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Existing LF and CRLF terminators must survive; the inserted line must use the dominant EOL.',
+        );
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            'Merged mixed-EOL file must be stable on the next apply.',
+        );
+    }
+
     public function testResultHashMatchesActualFileHash(): void
     {
         $this->makeSourceFile('content');
@@ -841,6 +906,36 @@ final class AppendModeTest extends TestCase
         self::assertNull(
             $result->warning,
             'AppendMode must not produce any warnings when writing a new file.',
+        );
+    }
+
+    public function testWritesFullStubWhenDestinationIsEmptyFile(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Destination exists but is empty (zero bytes): every provider line is missing and lands at the top.
+        file_put_contents($projectDir . '/output.txt', '');
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Written,
+            $result->outcome,
+            "Empty destination must yield 'ApplyOutcome::Written'.",
+        );
+        self::assertSame(
+            "alpha\nbeta\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Content must equal the full stub with no leading separator.',
         );
     }
 

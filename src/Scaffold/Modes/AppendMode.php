@@ -11,7 +11,9 @@ use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\PathResolver;
 
+use function array_column;
 use function array_count_values;
+use function count;
 use function explode;
 use function implode;
 use function preg_replace;
@@ -25,7 +27,8 @@ use function substr;
  *
  * Idempotent by design: when the destination already exists, provider lines missing from it are inserted at their
  * contextual position relative to shared anchor lines (LCS alignment). Presence is decided by order-independent line
- * counting, so a destination holding every provider line in a different order is left untouched. Repeated
+ * counting, so a destination holding every provider line in a different order is left untouched. Existing lines keep
+ * their original terminators (mixed EOLs included) while inserted lines use the destination's dominant EOL. Repeated
  * applications produce no duplication, and consumer-specific additions are never removed or reordered.
  */
 final class AppendMode implements ModeInterface
@@ -61,15 +64,15 @@ final class AppendMode implements ModeInterface
             throw new RuntimeException(sprintf('Could not read destination file "%s".', $destination));
         }
 
-        // Detect the destination EOL style BEFORE normalising so the appended block can be emitted in the same style,
-        // avoiding mixed CRLF/LF output on Windows-style files.
+        // Dominant EOL style is used for inserted provider lines only; existing lines keep their own terminators.
         $eol = self::detectEol($consumerContent);
 
-        // Normalise line endings so CRLF/CR destinations diff identically against an LF stub.
+        // Normalise the provider only: consumer lines are split with their raw terminators preserved, and the diff
+        // compares terminator-free texts, so CRLF/CR destinations still diff identically against an LF stub.
         $providerContent = (string) preg_replace('/\r\n|\r/', "\n", $providerContent);
-        $consumerContent = (string) preg_replace('/\r\n|\r/', "\n", $consumerContent);
 
-        $consumerLines = self::splitLines($consumerContent);
+        $segments = self::splitRawSegments($consumerContent);
+        $consumerLines = array_column($segments, 0);
         $providerLines = self::splitLines($providerContent);
 
         // Count-based multiset decides WHAT is missing (order-independent, multiplicity-preserving): a provider line
@@ -97,11 +100,12 @@ final class AppendMode implements ModeInterface
         $entries = $differ->diffToArray($providerLines, $consumerLines);
 
         // LCS alignment decides WHERE missing lines land: provider-only entries ('REMOVED') buffer until the next
-        // shared anchor ('OLD') so they insert at their contextual position, while consumer-only lines ('ADDED') stay
-        // in place ahead of them. 'REMOVED' entries with no remaining missing quota are reorder artifacts: the same
-        // line exists elsewhere in the destination, so they are dropped instead of duplicated.
-        $merged = [];
+        // shared anchor ('OLD'), recording the insertion point as "before consumer segment N", while consumer-only
+        // lines ('ADDED') stay in place ahead of them. 'REMOVED' entries with no remaining missing quota are reorder
+        // artifacts: the same line exists elsewhere in the destination, so they are dropped instead of duplicated.
         $pending = [];
+        $insertions = [];
+        $consumerIndex = 0;
 
         foreach ($entries as [$line, $type]) {
             if ($type === Differ::REMOVED) {
@@ -114,21 +118,31 @@ final class AppendMode implements ModeInterface
             }
 
             if ($type === Differ::OLD && $pending !== []) {
-                $merged = [...$merged, ...$pending];
+                $insertions[$consumerIndex] = $pending;
                 $pending = [];
             }
 
-            $merged[] = $line;
+            $consumerIndex++;
         }
 
-        $endsWithProviderLine = $pending !== [];
-        $merged = [...$merged, ...$pending];
+        // Consumer segments are re-emitted verbatim (text plus original terminator) so existing line endings are
+        // never rewritten; only inserted provider lines use the dominant EOL.
+        $output = '';
 
-        // Preserve the consumer's trailing-newline choice unless provider lines land at the end of the file, which
-        // must be newline-terminated exactly as the former append behavior produced.
-        $trailing = $endsWithProviderLine || str_ends_with($consumerContent, "\n") ? $eol : '';
+        foreach ($segments as $index => [$text, $segmentEol]) {
+            if (isset($insertions[$index])) {
+                $output .= implode($eol, $insertions[$index]) . $eol;
+            }
 
-        if (file_put_contents($destination, implode($eol, $merged) . $trailing) === false) {
+            $output .= $text . $segmentEol;
+        }
+
+        if ($pending !== []) {
+            $separator = $output === '' || str_ends_with($output, "\n") || str_ends_with($output, "\r") ? '' : $eol;
+            $output .= $separator . implode($eol, $pending) . $eol;
+        }
+
+        if (file_put_contents($destination, $output) === false) {
             throw new RuntimeException(sprintf('Could not write to "%s".', $destination));
         }
 
@@ -139,8 +153,8 @@ final class AppendMode implements ModeInterface
      * Detects the dominant end-of-line sequence used by `$content`.
      *
      * Returns `"\r\n"` for Windows-style content, `"\r"` for legacy Mac-style content, and `"\n"` otherwise (Unix or
-     * empty). The result is used to emit appended lines in the same EOL style as the destination so the file does not
-     * end up with mixed line endings.
+     * empty). The result is used to emit inserted provider lines in the destination's dominant EOL style; existing
+     * lines keep their own terminators.
      *
      * @param string $content Original (un-normalised) destination content.
      *
@@ -181,5 +195,49 @@ final class AppendMode implements ModeInterface
         }
 
         return explode("\n", $content);
+    }
+
+    /**
+     * Splits raw destination content into `[text, terminator]` segments, preserving each line's original EOL bytes.
+     *
+     * Recognises `"\r\n"`, `"\r"`, and `"\n"` terminators so the produced texts align one-to-one with the normalised
+     * provider lines used for diffing, while re-emission keeps mixed line endings byte-identical. Built on `explode`,
+     * which always returns `array<string>`, avoiding the defensive false-branch `preg_split` would have produced.
+     *
+     * @param string $content Raw (un-normalised) destination content.
+     *
+     * @return list<array{string, string}> Ordered `[text, terminator]` pairs; the final terminator is empty when the
+     * content does not end with a newline.
+     */
+    private static function splitRawSegments(string $content): array
+    {
+        $segments = [];
+
+        $chunks = explode("\n", $content);
+        $lastChunk = count($chunks) - 1;
+
+        foreach ($chunks as $index => $chunk) {
+            $chunkEol = $index < $lastChunk ? "\n" : '';
+
+            if ($chunkEol === "\n" && str_ends_with($chunk, "\r")) {
+                $chunk = substr($chunk, 0, -1);
+                $chunkEol = "\r\n";
+            }
+
+            // Legacy Mac CR terminators inside the chunk produce their own segments; the final piece takes the chunk
+            // terminator, except for the synthetic empty piece a trailing terminator leaves behind.
+            $pieces = explode("\r", $chunk);
+            $lastPiece = count($pieces) - 1;
+
+            foreach ($pieces as $pieceIndex => $piece) {
+                if ($pieceIndex < $lastPiece) {
+                    $segments[] = [$piece, "\r"];
+                } elseif ($piece !== '' || $chunkEol !== '') {
+                    $segments[] = [$piece, $chunkEol];
+                }
+            }
+        }
+
+        return $segments;
     }
 }
