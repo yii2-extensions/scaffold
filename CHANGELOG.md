@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ci: migrate GitHub workflows to pinned reusable quality and security checks.
 - chore: enable name importing in Rector configuration.
 - chore: add social media links to `README.md`.
+- feat!: contextual LCS line merge in `append` mode and git-style colored unified diff output for `scaffold diff`.
 
 ## 0.1.0 May 05, 2026
 

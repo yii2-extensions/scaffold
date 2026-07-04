@@ -70,6 +70,31 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testAppendsTrailingNewlineWhenProviderLinesLandAtEnd(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Destination lacks a trailing newline; provider lines merged at the end must terminate the file with one.
+        file_put_contents($projectDir . '/output.txt', 'alpha');
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\nbeta\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must newline-terminate the file when provider lines land at the end.',
+        );
+    }
+
     public function testCreatesIntermediateDirectories(): void
     {
         $this->makeSourceFile(relative: 'stubs/nested/deep.txt');
@@ -171,6 +196,81 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testInsertsConsecutiveMissingProviderLinesBeforeSharedAnchor(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "head\ntail\n");
+
+        // Two consecutive missing provider lines must both be flushed before the shared anchor, in stub order.
+        $this->makeSourceFile("head\nmid1\nmid2\ntail\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "head\nmid1\nmid2\ntail\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Every buffered provider line must be flushed, in order.',
+        );
+    }
+
+    public function testInsertsMissingProviderLineAtContextualPosition(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\n");
+
+        // Provider declares an explicit empty line between 'alpha' and 'beta'. The LCS alignment must insert it
+        // between the shared anchors instead of dumping it at the end of the file.
+        $this->makeSourceFile("alpha\n\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\n\nbeta\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must insert the missing empty line between its shared anchors.',
+        );
+    }
+
+    public function testInsertsMissingProviderLinesBeforeSharedAnchor(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Consumer replaced the middle section; the missing provider line must land after the consumer block and
+        // before the next shared anchor, never at the end of the file.
+        file_put_contents($projectDir . '/output.txt', "head\ncustom\ntail\n");
+
+        $this->makeSourceFile("head\nmiddle\ntail\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "head\ncustom\nmiddle\ntail\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'AppendMode must keep consumer lines first and flush provider lines before the shared anchor.',
+        );
+    }
+
     public function testInsertsSeparatorWhenDestinationDoesNotEndWithNewline(): void
     {
         $projectDir = "{$this->tempDir}/project";
@@ -191,6 +291,41 @@ final class AppendModeTest extends TestCase
             "existing\nappended\n",
             file_get_contents($projectDir . '/output.txt'),
             'AppendMode must insert a newline separator when the destination does not end with one.',
+        );
+    }
+
+    public function testIsIdempotentAfterContextualInsertion(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+        file_put_contents($projectDir . '/output.txt', "head\ncustom\ntail\n");
+
+        $this->makeSourceFile("head\nmiddle\ntail\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            "Second apply must return 'ApplyOutcome::Skipped'.",
+        );
+        self::assertSame(
+            "head\ncustom\nmiddle\ntail\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Content must stay stable across repeated applies.',
         );
     }
 
@@ -325,6 +460,57 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testPreservesCrlfEolForContextualInsertion(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Windows-style CRLF destination; the mid-file insertion must be emitted in the same EOL style.
+        file_put_contents($projectDir . '/output.txt', "alpha\r\nbeta\r\n");
+
+        $this->makeSourceFile("alpha\ngamma\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "alpha\r\ngamma\r\nbeta\r\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Mid-file insertion must use the destination CRLF EOL style.',
+        );
+    }
+
+    public function testPreservesMissingTrailingNewlineWhenInsertionIsNotAtEnd(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Destination intentionally lacks a trailing newline and the insertion lands mid-file, so the consumer's
+        // trailing-newline choice must survive the rewrite.
+        file_put_contents($projectDir . '/output.txt', "alpha\nomega");
+
+        $this->makeSourceFile("gamma\nalpha\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "gamma\nalpha\nomega",
+            file_get_contents($projectDir . '/output.txt'),
+            'Consumer trailing-newline choice must survive a mid-file insertion.',
+        );
+    }
+
     public function testResultHashMatchesActualFileHash(): void
     {
         $this->makeSourceFile('content');
@@ -395,16 +581,32 @@ final class AppendModeTest extends TestCase
         );
     }
 
-    public function testRtrimsTrailingNewlineFromConsumerBeforeDiffing(): void
+    public function testRewritesDestinationWithMergedContentWhenLinesAreMissing(): void
     {
         $projectDir = "{$this->tempDir}/project";
 
         mkdir($projectDir, 0o777, recursive: true);
-        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\n");
+        file_put_contents($projectDir . '/output.txt', "alpha\n");
 
-        // Provider declares an explicit empty line between 'alpha' and 'beta'. Without rtrim'ing the consumer the
-        // trailing-newline split would inject a phantom empty entry into the consumer set, masking the missing line.
-        $this->makeSourceFile("alpha\n\nbeta\n");
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        $capturedFlag = null;
+
+        MockerState::addCondition(
+            'yii\\scaffold\\Scaffold\\Modes',
+            'file_put_contents',
+            [
+                $projectDir . DIRECTORY_SEPARATOR . 'output.txt',
+                "alpha\nbeta\n",
+                0,
+                null,
+            ],
+            static function (string $file, string $data, int $flag) use (&$capturedFlag): int {
+                $capturedFlag = $flag;
+
+                return (int) \file_put_contents($file, $data, $flag);
+            },
+        );
 
         (new AppendMode())->apply(
             $this->makeMapping(),
@@ -414,9 +616,9 @@ final class AppendModeTest extends TestCase
         );
 
         self::assertSame(
-            "alpha\nbeta\n\n",
-            file_get_contents($projectDir . '/output.txt'),
-            'AppendMode must rtrim consumer trailing newline before diffing so empty provider lines are detected.',
+            0,
+            $capturedFlag,
+            "Full merged content must be written with no flags, never 'FILE_APPEND'.",
         );
     }
 
@@ -427,7 +629,7 @@ final class AppendModeTest extends TestCase
         mkdir($projectDir, 0o777, recursive: true);
         file_put_contents($projectDir . '/output.txt', "existing\n");
 
-        // Source has a line not present in the destination, so the append-write path is reached.
+        // Source has a line not present in the destination, so the merge-write path is reached.
         $this->makeSourceFile("missing\n");
 
         MockerState::addCondition(
@@ -521,47 +723,6 @@ final class AppendModeTest extends TestCase
             "{$this->tempDir}/project",
             new Hasher(),
             null,
-        );
-    }
-
-    public function testUsesFileAppendFlagWhenDestinationExists(): void
-    {
-        $projectDir = "{$this->tempDir}/project";
-
-        mkdir($projectDir, 0o777, recursive: true);
-        file_put_contents($projectDir . '/output.txt', "alpha\n");
-
-        $this->makeSourceFile("alpha\nbeta\n");
-
-        $capturedFlag = null;
-
-        MockerState::addCondition(
-            'yii\\scaffold\\Scaffold\\Modes',
-            'file_put_contents',
-            [
-                $projectDir . DIRECTORY_SEPARATOR . 'output.txt',
-                "beta\n",
-                FILE_APPEND,
-                null,
-            ],
-            static function (string $file, string $data, int $flag) use (&$capturedFlag): int {
-                $capturedFlag = $flag;
-
-                return (int) \file_put_contents($file, $data, $flag);
-            },
-        );
-
-        (new AppendMode())->apply(
-            $this->makeMapping(),
-            $projectDir,
-            new Hasher(),
-            null,
-        );
-
-        self::assertSame(
-            FILE_APPEND,
-            $capturedFlag,
-            'AppendMode must pass FILE_APPEND when appending missing lines to an existing destination.',
         );
     }
 

@@ -6,20 +6,20 @@ namespace yii\scaffold\Services;
 
 use RuntimeException;
 use SebastianBergmann\Diff\Differ;
-use SebastianBergmann\Diff\Output\DiffOnlyOutputBuilder;
-use yii\scaffold\Console\{ExitCode, OutputWriter};
+use SebastianBergmann\Diff\Output\StrictUnifiedDiffOutputBuilder;
+use yii\scaffold\Console\{DiffColorizer, ExitCode, OutputWriter};
 use yii\scaffold\Scaffold\Lock\LockFile;
 use yii\scaffold\Scaffold\PathResolver;
 use yii\scaffold\Security\PathValidator;
 
-use function implode;
 use function is_file;
 use function preg_replace;
-use function rtrim;
 use function sprintf;
+use function str_ends_with;
+use function substr;
 
 /**
- * Computes and renders a line-by-line diff between a scaffold provider stub and the current on-disk file.
+ * Computes and renders a git-style unified diff between a scaffold provider stub and the current on-disk file.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -27,43 +27,38 @@ use function sprintf;
 final class DiffService
 {
     /**
-     * Builds a line-by-line diff between `$stubContent` and `$currentContent` using LCS.
+     * Builds a git-style unified diff between `$stubContent` and `$currentContent`.
      *
-     * Lines present only in the stub are prefixed with `- `, lines present only in the current file are prefixed with
-     * `+ `, and shared unchanged lines are prefixed with two spaces.
+     * Renders `--- a/$file` and `+++ b/$file` headers followed by `@@ -l,c +l,c @@` hunks with three context lines.
+     * Lines present only in the stub are prefixed with `-`, and lines present only in the current file with `+`.
      *
      * @param string $stubContent Content from the provider stub file.
      * @param string $currentContent Content of the current on-disk file.
+     * @param string $file Destination path used in the `a/`–`b/` header labels.
      *
-     * @return string Formatted diff output. Empty string if the contents are identical.
+     * @return string Unified diff output without a trailing newline. Empty string if the contents are identical.
      */
-    public function buildDiff(string $stubContent, string $currentContent): string
+    public function buildDiff(string $stubContent, string $currentContent, string $file): string
     {
         $stubContent = (string) preg_replace('/\r\n|\r/', "\n", $stubContent);
         $currentContent = (string) preg_replace('/\r\n|\r/', "\n", $currentContent);
 
-        if ($stubContent === $currentContent) {
-            return '';
-        }
+        // The builder defaults match git: three context lines and collapsed single-line ranges. It returns an empty
+        // string for identical contents, so only the header labels need configuring.
+        $differ = new Differ(
+            new StrictUnifiedDiffOutputBuilder(
+                [
+                    'fromFile' => 'a/' . $file,
+                    'toFile' => 'b/' . $file,
+                ],
+            ),
+        );
 
-        $differ = new Differ(new DiffOnlyOutputBuilder(''));
+        $diff = $differ->diff($stubContent, $currentContent);
 
-        /** @var list<array{0: string, 1: int}> $entries */
-        $entries = $differ->diffToArray($stubContent, $currentContent);
-
-        $output = [];
-
-        foreach ($entries as [$line, $type]) {
-            if ($type === Differ::REMOVED) {
-                $output[] = '- ' . rtrim($line, "\n");
-            } elseif ($type === Differ::ADDED) {
-                $output[] = '+ ' . rtrim($line, "\n");
-            } else {
-                $output[] = '  ' . rtrim($line, "\n");
-            }
-        }
-
-        return implode(PHP_EOL, $output);
+        // The builder always terminates its output with exactly one newline; strip it because 'writeStdout()' appends
+        // the final newline itself.
+        return str_ends_with($diff, "\n") ? substr($diff, 0, -1) : $diff;
     }
 
     /**
@@ -73,11 +68,17 @@ final class DiffService
      * @param string $vendorDir Absolute path to the Composer vendor directory.
      * @param string $file Destination path as recorded in `scaffold-lock.json`.
      * @param OutputWriter $out Output sink.
+     * @param bool $decorated Whether to wrap the diff lines in ANSI color escape codes.
      *
      * @return int `0` on success, non-zero on unsafe lock entry, missing stub, or I/O failure.
      */
-    public function run(string $projectRoot, string $vendorDir, string $file, OutputWriter $out): int
-    {
+    public function run(
+        string $projectRoot,
+        string $vendorDir,
+        string $file,
+        OutputWriter $out,
+        bool $decorated = false,
+    ): int {
         $data = (new LockFile($projectRoot))->read();
 
         $entry = $data['files'][$file] ?? null;
@@ -138,12 +139,12 @@ final class DiffService
 
         $stubContent = (string) file_get_contents($stubPath);
 
-        $diff = $this->buildDiff($stubContent, $currentContent);
+        $diff = $this->buildDiff($stubContent, $currentContent, $file);
 
         if ($diff === '') {
             $out->writeStdout('[scaffold] No differences found.');
         } else {
-            $out->writeStdout($diff);
+            $out->writeStdout($decorated ? (new DiffColorizer())->colorize($diff) : $diff);
         }
 
         return ExitCode::Ok->value;

@@ -5,11 +5,12 @@ declare(strict_types=1);
 namespace yii\scaffold\Scaffold\Modes;
 
 use RuntimeException;
+use SebastianBergmann\Diff\Differ;
+use SebastianBergmann\Diff\Output\DiffOnlyOutputBuilder;
 use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\PathResolver;
 
-use function array_count_values;
 use function explode;
 use function implode;
 use function preg_replace;
@@ -21,9 +22,9 @@ use function substr;
 /**
  * Applies a scaffold file by line-merging its content into the destination, or writing it fresh.
  *
- * Idempotent by design: when the destination already exists, only provider lines that are not already present in the
- * destination are appended. Repeated applications produce no duplication, and consumer-specific additions are never
- * removed.
+ * Idempotent by design: when the destination already exists, provider lines missing from it are inserted at their
+ * contextual position relative to shared anchor lines (LCS alignment). Repeated applications produce no duplication,
+ * and consumer-specific additions are never removed or reordered.
  *
  * @author Wilmer Arambula <terabytesoftw@gmail.com>
  * @since 0.1
@@ -72,29 +73,46 @@ final class AppendMode implements ModeInterface
         $consumerLines = self::splitLines($consumerContent);
         $providerLines = self::splitLines($providerContent);
 
-        // Count-based diff preserves multiplicity: a stub with two 'alpha' lines whose destination has only one
-        // appends the second occurrence instead of dropping it as set-based 'array_diff' would.
-        $consumerCounts = array_count_values($consumerLines);
-        $missing = [];
+        $differ = new Differ(new DiffOnlyOutputBuilder(''));
 
-        foreach ($providerLines as $line) {
-            if (isset($consumerCounts[$line]) && $consumerCounts[$line] > 0) {
-                $consumerCounts[$line]--;
+        /** @var list<array{0: string, 1: int}> $entries */
+        $entries = $differ->diffToArray($providerLines, $consumerLines);
+
+        // LCS-aligned merge: provider-only lines ('REMOVED') buffer until the next shared anchor ('OLD') so they land
+        // at their contextual position, while consumer-only lines ('ADDED') stay in place ahead of them. LCS handles
+        // duplicate multiplicity natively: a stub with two 'alpha' lines whose destination has one inserts the second.
+        $merged = [];
+        $pending = [];
+        $hasMissing = false;
+
+        foreach ($entries as [$line, $type]) {
+            if ($type === Differ::REMOVED) {
+                $pending[] = $line;
+                $hasMissing = true;
 
                 continue;
             }
 
-            $missing[] = $line;
+            if ($type === Differ::OLD && $pending !== []) {
+                $merged = [...$merged, ...$pending];
+                $pending = [];
+            }
+
+            $merged[] = $line;
         }
 
-        if ($missing === []) {
+        if (!$hasMissing) {
             return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);
         }
 
-        $separator = $consumerContent === '' || str_ends_with($consumerContent, "\n") ? '' : $eol;
-        $appendData = $separator . implode($eol, $missing) . $eol;
+        $endsWithProviderLine = $pending !== [];
+        $merged = [...$merged, ...$pending];
 
-        if (file_put_contents($destination, $appendData, FILE_APPEND) === false) {
+        // Preserve the consumer's trailing-newline choice unless provider lines land at the end of the file, which
+        // must be newline-terminated exactly as the former append behavior produced.
+        $trailing = $endsWithProviderLine || str_ends_with($consumerContent, "\n") ? $eol : '';
+
+        if (file_put_contents($destination, implode($eol, $merged) . $trailing) === false) {
             throw new RuntimeException(sprintf('Could not write to "%s".', $destination));
         }
 

@@ -23,19 +23,81 @@ final class DiffServiceTest extends TestCase
 {
     use TempDirectoryTrait;
 
-    public function testBuildDiffJoinsLinesWithPhpEolWithoutLeadingOrTrailingNewline(): void
+    public function testBuildDiffDoesNotStartOrEndWithNewline(): void
     {
-        $diff = (new DiffService())->buildDiff("a\n", "a\nb\n");
+        $diff = (new DiffService())->buildDiff("a\n", "a\nb\n", 'config/params.php');
 
         self::assertStringStartsNotWith(
-            PHP_EOL,
+            "\n",
             $diff,
-            "The concatenated diff must not begin with PHP_EOL; 'implode' inserts separators between lines only.",
+            'Diff must start with the first header line, not a newline.',
         );
         self::assertStringEndsNotWith(
-            PHP_EOL,
+            "\n",
             $diff,
-            "The concatenated diff must not end with PHP_EOL; the trailing newline is appended by 'writeStdout'.",
+            "The builder's trailing newline must be stripped; 'writeStdout' appends the final one.",
+        );
+    }
+
+    public function testBuildDiffEmitsGitStyleFileHeaders(): void
+    {
+        $diff = (new DiffService())->buildDiff("a\n", "a\nb\n", 'config/params.php');
+
+        self::assertStringStartsWith(
+            "--- a/config/params.php\n+++ b/config/params.php\n",
+            $diff,
+            "Headers must label the stub as 'a/' and the current file as 'b/'.",
+        );
+    }
+
+    public function testBuildDiffEmitsHunkHeaderWithLineRanges(): void
+    {
+        $diff = (new DiffService())->buildDiff(
+            "one\ntwo\nthree\nfour\nfive\n",
+            "one\ntwo\nchanged\nfour\nfive\n",
+            'config/params.php',
+        );
+
+        self::assertStringContainsString(
+            '@@ -1,5 +1,5 @@',
+            $diff,
+            'Hunk header must carry the from/to line ranges.',
+        );
+    }
+
+    public function testBuildDiffLimitsContextToThreeLines(): void
+    {
+        $diff = (new DiffService())->buildDiff(
+            "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\n",
+            "one\ntwo\nthree\nfour\nfive\nchanged\nseven\neight\nnine\nten\n",
+            'config/params.php',
+        );
+
+        self::assertStringContainsString(
+            ' three',
+            $diff,
+            'The third line before the change belongs to the context window.',
+        );
+        self::assertStringNotContainsString(
+            ' two',
+            $diff,
+            'Lines beyond three of context must be omitted.',
+        );
+        self::assertStringNotContainsString(
+            ' ten',
+            $diff,
+            'Trailing lines beyond three of context must be omitted.',
+        );
+    }
+
+    public function testBuildDiffMarksMissingTrailingNewlineWithBackslashMarker(): void
+    {
+        $diff = (new DiffService())->buildDiff("a\n", "a\nb", 'config/params.php');
+
+        self::assertStringContainsString(
+            '\\ No newline at end of file',
+            $diff,
+            'A file without a final newline must carry the backslash marker.',
         );
     }
 
@@ -43,24 +105,19 @@ final class DiffServiceTest extends TestCase
     {
         self::assertSame(
             '',
-            (new DiffService())->buildDiff("line\r\nline2\r\n", "line\nline2\n"),
+            (new DiffService())->buildDiff("line\r\nline2\r\n", "line\nline2\n", 'config/params.php'),
             'Mixed CRLF / LF line endings with identical text content must collapse to an empty diff.',
         );
     }
 
-    public function testBuildDiffPreservesUnchangedLinesWithIndent(): void
+    public function testBuildDiffPrefixesContextLinesWithSingleSpace(): void
     {
-        $diff = (new DiffService())->buildDiff("a\nc\n", "a\nc\n\n");
+        $diff = (new DiffService())->buildDiff("shared\nold\n", "shared\nnew\n", 'config/params.php');
 
         self::assertStringContainsString(
-            '  a',
+            "\n shared\n",
             $diff,
-            'Unchanged lines must be prefixed with two spaces.',
-        );
-        self::assertStringContainsString(
-            '  c',
-            $diff,
-            'Unchanged lines must be prefixed with two spaces.',
+            'Context lines must be prefixed with a single space.',
         );
     }
 
@@ -68,79 +125,44 @@ final class DiffServiceTest extends TestCase
     {
         self::assertSame(
             '',
-            (new DiffService())->buildDiff("line\n", "line\n"),
+            (new DiffService())->buildDiff("line\n", "line\n", 'config/params.php'),
             'Identical contents must produce an empty diff.',
         );
     }
 
     public function testBuildDiffShowsAddedLinesWithPlusPrefix(): void
     {
-        $diff = (new DiffService())->buildDiff("a\n", "a\nb\n");
+        $diff = (new DiffService())->buildDiff("a\n", "a\nadded\n", 'config/params.php');
 
         self::assertStringContainsString(
-            '+ b',
+            "\n+added",
             $diff,
-            "Added lines must be prefixed with '+ '.",
+            "Added lines must be prefixed with a single '+'.",
         );
     }
 
     public function testBuildDiffShowsRemovedLinesWithMinusPrefix(): void
     {
-        $diff = (new DiffService())->buildDiff("a\nb\n", "a\n");
+        $diff = (new DiffService())->buildDiff("a\nremoved\n", "a\n", 'config/params.php');
 
         self::assertStringContainsString(
-            '- b',
+            "\n-removed",
             $diff,
-            "Removed lines must be prefixed with '- '.",
+            "Removed lines must be prefixed with a single '-'.",
         );
     }
 
-    public function testBuildDiffTrimsAddedLinesOfTrailingNewlinesBeforeJoin(): void
+    public function testBuildDiffSplitsDistantChangesIntoSeparateHunks(): void
     {
-        // Multiple added lines are required so an 'rtrim' mutation shows as a doubled newline at the 'implode' boundary.
-        $diff = (new DiffService())->buildDiff('a', "a\nb\nc\n");
+        $stub = "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\nthirteen\nfourteen\nfifteen\n";
+        $current = "one\nchanged\nthree\nfour\nfive\nsix\nseven\neight\nnine\nten\neleven\ntwelve\nthirteen\naltered\nfifteen\n";
 
-        self::assertStringNotContainsString(
-            '+ b' . "\n" . PHP_EOL,
-            $diff,
-            "Added lines must be rtrimmed of trailing '\\n' before the 'implode(PHP_EOL, ...)' join on every platform.",
-        );
-        self::assertStringContainsString(
-            '+ b' . PHP_EOL . '+ c',
-            $diff,
-            "Two consecutive added lines must be separated by exactly one PHP_EOL after the 'rtrim'.",
-        );
-    }
+        $diff = (new DiffService())->buildDiff($stub, $current, 'config/params.php');
 
-    public function testBuildDiffTrimsRemovedLinesOfTrailingNewlinesBeforeJoin(): void
-    {
-        $diff = (new DiffService())->buildDiff("a\nb\nc\n", 'a');
-
-        self::assertStringNotContainsString(
-            '- b' . "\n" . PHP_EOL,
-            $diff,
-            "Removed lines must be rtrimmed of trailing '\\n' before the 'implode' join on every platform.",
-        );
-        self::assertStringContainsString(
-            '- b' . PHP_EOL . '- c',
-            $diff,
-            'Two consecutive removed lines must be separated by exactly one PHP_EOL after the rtrim.',
-        );
-    }
-
-    public function testBuildDiffTrimsUnchangedLinesOfTrailingNewlinesBeforeJoin(): void
-    {
-        $diff = (new DiffService())->buildDiff("a\nb\n", "a\nb\nc\n");
-
-        self::assertStringNotContainsString(
-            '  a' . "\n" . PHP_EOL,
-            $diff,
-            "Unchanged lines must be rtrimmed of trailing '\\n' before the 'implode' join on every platform.",
-        );
-        self::assertStringContainsString(
-            '  a' . PHP_EOL . '  b',
-            $diff,
-            'Two consecutive unchanged lines must be separated by exactly one PHP_EOL after the rtrim.',
+        self::assertSame(
+            2,
+            substr_count($diff, '@@ -'),
+            'Changes separated by more than the common-line threshold must produce two hunks.',
         );
     }
 
@@ -169,6 +191,35 @@ final class DiffServiceTest extends TestCase
             'No differences found',
             $out->stdoutBuffer,
             'When files are identical, the output must indicate no differences.',
+        );
+    }
+
+    public function testRunColorizesDiffWhenDecorated(): void
+    {
+        $this->seedProviderAndFile(
+            destination: 'config/params.php',
+            sourceContent: "return ['x' => 1];\n",
+            currentContent: "return ['x' => 2];\n",
+        );
+
+        $out = new BufferedOutputWriter();
+        (new DiffService())->run(
+            $this->tempDir,
+            "{$this->tempDir}/vendor",
+            'config/params.php',
+            $out,
+            decorated: true,
+        );
+
+        self::assertStringContainsString(
+            "\e[31m",
+            $out->stdoutBuffer,
+            'Removed lines must carry the red ANSI escape code.',
+        );
+        self::assertStringContainsString(
+            "\e[32m",
+            $out->stdoutBuffer,
+            'Added lines must carry the green ANSI escape code.',
         );
     }
 
@@ -618,9 +669,37 @@ final class DiffServiceTest extends TestCase
             "When the destination is absent, the exit code must be '0'.",
         );
         self::assertStringContainsString(
-            "- return ['x' => 1];",
+            "-return ['x' => 1];",
             $out->stdoutBuffer,
             'When the destination is absent, the output must indicate the full stub as removed.',
+        );
+        self::assertStringContainsString(
+            '@@ -1 +1,0 @@',
+            $out->stdoutBuffer,
+            'An absent destination must render as an empty-target hunk.',
+        );
+    }
+
+    public function testRunWritesPlainDiffWhenNotDecorated(): void
+    {
+        $this->seedProviderAndFile(
+            destination: 'config/params.php',
+            sourceContent: "return ['x' => 1];\n",
+            currentContent: "return ['x' => 2];\n",
+        );
+
+        $out = new BufferedOutputWriter();
+        (new DiffService())->run(
+            $this->tempDir,
+            "{$this->tempDir}/vendor",
+            'config/params.php',
+            $out,
+        );
+
+        self::assertStringNotContainsString(
+            "\e[",
+            $out->stdoutBuffer,
+            'Undecorated output must contain no ANSI escape codes.',
         );
     }
 

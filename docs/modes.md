@@ -10,7 +10,7 @@ when a file has been modified by the developer after scaffolding.
 | ---------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                           | **Skips** emits warning to stderr.                                                                    |
 | `preserve` | Writes stub, records hash. | **Skips**; never overwrites.                                                                                                                                  | **Skips**; never overwrites.                                                                          |
-| `append`   | Writes stub, records hash. | Appends only stub lines not already present in the file (idempotent line merge); updates hash. Returns `Skipped` when every stub line is already in the file. | Appends only stub lines not already present in the file (idempotent line merge); user lines are kept. |
+| `append`   | Writes stub, records hash. | Inserts missing stub lines at their contextual position (idempotent LCS line merge); updates hash. Returns `Skipped` when every stub line is already in the file. | Inserts missing stub lines at their contextual position (idempotent LCS line merge); user lines are kept. |
 | `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).         | Prepends stub content, updates hash (full scaffold only).                                             |
 
 ## Hash tracking
@@ -23,8 +23,9 @@ On subsequent runs the plugin compares the current on-disk hash to the recorded 
 - **Hashes differ**; the developer has modified the file. For `replace`, the plugin skips the file and writes a warning
   to stderr. For `preserve`, the file is always skipped regardless of hash.
 
-`append` does not compare hashes; instead it diffs the stub lines against the destination and writes only the missing
-ones. The operation is therefore idempotent: repeated runs over a file that already contains every stub line are a no-op.
+`append` does not compare hashes; instead it diffs the stub lines against the destination and inserts only the missing
+ones at their contextual position. The operation is therefore idempotent: repeated runs over a file that already
+contains every stub line are a no-op.
 On partial scaffold runs (`post-install-cmd`, `post-update-cmd`), `append` and `prepend` are also skipped at the
 scaffolder level for files already recorded in the lockfile as a performance optimisation; the line-diff guarantees
 correctness even without that skip.
@@ -55,10 +56,10 @@ Once written, the file is never touched again by the scaffold process.
 
 ## append
 
-Idempotent line merge. The plugin reads both the stub and the destination, splits each on `\n` (after trimming the
-trailing newline), and appends only the stub lines that are not already present in the destination. Repeated runs over
-a destination that already contains every stub line are a no-op (`ApplyOutcome::Skipped`); developer-added lines are
-never removed.
+Idempotent contextual line merge. The plugin reads both the stub and the destination, splits each on `\n` (after
+trimming the trailing newline), and inserts the stub lines missing from the destination at their contextual position,
+aligned against shared anchor lines (LCS). Repeated runs over a destination that already contains every stub line are
+a no-op (`ApplyOutcome::Skipped`); developer-added lines are never removed or reordered.
 
 Use it for line-based, comment-tolerant files where the destination may already contain the stub content (because the
 project follows the same baseline) or where the developer routinely adds project-specific entries:

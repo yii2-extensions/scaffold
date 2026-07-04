@@ -35,19 +35,25 @@ docker/nginx/nginx.conf                  yii2-extensions/app-nginx      replace 
 
 ## vendor/bin/scaffold diff `<file>`
 
-Shows a line-by-line diff between the provider stub and the current on-disk file.
+Shows a git-style unified diff between the provider stub and the current on-disk file.
 
 ```bash
 vendor/bin/scaffold diff config/params.php
 ```
 
-Lines present only in the stub are prefixed with `-`, lines present only in the current file with `+`, and unchanged
-lines with two spaces.
+The output starts with `--- a/<file>` / `+++ b/<file>` headers followed by `@@` hunk headers with three lines of
+context. Lines present only in the stub are prefixed with `-`, and lines present only in the current file with `+`.
+On ANSI-capable terminals the diff is colorized (bold headers, cyan hunks, green additions, red removals); pass
+`--no-ansi` to force plain output.
 
 ```diff
-<?php
-- return [];
-+ return ['adminEmail' => 'admin@example.com'];
+--- a/config/params.php
++++ b/config/params.php
+@@ -1,3 +1,3 @@
+ <?php
+
+-return [];
++return ['adminEmail' => 'admin@example.com'];
 ```
 
 ## vendor/bin/scaffold reapply `[file]` `[--force]` `[--provider=<name>]`
