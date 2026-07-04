@@ -17,9 +17,6 @@ use function realpath;
  * Applies a single scaffold file mapping after running all security pre-checks.
  *
  * Enforces package authorization, path validation, and forwards mode warnings to the IO layer.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final readonly class Applier
 {

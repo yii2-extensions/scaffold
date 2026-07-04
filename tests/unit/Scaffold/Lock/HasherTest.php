@@ -15,9 +15,6 @@ use function strlen;
 
 /**
  * Unit tests for {@see Hasher} file hash computation.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('lock')]

@@ -12,9 +12,6 @@ use yii\scaffold\Manifest\{FileMapping, FileMode};
 
 /**
  * Unit tests for {@see FileMapping} value object construction and property access.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('manifest')]

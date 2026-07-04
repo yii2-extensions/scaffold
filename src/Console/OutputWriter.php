@@ -10,9 +10,6 @@ namespace yii\scaffold\Console;
  *
  * Implementations append a single trailing newline to every write (writeln semantics), mirroring Symfony Console's
  * conventions; services pass pre-formatted strings without a trailing `PHP_EOL`.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 interface OutputWriter
 {

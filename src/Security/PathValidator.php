@@ -13,9 +13,6 @@ use function sprintf;
  *
  * Both destination (project-relative) and source (provider-relative) paths are validated before any filesystem
  * operation. Rejects paths containing `..` as a segment and paths that begin with a directory separator.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class PathValidator
 {

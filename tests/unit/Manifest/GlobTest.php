@@ -10,9 +10,6 @@ use yii\scaffold\Manifest\Glob;
 
 /**
  * Unit tests for {@see Glob} pattern-to-regex conversion and matching semantics.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('manifest')]

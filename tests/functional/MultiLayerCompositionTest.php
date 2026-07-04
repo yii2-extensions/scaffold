@@ -17,9 +17,6 @@ use yii\scaffold\tests\support\{ComposerEventHarness, FakeProjectBuilder, TempDi
  *
  * Exercises the spec's contract that when several authorized providers declare the same destination, the provider
  * listed last in `extra.scaffold.allowed-packages` wins. The lock file must record the winning provider.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('functional')]

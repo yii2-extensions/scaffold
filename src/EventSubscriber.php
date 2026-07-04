@@ -19,9 +19,6 @@ use function sprintf;
 
 /**
  * Listens to Composer script events and triggers the scaffold workflow.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class EventSubscriber implements EventSubscriberInterface
 {

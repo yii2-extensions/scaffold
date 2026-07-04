@@ -14,9 +14,6 @@ use yii\scaffold\{EventSubscriber, Plugin};
 
 /**
  * Unit tests for {@see Plugin} interface implementations and capabilities.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 final class PluginTest extends TestCase

@@ -14,9 +14,6 @@ use yii\scaffold\Console\Command\{DiffCommand, EjectCommand, ProvidersCommand, R
  * `vendor/bin/scaffold` after `composer install`.
  *
  * Works in any PHP project with Composer, regardless of framework (Yii2, Yii3, Laravel, Symfony, Slim, pure PHP).
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class Application extends SymfonyApplication
 {

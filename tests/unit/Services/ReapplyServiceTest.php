@@ -14,9 +14,6 @@ use yii\scaffold\tests\support\{BufferedOutputWriter, TempDirectoryTrait};
 
 /**
  * Unit tests for {@see ReapplyService} covering single-file, provider-filter, force, and error-path branches.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('services')]

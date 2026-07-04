@@ -10,9 +10,6 @@ use yii\scaffold\Scaffold\Lock\Hasher;
 
 /**
  * Contract for all scaffold file-application strategies.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 interface ModeInterface
 {

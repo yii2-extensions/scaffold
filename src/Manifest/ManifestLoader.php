@@ -22,9 +22,6 @@ use function str_starts_with;
  *
  * Supports both inline `extra.scaffold` declarations and external JSON manifests referenced by
  * `extra.scaffold.manifest` relative to the provider root.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final readonly class ManifestLoader
 {

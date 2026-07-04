@@ -19,9 +19,6 @@ use function is_dir;
 
 /**
  * Unit tests for the Symfony Console {@see EjectCommand} verifying dry-run, confirmed-removal, and not-tracked paths.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console-command')]

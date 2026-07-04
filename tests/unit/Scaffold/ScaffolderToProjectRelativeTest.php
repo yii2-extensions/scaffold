@@ -14,9 +14,6 @@ use yii\scaffold\Scaffold\Scaffolder;
  *
  * Exercised via {@see ReflectionMethod} because the helper is intentionally private; testing it directly pins down
  * normalization edge cases that would otherwise only appear by accident through end-to-end scaffolding.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 final class ScaffolderToProjectRelativeTest extends TestCase

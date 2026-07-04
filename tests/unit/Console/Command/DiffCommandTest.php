@@ -20,9 +20,6 @@ use function is_dir;
 /**
  * Unit tests for the Symfony Console {@see DiffCommand} covering identical-content, divergent-content, and
  * untracked-file scenarios.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console-command')]
@@ -31,6 +28,25 @@ final class DiffCommandTest extends TestCase
     use TempDirectoryTrait;
 
     private string $originalCwd = '';
+
+    public function testExecutePrintsAnsiColorsWhenOutputIsDecorated(): void
+    {
+        $this->seedProviderAndFile(
+            destination: 'config/params.php',
+            sourceContent: "return ['a' => 1];\n",
+            currentContent: "return ['a' => 2];\n",
+        );
+
+        $tester = new CommandTester(new DiffCommand());
+
+        $tester->execute(['file' => 'config/params.php'], ['decorated' => true]);
+
+        self::assertStringContainsString(
+            "\e[31m",
+            $tester->getDisplay(),
+            'Decorated output must colorize removed lines in red.',
+        );
+    }
 
     public function testExecutePrintsDiffWhenContentsDiverge(): void
     {
@@ -53,14 +69,33 @@ final class DiffCommandTest extends TestCase
         $display = $tester->getDisplay();
 
         self::assertStringContainsString(
-            "- return ['a' => 1];",
+            "-return ['a' => 1];",
             $display,
-            "Diff output must contain removed line prefixed with '-''.",
+            "Diff output must contain removed line prefixed with '-'.",
         );
         self::assertStringContainsString(
-            "+ return ['a' => 2];",
+            "+return ['a' => 2];",
             $display,
             "Diff output must contain added line prefixed with '+'.",
+        );
+    }
+
+    public function testExecutePrintsPlainDiffWhenOutputIsNotDecorated(): void
+    {
+        $this->seedProviderAndFile(
+            destination: 'config/params.php',
+            sourceContent: "return ['a' => 1];\n",
+            currentContent: "return ['a' => 2];\n",
+        );
+
+        $tester = new CommandTester(new DiffCommand());
+
+        $tester->execute(['file' => 'config/params.php']);
+
+        self::assertStringNotContainsString(
+            "\e[",
+            $tester->getDisplay(),
+            'Undecorated output must contain no ANSI escape codes.',
         );
     }
 

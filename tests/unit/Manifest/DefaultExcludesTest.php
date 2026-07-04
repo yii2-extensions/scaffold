@@ -14,9 +14,6 @@ use yii\scaffold\tests\providers\DefaultExcludesProvider;
  * Unit tests for {@see DefaultExcludes} built-in exclusion patterns.
  *
  * {@see DefaultExcludesProvider} for test case data providers.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('manifest')]

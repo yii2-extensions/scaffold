@@ -19,9 +19,6 @@ use function preg_replace_callback;
  * - literals everything else matches byte-exact.
  *
  * Paths are normalised to forward slashes before matching so providers can share patterns across POSIX and Windows.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class Glob
 {

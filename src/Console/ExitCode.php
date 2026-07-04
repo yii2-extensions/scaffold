@@ -9,9 +9,6 @@ namespace yii\scaffold\Console;
  *
  * Backed by `int` so service entry points can return the code via `->value` when called from Console commands
  * controllers, both of which expect an integer exit status.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 enum ExitCode: int
 {

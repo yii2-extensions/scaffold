@@ -18,9 +18,6 @@ use yii\scaffold\Services\StatusService;
  * ```bash
  * vendor/bin/scaffold status
  * ```
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[AsCommand(
     name: 'status',

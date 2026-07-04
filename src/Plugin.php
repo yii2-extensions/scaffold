@@ -13,9 +13,6 @@ use Composer\Plugin\{Capable, PluginInterface};
  *
  * Registers the event subscriber that orchestrates multi-layer file scaffolding during `composer install`,
  * `composer update`, and `composer create-project`.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class Plugin implements PluginInterface, Capable
 {

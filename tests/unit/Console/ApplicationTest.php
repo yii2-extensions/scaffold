@@ -15,9 +15,6 @@ use function sprintf;
 /**
  * Unit tests for {@see Application} verifying command registration, name stability, and the runtime-derived
  * version lookup via Composer metadata.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console')]

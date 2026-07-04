@@ -16,9 +16,6 @@ use function sprintf;
  *
  * When a lock hash exists and the current file hash differs, the file is considered user-modified and the write is
  * skipped with a warning. When no lock hash exists, or hashes match, the source is copied unconditionally.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class ReplaceMode implements ModeInterface
 {

@@ -14,9 +14,6 @@ use Symfony\Component\Console\Output\OutputInterface;
  * Centralizes the `getcwd()` fail-fast check so every command reports a single, consistent diagnostic when the CWD
  * becomes unreadable (for example, after the parent directory is removed) instead of silently propagating an
  * empty project root into {@see \yii\scaffold\Scaffold\Lock\LockFile} or {@see \yii\scaffold\Scaffold\PathResolver}.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 abstract class AbstractScaffoldCommand extends Command
 {

@@ -11,9 +11,6 @@ use yii\scaffold\Manifest\{FileMode, ManifestSchema};
 
 /**
  * Unit tests for {@see ManifestSchema} validation of the `copy` / `exclude` / `modes` shape.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('manifest')]

@@ -11,9 +11,6 @@ use function is_string;
 
 /**
  * Reads and writes the `scaffold-lock.json` file that tracks applied file hashes.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class LockFile
 {

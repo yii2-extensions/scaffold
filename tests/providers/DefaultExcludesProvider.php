@@ -6,11 +6,6 @@ namespace yii\scaffold\tests\providers;
 
 /**
  * Data provider for {@see \yii\scaffold\tests\unit\Manifest\DefaultExcludesTest} test cases.
- *
- * Provides representative input/output pairs for {@see \yii\scaffold\Manifest\DefaultExcludes} matching.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class DefaultExcludesProvider
 {

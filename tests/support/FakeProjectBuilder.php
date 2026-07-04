@@ -8,9 +8,6 @@ use RuntimeException;
 
 /**
  * Builds a temporary fake project and vendor directory for functional scaffold tests.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final readonly class FakeProjectBuilder
 {

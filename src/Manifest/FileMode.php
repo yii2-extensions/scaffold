@@ -6,9 +6,6 @@ namespace yii\scaffold\Manifest;
 
 /**
  * Scaffold file write modes used in provider manifests and surfaced on {@see FileMapping}.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 enum FileMode: string
 {

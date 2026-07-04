@@ -12,19 +12,18 @@ use yii\scaffold\Console\{SymfonyOutputWriter, VendorDirResolver};
 use yii\scaffold\Services\DiffService;
 
 /**
- * Shows a line-by-line diff between the provider stub and the current on-disk file.
+ * Shows a git-style unified diff between the provider stub and the current on-disk file.
+ *
+ * Output is colorized on ANSI-capable terminals; pass `--no-ansi` to force plain output.
  *
  * Usage example:
  * ```bash
  * vendor/bin/scaffold diff config/params.php
  * ```
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[AsCommand(
     name: 'diff',
-    description: 'Shows a line-by-line diff between the provider stub and the current on-disk file.',
+    description: 'Shows a git-style unified diff between the provider stub and the current on-disk file.',
 )]
 final class DiffCommand extends AbstractScaffoldCommand
 {
@@ -53,6 +52,7 @@ final class DiffCommand extends AbstractScaffoldCommand
             VendorDirResolver::resolve($projectRoot),
             $file,
             new SymfonyOutputWriter($output),
+            $output->isDecorated(),
         );
     }
 }
