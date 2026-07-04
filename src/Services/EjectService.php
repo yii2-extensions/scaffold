@@ -11,9 +11,6 @@ use function sprintf;
 
 /**
  * Removes a file entry from `scaffold-lock.json` without deleting the file from disk.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class EjectService
 {

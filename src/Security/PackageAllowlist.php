@@ -13,9 +13,6 @@ use function in_array;
  *
  * Only packages explicitly listed in `allowed-packages` may write files to the project. An empty allowlist rejects
  * every package.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final readonly class PackageAllowlist
 {

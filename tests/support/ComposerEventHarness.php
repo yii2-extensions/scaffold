@@ -26,9 +26,6 @@ use function sprintf;
  * Tests dispatch events directly against a {@see \yii\scaffold\EventSubscriber} instance, bypassing the full Composer
  * installation pipeline. This exercises the same code path the plugin runs in production without the cost and
  * brittleness of shelling out to `composer install`.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 trait ComposerEventHarness
 {

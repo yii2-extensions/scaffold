@@ -18,9 +18,6 @@ use function json_encode;
 
 /**
  * Unit tests for {@see ManifestLoader} inline and external manifest loading with the `copy`/`exclude`/`modes` schema.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('manifest')]

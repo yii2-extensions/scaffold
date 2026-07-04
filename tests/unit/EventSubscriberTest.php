@@ -17,9 +17,6 @@ use yii\scaffold\EventSubscriber;
 
 /**
  * Unit tests for {@see EventSubscriber} event registration.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 final class EventSubscriberTest extends TestCase

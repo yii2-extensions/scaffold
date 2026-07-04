@@ -26,9 +26,6 @@ use function unlink;
  *
  * On Windows `rmdir` handles directory symlinks cleanly when their target has already been removed; plain file symlinks
  * are `unlink`ed like regular files.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 trait TempDirectoryTrait
 {

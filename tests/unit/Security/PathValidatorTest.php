@@ -13,9 +13,6 @@ use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
  * Unit tests for {@see PathValidator} path traversal and absolute path detection.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('security')]

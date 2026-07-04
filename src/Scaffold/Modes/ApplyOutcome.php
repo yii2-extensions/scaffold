@@ -6,9 +6,6 @@ namespace yii\scaffold\Scaffold\Modes;
 
 /**
  * Enumerates the possible outcomes after applying a scaffold file mapping.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 enum ApplyOutcome
 {

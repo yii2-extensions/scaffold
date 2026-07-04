@@ -10,6 +10,14 @@
         "file-mapping"
     ],
     "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Wilmer Arambula",
+            "email": "terabytesoftw@gmail.com",
+            "homepage": "https://github.com/terabytesoftw",
+            "role": "Developer"
+        }
+    ],
     "require": {
         "php": ">=8.3",
         "composer-plugin-api": "^2.3",
@@ -22,7 +30,7 @@
     ],
     "require-dev": {
         "composer/composer": "^2.9",
-        "infection/infection": "^0.33",
+        "infection/infection": "^0.34",
         "maglnet/composer-require-checker": "^4.1",
         "php-forge/coding-standard": "^0.3",
         "phpstan/extension-installer": "^1.4",

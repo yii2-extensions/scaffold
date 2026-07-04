@@ -13,9 +13,6 @@ use yii\scaffold\tests\support\{ComposerEventHarness, FakeProjectBuilder, TempDi
 
 /**
  * Functional tests for the `post-install-cmd` flow using a real {@see \Composer\Composer} instance.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('functional')]

@@ -20,9 +20,6 @@ use function substr;
 
 /**
  * Computes and renders a git-style unified diff between a scaffold provider stub and the current on-disk file.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class DiffService
 {

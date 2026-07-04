@@ -16,9 +16,6 @@ use function sprintf;
  *
  * If the destination exists it is never overwritten; the existing hash is returned so the lock file can record the
  * current state.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class PreserveMode implements ModeInterface
 {

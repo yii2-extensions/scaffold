@@ -6,9 +6,6 @@ namespace yii\scaffold\Manifest;
 
 /**
  * Immutable value object representing a single file mapping from a scaffold provider.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final readonly class FileMapping
 {

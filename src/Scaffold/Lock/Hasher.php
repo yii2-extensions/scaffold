@@ -10,9 +10,6 @@ use function sprintf;
 
 /**
  * Computes and compares SHA-256 hashes for scaffold file tracking.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class Hasher
 {

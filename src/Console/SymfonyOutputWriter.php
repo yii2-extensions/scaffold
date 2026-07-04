@@ -16,9 +16,6 @@ use Symfony\Component\Console\Output\{ConsoleOutputInterface, OutputInterface};
  *
  * When the underlying output is a {@see ConsoleOutputInterface}, stderr writes are routed through `getErrorOutput()`,
  * matching Symfony's "split stdout/stderr" convention.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final readonly class SymfonyOutputWriter implements OutputWriter
 {

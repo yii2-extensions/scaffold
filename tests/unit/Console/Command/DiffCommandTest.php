@@ -20,9 +20,6 @@ use function is_dir;
 /**
  * Unit tests for the Symfony Console {@see DiffCommand} covering identical-content, divergent-content, and
  * untracked-file scenarios.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console-command')]

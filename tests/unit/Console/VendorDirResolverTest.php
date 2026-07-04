@@ -15,9 +15,6 @@ use function putenv;
 /**
  * Unit tests for {@see VendorDirResolver} covering environment variable, `composer.json`, and default fallback
  * resolution paths.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console')]

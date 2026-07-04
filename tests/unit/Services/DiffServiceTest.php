@@ -13,9 +13,6 @@ use yii\scaffold\tests\support\{BufferedOutputWriter, TempDirectoryTrait};
 
 /**
  * Unit tests for {@see DiffService} covering diff computation and error handling for unsafe / missing inputs.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('services')]

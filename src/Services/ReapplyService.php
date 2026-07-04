@@ -18,9 +18,6 @@ use function sprintf;
  * Re-applies scaffold stubs to the project, optionally overwriting user-modified files.
  *
  * Framework-free: invoked by both the console controller wrapper and the Symfony Console command.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class ReapplyService
 {

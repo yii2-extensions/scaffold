@@ -14,9 +14,6 @@ use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
  * Unit tests for {@see PreserveMode} scaffold file application strategy.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
  */
 final class PreserveModeTest extends TestCase
 {

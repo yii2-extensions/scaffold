@@ -20,9 +20,6 @@ use function is_dir;
 /**
  * Unit tests for the Symfony Console {@see StatusCommand} verifying the status listing against a real
  * `scaffold-lock.json` written to a temporary project root.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console-command')]

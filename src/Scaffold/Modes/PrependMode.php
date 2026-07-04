@@ -13,9 +13,6 @@ use function sprintf;
 
 /**
  * Applies a scaffold file by prepending its content before an existing destination, or writing it fresh.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class PrependMode implements ModeInterface
 {

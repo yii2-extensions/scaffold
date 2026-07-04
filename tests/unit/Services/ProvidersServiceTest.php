@@ -12,9 +12,6 @@ use yii\scaffold\tests\support\{BufferedOutputWriter, TempDirectoryTrait};
 
 /**
  * Unit tests for {@see ProvidersService} covering file-count aggregation and empty-state output.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('services')]

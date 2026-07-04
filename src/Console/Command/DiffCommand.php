@@ -20,9 +20,6 @@ use yii\scaffold\Services\DiffService;
  * ```bash
  * vendor/bin/scaffold diff config/params.php
  * ```
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[AsCommand(
     name: 'diff',

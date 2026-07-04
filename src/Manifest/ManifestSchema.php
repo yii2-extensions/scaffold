@@ -31,9 +31,6 @@ use function str_starts_with;
  *
  * @phpstan-type CopyEntry array{from: string, to: string}
  * @phpstan-type ValidatedManifest array{copy: list<CopyEntry>, exclude: list<string>, modes: array<string, FileMode>}
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class ManifestSchema
 {

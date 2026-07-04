@@ -16,9 +16,6 @@ use yii\scaffold\tests\support\{ComposerEventHarness, FakeProjectBuilder, TempDi
  *
  * Composer fires both events during `composer create-project`. The plugin must apply the scaffold exactly once, so
  * append/prepend entries are not duplicated. These tests exercise the `$installScaffoldRan` flag end-to-end.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('functional')]

@@ -20,9 +20,6 @@ use function is_dir;
 /**
  * Unit tests for the Symfony Console {@see ReapplyCommand} covering single-file reapply, filter-mismatch error, and
  * the `--force` flag.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console-command')]

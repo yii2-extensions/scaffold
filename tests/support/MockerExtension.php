@@ -17,9 +17,6 @@ use Xepozz\InternalMocker\{Mocker, MockerState};
  * Wires {@see \Xepozz\InternalMocker\Mocker} into the PHPUnit event loop so the scaffold source namespaces can
  * intercept selected PHP built-ins (`is_readable`, `mkdir`, `is_dir`, `file_put_contents`) during tests that need to
  * simulate filesystem failures or race conditions beyond what a real temporary directory can reproduce.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class MockerExtension implements Extension
 {

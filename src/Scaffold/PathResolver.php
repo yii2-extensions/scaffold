@@ -25,9 +25,6 @@ use function umask;
  *
  * Centralizes path joining, directory creation, and provider-root resolution used by mode strategies and console
  * controllers. Callers remain responsible for validating the relative segments with {@see PathValidator} beforehand.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class PathResolver
 {

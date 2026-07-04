@@ -17,9 +17,6 @@ use function posix_geteuid;
 
 /**
  * Unit tests for {@see ManifestExpander} covering directory walking, exclusions, and mode resolution.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('manifest')]

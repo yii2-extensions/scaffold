@@ -19,9 +19,6 @@ use function is_string;
 
 /**
  * Unit tests for {@see Applier} security pre-checks and mode delegation.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1.0
  */
 final class ApplierTest extends TestCase
 {

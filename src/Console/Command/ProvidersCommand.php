@@ -18,9 +18,6 @@ use yii\scaffold\Services\ProvidersService;
  * ```bash
  * vendor/bin/scaffold providers
  * ```
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[AsCommand(
     name: 'providers',

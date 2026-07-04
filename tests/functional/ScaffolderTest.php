@@ -17,9 +17,6 @@ use yii\scaffold\tests\support\{FakeProjectBuilder, TempDirectoryTrait};
 
 /**
  * Functional tests for {@see Scaffolder} end-to-end scaffold execution.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('functional')]

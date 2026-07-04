@@ -12,9 +12,6 @@ use function explode;
 
 /**
  * Unit tests for {@see DiffColorizer} ANSI styling of unified diff lines.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console')]

@@ -32,9 +32,6 @@ use function substr;
  *
  * Mode resolution falls back to {@see FileMode::Replace} when no pattern in `modes{}` matches the destination.
  *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
- *
  * @phpstan-type ValidatedManifest = array{
  *   copy: list<array{from: string, to: string}>,
  *   exclude: list<string>,

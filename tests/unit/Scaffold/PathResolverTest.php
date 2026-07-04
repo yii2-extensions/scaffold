@@ -13,9 +13,6 @@ use yii\scaffold\tests\support\TempDirectoryTrait;
 
 /**
  * Unit tests for {@see PathResolver} path joining, directory creation, and provider-root resolution.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 final class PathResolverTest extends TestCase

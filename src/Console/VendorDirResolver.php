@@ -26,9 +26,6 @@ use function str_starts_with;
  *
  * Keeps the `diff` / `reapply` commands correct for projects that customise the vendor directory via Composer's
  * `config.vendor-dir` key or the `COMPOSER_VENDOR_DIR` environment variable.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class VendorDirResolver
 {

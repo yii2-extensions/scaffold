@@ -14,9 +14,6 @@ use yii\scaffold\Console\SymfonyOutputWriter;
 /**
  * Unit tests for {@see SymfonyOutputWriter} verifying that stdout / stderr writes bypass Symfony's output formatter so
  * pre-formatted service messages (for example, diffs that contain angle-bracket tokens) land verbatim.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('console')]

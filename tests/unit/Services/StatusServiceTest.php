@@ -13,9 +13,6 @@ use yii\scaffold\tests\support\{BufferedOutputWriter, TempDirectoryTrait};
 
 /**
  * Unit tests for {@see StatusService} covering the status-computation branches and rendered output.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[Group('scaffold')]
 #[Group('services')]

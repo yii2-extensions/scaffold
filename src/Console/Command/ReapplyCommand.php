@@ -21,9 +21,6 @@ use yii\scaffold\Services\ReapplyService;
  * vendor/bin/scaffold reapply config/params.php --force
  * vendor/bin/scaffold reapply --provider=yii2-extensions/app-base
  * ```
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 #[AsCommand(
     name: 'reapply',

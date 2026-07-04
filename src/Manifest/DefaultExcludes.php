@@ -14,9 +14,6 @@ use function substr;
  * the consumer project just because the provider's tree is copied wholesale. Providers that need to distribute a file
  * that matches a default exclude may list it as an explicit file entry in `copy[]`; explicit file entries bypass the
  * default excludes by design.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class DefaultExcludes
 {

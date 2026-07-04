@@ -25,9 +25,6 @@ use function substr;
  * Idempotent by design: when the destination already exists, provider lines missing from it are inserted at their
  * contextual position relative to shared anchor lines (LCS alignment). Repeated applications produce no duplication,
  * and consumer-specific additions are never removed or reordered.
- *
- * @author Wilmer Arambula <terabytesoftw@gmail.com>
- * @since 0.1
  */
 final class AppendMode implements ModeInterface
 {
