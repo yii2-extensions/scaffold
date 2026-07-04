@@ -11,6 +11,7 @@ use yii\scaffold\Manifest\FileMapping;
 use yii\scaffold\Scaffold\Lock\Hasher;
 use yii\scaffold\Scaffold\PathResolver;
 
+use function array_count_values;
 use function explode;
 use function implode;
 use function preg_replace;
@@ -23,8 +24,9 @@ use function substr;
  * Applies a scaffold file by line-merging its content into the destination, or writing it fresh.
  *
  * Idempotent by design: when the destination already exists, provider lines missing from it are inserted at their
- * contextual position relative to shared anchor lines (LCS alignment). Repeated applications produce no duplication,
- * and consumer-specific additions are never removed or reordered.
+ * contextual position relative to shared anchor lines (LCS alignment). Presence is decided by order-independent line
+ * counting, so a destination holding every provider line in a different order is left untouched. Repeated
+ * applications produce no duplication, and consumer-specific additions are never removed or reordered.
  */
 final class AppendMode implements ModeInterface
 {
@@ -70,22 +72,43 @@ final class AppendMode implements ModeInterface
         $consumerLines = self::splitLines($consumerContent);
         $providerLines = self::splitLines($providerContent);
 
+        // Count-based multiset decides WHAT is missing (order-independent, multiplicity-preserving): a provider line
+        // is missing only when the destination holds fewer copies of it, so reordered destinations never duplicate.
+        $consumerCounts = array_count_values($consumerLines);
+        $missingCounts = [];
+
+        foreach ($providerLines as $line) {
+            if (isset($consumerCounts[$line]) && $consumerCounts[$line] > 0) {
+                $consumerCounts[$line]--;
+
+                continue;
+            }
+
+            $missingCounts[$line] = ($missingCounts[$line] ?? 0) + 1;
+        }
+
+        if ($missingCounts === []) {
+            return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);
+        }
+
         $differ = new Differ(new DiffOnlyOutputBuilder(''));
 
         /** @var list<array{0: string, 1: int}> $entries */
         $entries = $differ->diffToArray($providerLines, $consumerLines);
 
-        // LCS-aligned merge: provider-only lines ('REMOVED') buffer until the next shared anchor ('OLD') so they land
-        // at their contextual position, while consumer-only lines ('ADDED') stay in place ahead of them. LCS handles
-        // duplicate multiplicity natively: a stub with two 'alpha' lines whose destination has one inserts the second.
+        // LCS alignment decides WHERE missing lines land: provider-only entries ('REMOVED') buffer until the next
+        // shared anchor ('OLD') so they insert at their contextual position, while consumer-only lines ('ADDED') stay
+        // in place ahead of them. 'REMOVED' entries with no remaining missing quota are reorder artifacts: the same
+        // line exists elsewhere in the destination, so they are dropped instead of duplicated.
         $merged = [];
         $pending = [];
-        $hasMissing = false;
 
         foreach ($entries as [$line, $type]) {
             if ($type === Differ::REMOVED) {
-                $pending[] = $line;
-                $hasMissing = true;
+                if (isset($missingCounts[$line]) && $missingCounts[$line] > 0) {
+                    $missingCounts[$line]--;
+                    $pending[] = $line;
+                }
 
                 continue;
             }
@@ -96,10 +119,6 @@ final class AppendMode implements ModeInterface
             }
 
             $merged[] = $line;
-        }
-
-        if (!$hasMissing) {
-            return new ApplyResult(ApplyOutcome::Skipped, $hasher->hash($destination), null);
         }
 
         $endsWithProviderLine = $pending !== [];

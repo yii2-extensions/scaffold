@@ -268,6 +268,32 @@ final class AppendModeTest extends TestCase
         );
     }
 
+    public function testInsertsOnlyMissingOccurrenceWhenDuplicateLinesAreReordered(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Consumer already holds one 'dup' (at the end); the stub wants two. Exactly one insertion is allowed even
+        // though LCS reports both leading stub occurrences as provider-only.
+        file_put_contents($projectDir . '/output.txt', "alpha\nbeta\ndup\n");
+
+        $this->makeSourceFile("dup\ndup\nalpha\nbeta\n");
+
+        (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            "dup\nalpha\nbeta\ndup\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Exactly one missing occurrence must be inserted; the existing copy must not be duplicated.',
+        );
+    }
+
     public function testInsertsSeparatorWhenDestinationDoesNotEndWithNewline(): void
     {
         $projectDir = "{$this->tempDir}/project";
@@ -552,6 +578,36 @@ final class AppendModeTest extends TestCase
             "alpha\nbeta\ngamma\n",
             file_get_contents($projectDir . '/output.txt'),
             'AppendMode must leave the destination untouched when every provider line is already present.',
+        );
+    }
+
+    public function testReturnsSkippedWhenProviderLinesArePresentInDifferentOrder(): void
+    {
+        $projectDir = "{$this->tempDir}/project";
+
+        mkdir($projectDir, 0o777, recursive: true);
+
+        // Consumer reordered the stub lines; every line is present, so nothing is missing and nothing is duplicated.
+        file_put_contents($projectDir . '/output.txt', "beta\nalpha\n");
+
+        $this->makeSourceFile("alpha\nbeta\n");
+
+        $result = (new AppendMode())->apply(
+            $this->makeMapping(),
+            $projectDir,
+            new Hasher(),
+            null,
+        );
+
+        self::assertSame(
+            ApplyOutcome::Skipped,
+            $result->outcome,
+            'Reordered-but-complete destination must be skipped.',
+        );
+        self::assertSame(
+            "beta\nalpha\n",
+            file_get_contents($projectDir . '/output.txt'),
+            'Reordered destination must stay byte-identical.',
         );
     }
 

@@ -58,7 +58,8 @@ Once written, the file is never touched again by the scaffold process.
 
 Idempotent contextual line merge. The plugin reads both the stub and the destination, splits each on `\n` (after
 trimming the trailing newline), and inserts the stub lines missing from the destination at their contextual position,
-aligned against shared anchor lines (LCS). Repeated runs over a destination that already contains every stub line are
+aligned against shared anchor lines (LCS). Presence is order-independent: a destination that contains every stub line
+in a different order is left untouched. Repeated runs over a destination that already contains every stub line are
 a no-op (`ApplyOutcome::Skipped`); developer-added lines are never removed or reordered.
 
 Use it for line-based, comment-tolerant files where the destination may already contain the stub content (because the
