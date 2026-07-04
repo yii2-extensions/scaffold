@@ -49,9 +49,7 @@ On ANSI-capable terminals the diff is colorized (bold headers, cyan hunks, green
 ```diff
 --- a/config/params.php
 +++ b/config/params.php
-@@ -1,3 +1,3 @@
- <?php
-
+@@ -1 +1 @@
 -return [];
 +return ['adminEmail' => 'admin@example.com'];
 ```

@@ -6,12 +6,12 @@ when a file has been modified by the developer after scaffolding.
 
 ## Mode reference
 
-| Mode       | File absent                | File present (unmodified)                                                                                                                                     | File present (user-modified)                                                                          |
-| ---------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                           | **Skips** emits warning to stderr.                                                                    |
-| `preserve` | Writes stub, records hash. | **Skips**; never overwrites.                                                                                                                                  | **Skips**; never overwrites.                                                                          |
+| Mode       | File absent                | File present (unmodified)                                                                                                                                         | File present (user-modified)                                                                              |
+| ---------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `replace`  | Writes stub, records hash. | Overwrites with stub, updates hash.                                                                                                                               | **Skips** emits warning to stderr.                                                                        |
+| `preserve` | Writes stub, records hash. | **Skips**; never overwrites.                                                                                                                                      | **Skips**; never overwrites.                                                                              |
 | `append`   | Writes stub, records hash. | Inserts missing stub lines at their contextual position (idempotent LCS line merge); updates hash. Returns `Skipped` when every stub line is already in the file. | Inserts missing stub lines at their contextual position (idempotent LCS line merge); user lines are kept. |
-| `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).         | Prepends stub content, updates hash (full scaffold only).                                             |
+| `prepend`  | Writes stub, records hash. | Prepends stub content before existing content, updates hash (full scaffold only; skipped on `post-install-cmd`/`post-update-cmd` if already in lock).             | Prepends stub content, updates hash (full scaffold only).                                                 |
 
 ## Hash tracking
 
